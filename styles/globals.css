@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-white text-slate-900 antialiased;
+}
+
+a {
+  @apply transition-colors duration-200;
+}
+
+.logo-carousel {
+  @apply overflow-hidden rounded-2xl border border-slate-200 bg-white py-6;
+}
+
+.logo-carousel__track {
+  display: flex;
+  width: max-content;
+  animation: marquee 28s linear infinite;
+}
+
+.logo-carousel__item {
+  @apply mx-4 flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 py-4 shadow-sm;
+  min-width: 140px;
+}
+
+.logo-carousel__image {
+  height: 36px;
+  width: auto;
+  object-fit: contain;
+  filter: grayscale(30%);
+}
