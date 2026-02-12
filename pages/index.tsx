@@ -228,3 +228,97 @@ export default function Home() {
               <li className="flex gap-3">
                 <span className="text-accent">●</span>
                 Measurement-driven growth plans with quarterly impact reports.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section className="container mx-auto px-6 py-16">
+        <h2 className="text-3xl font-bold text-primary text-center">Platform Highlights</h2>
+        <p className="mt-2 text-center text-gray-600 max-w-2xl mx-auto">
+          Everything you need to deliver world-class education under one roof.
+        </p>
+        <div className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          {featureHighlights.map((f) => (
+            <div key={f.title} className="rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-shadow">
+              <h3 className="text-lg font-semibold text-primary">{f.title}</h3>
+              <p className="mt-2 text-sm text-gray-600">{f.description}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="bg-slate-50">
+        <div className="container mx-auto px-6 py-16">
+          <h2 className="text-3xl font-bold text-primary text-center">Signature Programs</h2>
+          <div className="mt-10 grid gap-8 sm:grid-cols-2">
+            {signaturePrograms.map((p) => (
+              <div key={p.title} className="rounded-2xl bg-white border border-slate-200 p-6 shadow-sm">
+                <h3 className="text-xl font-semibold text-primary">{p.title}</h3>
+                <p className="mt-2 text-gray-600">{p.details}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="container mx-auto px-6 py-16">
+        <h2 className="text-3xl font-bold text-primary text-center">Your Learning Journey</h2>
+        <div className="mt-10 grid gap-8 md:grid-cols-3">
+          {learningJourney.map((step, i) => (
+            <div key={step.title} className="text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-950 text-white font-bold text-lg">
+                {i + 1}
+              </div>
+              <h3 className="mt-4 text-lg font-semibold text-primary">{step.title}</h3>
+              <p className="mt-2 text-gray-600">{step.summary}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="bg-slate-50">
+        <div className="container mx-auto px-6 py-16">
+          <h2 className="text-3xl font-bold text-primary text-center">What Families Are Saying</h2>
+          <div className="mt-10 grid gap-8 md:grid-cols-3">
+            {testimonials.map((t) => (
+              <div key={t.name} className="rounded-2xl bg-white border border-slate-200 p-6 shadow-sm">
+                <p className="text-gray-600 italic">&ldquo;{t.quote}&rdquo;</p>
+                <p className="mt-4 font-semibold text-primary">{t.name}</p>
+                <p className="text-sm text-gray-500">{t.role}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="container mx-auto px-6 py-16">
+        <h2 className="text-2xl font-bold text-primary text-center mb-8">Our Students Have Been Accepted To</h2>
+        <div className="logo-carousel">
+          <div className="logo-carousel__track">
+            {[...logoMarquee, ...logoMarquee].map((uni, i) => (
+              <div key={`${uni.name}-${i}`} className="logo-carousel__item">
+                <img src={uni.logo} alt={uni.name} className="logo-carousel__image" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-gradient-to-br from-blue-950 via-blue-900 to-blue-800 text-white">
+        <div className="container mx-auto px-6 py-16 text-center">
+          <h2 className="text-3xl font-bold">Ready to Elevate Your Learning?</h2>
+          <p className="mt-4 text-lg text-blue-100 max-w-xl mx-auto">
+            Schedule a complimentary strategy call and discover how AdmitsOnly can unlock your potential.
+          </p>
+          <div className="mt-8">
+            <Link href="/contact" className="px-8 py-3 bg-accent rounded text-white font-semibold text-lg">
+              Get Started Today
+            </Link>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}

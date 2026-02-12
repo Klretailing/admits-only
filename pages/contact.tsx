@@ -38,3 +38,11 @@ export default function Contact() {
         </div>
         <button
           type="submit"
+          className="px-6 py-3 bg-accent rounded text-white font-semibold"
+        >
+          Send Message
+        </button>
+      </form>
+    </div>
+  );
+}
