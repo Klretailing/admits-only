@@ -169,6 +169,7 @@ const logoMarquee = [
 export default function Home() {
   return (
     <div className="bg-white">
+      {/* Hero Section */}
       <section className="bg-gradient-to-br from-blue-950 via-blue-900 to-blue-800">
         <div className="bg-blue-900 bg-opacity-60">
           <div className="container mx-auto px-6 py-28 text-white">
@@ -199,6 +200,7 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Ecosystem Overview */}
       <section className="container mx-auto px-6 py-16">
         <div className="grid gap-10 lg:grid-cols-[1.1fr_1fr] items-center">
           <div>
@@ -228,3 +230,114 @@ export default function Home() {
               <li className="flex gap-3">
                 <span className="text-accent">●</span>
                 Measurement-driven growth plans with quarterly impact reports.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* Feature Highlights */}
+      <section className="bg-slate-50 py-16">
+        <div className="container mx-auto px-6">
+          <h2 className="text-3xl font-bold text-primary text-center">Platform Capabilities</h2>
+          <p className="mt-4 text-lg text-gray-600 text-center max-w-2xl mx-auto">
+            Everything you need to deliver world-class education at scale.
+          </p>
+          <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            {featureHighlights.map((feature) => (
+              <div key={feature.title} className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+                <h3 className="text-lg font-semibold text-primary">{feature.title}</h3>
+                <p className="mt-3 text-gray-600 text-sm leading-relaxed">{feature.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Signature Programs */}
+      <section className="container mx-auto px-6 py-16">
+        <h2 className="text-3xl font-bold text-primary text-center">Signature Programs</h2>
+        <p className="mt-4 text-lg text-gray-600 text-center max-w-2xl mx-auto">
+          Curated tracks designed to unlock potential at every stage of a student&apos;s academic journey.
+        </p>
+        <div className="mt-12 grid gap-8 sm:grid-cols-2">
+          {signaturePrograms.map((program) => (
+            <div key={program.title} className="border border-slate-200 rounded-xl p-6 hover:shadow-md transition-shadow">
+              <h3 className="text-xl font-semibold text-primary">{program.title}</h3>
+              <p className="mt-3 text-gray-600 leading-relaxed">{program.details}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Learning Journey */}
+      <section className="bg-gradient-to-br from-blue-950 via-blue-900 to-blue-800 py-16">
+        <div className="container mx-auto px-6 text-white">
+          <h2 className="text-3xl font-bold text-center">Your Learning Journey</h2>
+          <p className="mt-4 text-lg text-blue-100 text-center max-w-2xl mx-auto">
+            A structured three-phase approach that transforms potential into measurable outcomes.
+          </p>
+          <div className="mt-12 grid gap-8 md:grid-cols-3">
+            {learningJourney.map((step, i) => (
+              <div key={step.title} className="bg-white/10 border border-white/20 rounded-xl p-6">
+                <div className="text-accent font-bold text-sm uppercase tracking-wide">Step {i + 1}</div>
+                <h3 className="mt-2 text-xl font-semibold">{step.title}</h3>
+                <p className="mt-3 text-blue-100 leading-relaxed">{step.summary}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="container mx-auto px-6 py-16">
+        <h2 className="text-3xl font-bold text-primary text-center">What Our Community Says</h2>
+        <div className="mt-12 grid gap-8 md:grid-cols-3">
+          {testimonials.map((t) => (
+            <div key={t.name} className="bg-slate-50 rounded-xl p-6 border border-slate-200">
+              <p className="text-gray-600 italic leading-relaxed">&ldquo;{t.quote}&rdquo;</p>
+              <div className="mt-4">
+                <p className="font-semibold text-primary">{t.name}</p>
+                <p className="text-sm text-gray-500">{t.role}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* University Logo Marquee */}
+      <section className="py-16">
+        <div className="container mx-auto px-6">
+          <h2 className="text-2xl font-bold text-primary text-center mb-8">Our Students Have Been Admitted To</h2>
+          <div className="logo-carousel">
+            <div className="logo-carousel__track">
+              {[...logoMarquee, ...logoMarquee].map((uni, i) => (
+                <div key={`${uni.name}-${i}`} className="logo-carousel__item">
+                  <img src={uni.logo} alt={uni.name} className="logo-carousel__image" title={uni.name} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="bg-blue-950 py-16">
+        <div className="container mx-auto px-6 text-center text-white">
+          <h2 className="text-3xl font-bold">Ready to Transform Your Child&apos;s Future?</h2>
+          <p className="mt-4 text-lg text-blue-100 max-w-2xl mx-auto">
+            Schedule a free strategy call to discuss your family&apos;s goals and discover how AdmitsOnly can help.
+          </p>
+          <div className="mt-8 flex flex-wrap justify-center gap-4">
+            <Link href="/contact" className="px-8 py-3 bg-accent rounded text-white font-semibold">
+              Schedule a Strategy Call
+            </Link>
+            <Link href="/services" className="px-8 py-3 bg-white rounded text-primary font-semibold">
+              View Programs
+            </Link>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}

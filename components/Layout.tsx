@@ -34,7 +34,7 @@ export default function Layout({ children }: LayoutProps) {
           </div>
           <div className="md:text-right text-sm text-slate-500">
             <p>Elevate your tutoring practice with bespoke curriculum and hybrid delivery.</p>
-            <p className="mt-2">© 2024 AdmitsOnly. All rights reserved.</p>
+            <p className="mt-2">© 2026 AdmitsOnly. All rights reserved.</p>
           </div>
         </div>
       </footer>
