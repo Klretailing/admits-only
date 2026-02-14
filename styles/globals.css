@@ -164,3 +164,25 @@
 .glow-warm {
   box-shadow: 0 0 60px -12px rgba(245, 158, 11, 0.3);
 }
+
+/* Bento grid animations */
+.bento-hidden .bento-card {
+  opacity: 0;
+  transform: translateY(24px) scale(0.96);
+}
+
+.bento-visible .bento-card {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out, box-shadow 0.3s ease;
+}
+
+.bento-visible .bento-card:nth-child(1) { transition-delay: 0ms; }
+.bento-visible .bento-card:nth-child(2) { transition-delay: 100ms; }
+.bento-visible .bento-card:nth-child(3) { transition-delay: 200ms; }
+.bento-visible .bento-card:nth-child(4) { transition-delay: 300ms; }
+
+.bento-card:hover {
+  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.08),
+              0 0 0 1px rgba(99, 102, 241, 0.08);
+}
