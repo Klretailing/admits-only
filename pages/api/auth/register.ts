@@ -16,8 +16,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Password must be at least 8 characters' });
   }
 
-  if (!['student', 'parent'].includes(role)) {
-    return res.status(400).json({ error: 'Role must be student or parent' });
+  if (!['student', 'parent', 'admin'].includes(role)) {
+    return res.status(400).json({ error: 'Invalid role' });
+  }
+
+  // Admin registration requires a secret key to prevent unauthorized admin accounts
+  if (role === 'admin') {
+    const adminKey = req.body.adminKey || req.headers['x-admin-key'];
+    if (adminKey !== process.env.ADMIN_SECRET_KEY) {
+      return res.status(403).json({ error: 'Unauthorized: invalid admin key' });
+    }
   }
 
   try {

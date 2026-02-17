@@ -5,7 +5,7 @@ import { useRouter } from 'next/router'
 import Layout from '../components/Layout'
 
 // Pages that use their own layout (no global header/footer)
-const noLayoutPrefixes = ['/dashboard', '/auth/'];
+const noLayoutPrefixes = ['/dashboard', '/admin', '/auth/'];
 
 export default function MyApp({ Component, pageProps: { session, ...pageProps } }: AppProps) {
   const router = useRouter();

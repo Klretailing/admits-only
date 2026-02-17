@@ -3,19 +3,40 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { compare, hash } from 'bcryptjs';
 
 // In-memory user store for demo — replace with a real database (Supabase, Prisma, etc.)
+export type UserRole = 'student' | 'parent' | 'admin';
+
 export interface StoredUser {
   id: string;
   name: string;
   email: string;
   password: string;
-  role: 'student' | 'parent';
+  role: UserRole;
   createdAt: string;
 }
 
 // This is a demo store. In production, use a proper database.
 const users: StoredUser[] = [];
 
-export async function createUser(name: string, email: string, password: string, role: 'student' | 'parent') {
+// Seed a default admin account (password: Admin@2024)
+// In production, use environment variables or a secure setup flow instead.
+(async () => {
+  const { hash: hashPw } = await import('bcryptjs');
+  const hashed = await hashPw('Admin@2024', 12);
+  users.push({
+    id: 'admin_default',
+    name: 'Admin',
+    email: 'admin@admitsonly.com',
+    password: hashed,
+    role: 'admin',
+    createdAt: new Date().toISOString(),
+  });
+})();
+
+export function getUsers(): Omit<StoredUser, 'password'>[] {
+  return users.map(({ password, ...u }) => u);
+}
+
+export async function createUser(name: string, email: string, password: string, role: UserRole) {
   const exists = users.find((u) => u.email === email);
   if (exists) throw new Error('User already exists');
 
