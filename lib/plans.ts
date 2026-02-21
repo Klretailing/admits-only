@@ -1,0 +1,48 @@
+export const plans = [
+  {
+    id: 'foundations',
+    name: 'Foundations for Growth',
+    audience: 'Grades 5–8',
+    price: 299,
+    interval: 'month' as const,
+    features: [
+      'Executive function coaching',
+      'Math & reading enrichment',
+      'Project-based learning',
+      'Weekly parent reports',
+      'Family Progress Hub access',
+    ],
+    highlight: false,
+  },
+  {
+    id: 'scholarship',
+    name: 'Scholarship-Ready Academy',
+    audience: 'Grades 9–12',
+    price: 499,
+    interval: 'month' as const,
+    features: [
+      'Personalized admissions strategy',
+      'SAT/ACT diagnostic & prep',
+      'College essay coaching',
+      'Portfolio development',
+      'Mock interviews & rec guidance',
+      'Family Progress Hub access',
+    ],
+    highlight: true,
+  },
+  {
+    id: 'stem',
+    name: 'STEM Innovators Lab',
+    audience: 'Grades 8–12',
+    price: 449,
+    interval: 'month' as const,
+    features: [
+      'Research mentorship',
+      'Coding bootcamps',
+      'Competition preparation',
+      'Capstone project coaching',
+      'Global Faculty Network access',
+    ],
+    highlight: false,
+  },
+];
