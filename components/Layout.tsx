@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import Head from 'next/head';
 import { useState, type ReactNode } from 'react';
-import { useSession } from 'next-auth/react';
 
 interface LayoutProps {
   children: ReactNode;
@@ -40,7 +39,6 @@ const navLinks = [
 
 export default function Layout({ children }: LayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { data: session } = useSession();
 
   return (
     <>
@@ -69,20 +67,12 @@ export default function Layout({ children }: LayoutProps) {
                   {link.label}
                 </Link>
               ))}
-              {session ? (
-                <Link href="/dashboard" className="ml-3 btn-primary text-sm !py-2.5 !px-5">
-                  Dashboard
-                </Link>
-              ) : (
-                <>
-                  <Link href="/auth/login" className="ml-2 px-4 py-2 text-sm font-medium text-slate-600 hover:text-primary transition-colors">
-                    Sign In
-                  </Link>
-                  <Link href="/auth/register" className="btn-primary text-sm !py-2.5 !px-5">
-                    Get Started
-                  </Link>
-                </>
-              )}
+              <Link href="/auth/login" className="ml-2 px-4 py-2 text-sm font-medium text-slate-600 hover:text-primary transition-colors">
+                Sign In
+              </Link>
+              <Link href="/auth/register" className="btn-primary text-sm !py-2.5 !px-5">
+                Get Started
+              </Link>
             </nav>
 
             {/* Mobile toggle */}
@@ -119,32 +109,20 @@ export default function Layout({ children }: LayoutProps) {
                   {link.label}
                 </Link>
               ))}
-              {session ? (
-                <Link
-                  href="/dashboard"
-                  onClick={() => setMobileOpen(false)}
-                  className="block mt-2 btn-primary text-sm text-center"
-                >
-                  Dashboard
-                </Link>
-              ) : (
-                <>
-                  <Link
-                    href="/auth/login"
-                    onClick={() => setMobileOpen(false)}
-                    className="block px-4 py-3 text-sm font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
-                  >
-                    Sign In
-                  </Link>
-                  <Link
-                    href="/auth/register"
-                    onClick={() => setMobileOpen(false)}
-                    className="block mt-2 btn-primary text-sm text-center"
-                  >
-                    Get Started
-                  </Link>
-                </>
-              )}
+              <Link
+                href="/auth/login"
+                onClick={() => setMobileOpen(false)}
+                className="block px-4 py-3 text-sm font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/auth/register"
+                onClick={() => setMobileOpen(false)}
+                className="block mt-2 btn-primary text-sm text-center"
+              >
+                Get Started
+              </Link>
             </div>
           )}
         </header>
