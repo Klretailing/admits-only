@@ -19,9 +19,11 @@ const users: StoredUser[] = [];
 
 // Seed a default admin account (password: Admin@2024)
 // In production, use environment variables or a secure setup flow instead.
-(async () => {
-  const { hash: hashPw } = await import('bcryptjs');
-  const hashed = await hashPw('Admin@2024', 12);
+let adminSeeded = false;
+async function seedAdmin() {
+  if (adminSeeded) return;
+  adminSeeded = true;
+  const hashed = await hash('Admin@2024', 12);
   users.push({
     id: 'admin_default',
     name: 'Admin',
@@ -30,13 +32,14 @@ const users: StoredUser[] = [];
     role: 'admin',
     createdAt: new Date().toISOString(),
   });
-})();
+}
 
 export function getUsers(): Omit<StoredUser, 'password'>[] {
   return users.map(({ password, ...u }) => u);
 }
 
 export async function createUser(name: string, email: string, password: string, role: UserRole) {
+  await seedAdmin();
   const exists = users.find((u) => u.email === email);
   if (exists) throw new Error('User already exists');
 
@@ -54,6 +57,7 @@ export async function createUser(name: string, email: string, password: string, 
 }
 
 export const authOptions: NextAuthOptions = {
+  secret: process.env.NEXTAUTH_SECRET || 'dev-secret-change-in-production',
   session: { strategy: 'jwt' },
   pages: {
     signIn: '/auth/login',
@@ -67,6 +71,8 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
+
+        await seedAdmin();
 
         const user = users.find((u) => u.email === credentials.email);
         if (!user) return null;
