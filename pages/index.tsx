@@ -93,7 +93,7 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>AdmitsOnly | College Admissions Consulting &amp; Academic Coaching for Top Universities</title>
+        <title>AdmitsOnly | College Admissions Consulting &amp; Academic Coaching (2025–2026)</title>
         <meta name="description" content="AdmitsOnly helps ambitious students gain admission to top universities like Stanford, MIT, Harvard, and more. Expert SAT/ACT prep, college essay coaching, STEM mentorship, and personalized academic programs." />
       </Head>
 
