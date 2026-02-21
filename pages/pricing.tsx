@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import { plans } from '../lib/stripe';
+import { plans } from '../lib/plans';
 
 export default function Pricing() {
   const { data: session } = useSession();
