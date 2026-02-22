@@ -85,7 +85,7 @@ export default function Dashboard() {
             <div className="space-y-4">
               {[
                 { subject: 'SAT Math', pct: 88, color: 'bg-accent' },
-                { subject: 'SAT Verbal', pct: 82, color: 'bg-purple-500' },
+                { subject: 'SAT Reading & Writing', pct: 82, color: 'bg-purple-500' },
                 { subject: 'Essay Writing', pct: 75, color: 'bg-emerald-500' },
                 { subject: 'Research Project', pct: 60, color: 'bg-amber-500' },
                 { subject: 'Extracurricular Portfolio', pct: 45, color: 'bg-rose-500' },

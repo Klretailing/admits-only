@@ -9,7 +9,7 @@ const sessions = [
   { title: 'Common App Essay Draft 2', coach: 'Sarah M.', date: 'Wed, 3:30 PM', type: 'Essay Review', status: 'upcoming' },
   { title: 'STEM Research Check-in', coach: 'Prof. Liu', date: 'Fri, 5:00 PM', type: 'Cohort', status: 'upcoming' },
   { title: 'College List Strategy', coach: 'Sarah M.', date: 'Last Monday', type: '1:1', status: 'completed' },
-  { title: 'SAT Verbal Practice', coach: 'Dr. Patel', date: 'Last Friday', type: '1:1', status: 'completed' },
+  { title: 'SAT Reading & Writing Practice', coach: 'Dr. Patel', date: 'Last Friday', type: '1:1', status: 'completed' },
   { title: 'Essay Brainstorm Workshop', coach: 'Sarah M.', date: '2 weeks ago', type: 'Group', status: 'completed' },
 ];
 

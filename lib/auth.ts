@@ -17,21 +17,34 @@ export interface StoredUser {
 // This is a demo store. In production, use a proper database.
 const users: StoredUser[] = [];
 
-// Seed a default admin account (password: Admin@2024)
+// Seed default accounts (admin + beta testers)
 // In production, use environment variables or a secure setup flow instead.
-let adminSeeded = false;
+let accountsSeeded = false;
 async function seedAdmin() {
-  if (adminSeeded) return;
-  adminSeeded = true;
-  const hashed = await hash('Admin@2024', 12);
-  users.push({
-    id: 'admin_default',
-    name: 'Admin',
-    email: 'admin@admitsonly.com',
-    password: hashed,
-    role: 'admin',
-    createdAt: new Date().toISOString(),
-  });
+  if (accountsSeeded) return;
+  accountsSeeded = true;
+
+  const seedAccounts: { id: string; name: string; email: string; password: string; role: UserRole }[] = [
+    // Admin — password: Admin@2024
+    { id: 'admin_default', name: 'Admin', email: 'admin@admitsonly.com', password: 'Admin@2024', role: 'admin' },
+    // Beta testers — password: Beta@2026
+    { id: 'beta_student_1', name: 'Maya Johnson', email: 'maya@beta.admitsonly.com', password: 'Beta@2026', role: 'student' },
+    { id: 'beta_student_2', name: 'Aisha Patel', email: 'aisha@beta.admitsonly.com', password: 'Beta@2026', role: 'student' },
+    { id: 'beta_student_3', name: 'James Williams', email: 'james@beta.admitsonly.com', password: 'Beta@2026', role: 'student' },
+    { id: 'beta_parent_1', name: 'Robert Chen', email: 'robert@beta.admitsonly.com', password: 'Beta@2026', role: 'parent' },
+  ];
+
+  for (const acct of seedAccounts) {
+    const hashed = await hash(acct.password, 12);
+    users.push({
+      id: acct.id,
+      name: acct.name,
+      email: acct.email,
+      password: hashed,
+      role: acct.role,
+      createdAt: new Date().toISOString(),
+    });
+  }
 }
 
 export function getUsers(): Omit<StoredUser, 'password'>[] {
