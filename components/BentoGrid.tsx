@@ -103,7 +103,7 @@ export default function BentoGrid() {
               {[
                 { label: 'Math', pct: 85, color: 'bg-accent' },
                 { label: 'Writing', pct: 72, color: 'bg-purple-500' },
-                { label: 'SAT Verbal', pct: 90, color: 'bg-emerald-500' },
+                { label: 'SAT R&W', pct: 90, color: 'bg-emerald-500' },
                 { label: 'Research', pct: 60, color: 'bg-amber-500' },
               ].map((bar) => (
                 <div key={bar.label}>
