@@ -5,7 +5,7 @@ import { prisma } from './db';
 
 export type UserRole = 'student' | 'parent' | 'admin';
 
-// Seed default accounts (admin + beta testers) — runs once per database
+// Seed default accounts (admin + beta testers) — runs once per server start
 let seeded = false;
 async function seedAccounts() {
   if (seeded) return;
@@ -32,6 +32,12 @@ async function seedAccounts() {
       });
     }
   }
+}
+
+// Reset a specific user to fresh slate (wipe profile + essays)
+export async function resetUserData(userId: string) {
+  await prisma.studentProfile.deleteMany({ where: { userId } });
+  await prisma.essay.deleteMany({ where: { userId } });
 }
 
 export async function getUsers() {
