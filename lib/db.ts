@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient; schemaReady: boolean };
 
@@ -12,12 +12,11 @@ if (process.env.NODE_ENV !== 'production') {
 // Create new tables if they don't exist yet (runs once per cold start)
 export async function ensureSchema() {
   if (globalForPrisma.schemaReady) return;
-  globalForPrisma.schemaReady = true;
 
   try {
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "student_profiles" (
-        "id"               TEXT NOT NULL DEFAULT gen_random_uuid()::text,
+        "id"               TEXT NOT NULL,
         "userId"           TEXT NOT NULL,
         "gpa"              DOUBLE PRECISION,
         "gpaScale"         TEXT NOT NULL DEFAULT '4.0',
@@ -39,7 +38,7 @@ export async function ensureSchema() {
 
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "essays" (
-        "id"               TEXT NOT NULL DEFAULT gen_random_uuid()::text,
+        "id"               TEXT NOT NULL,
         "userId"           TEXT NOT NULL,
         "title"            TEXT NOT NULL,
         "prompt"           TEXT NOT NULL DEFAULT '',
@@ -56,8 +55,11 @@ export async function ensureSchema() {
         CONSTRAINT "essays_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
       );
     `);
+
+    globalForPrisma.schemaReady = true;
   } catch (e) {
-    // Tables may already exist or DB may not support gen_random_uuid — non-fatal
+    // Tables likely already exist — mark as ready
+    globalForPrisma.schemaReady = true;
     console.error('ensureSchema (non-fatal):', (e as Error).message);
   }
 }

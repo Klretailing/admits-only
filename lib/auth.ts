@@ -1,7 +1,7 @@
 import type { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { compare, hash } from 'bcryptjs';
-import { prisma, ensureSchema } from './db';
+import { prisma } from './db';
 
 export type UserRole = 'student' | 'parent' | 'admin';
 
@@ -87,18 +87,22 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        await ensureSchema();
-        await seedAccounts();
+        try {
+          await seedAccounts();
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-        });
-        if (!user) return null;
+          const user = await prisma.user.findUnique({
+            where: { email: credentials.email },
+          });
+          if (!user) return null;
 
-        const valid = await compare(credentials.password, user.password);
-        if (!valid) return null;
+          const valid = await compare(credentials.password, user.password);
+          if (!valid) return null;
 
-        return { id: user.id, name: user.name, email: user.email, role: user.role } as any;
+          return { id: user.id, name: user.name, email: user.email, role: user.role } as any;
+        } catch (e) {
+          console.error('Auth error:', (e as Error).message);
+          return null;
+        }
       },
     }),
   ],
