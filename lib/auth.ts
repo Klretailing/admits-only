@@ -1,7 +1,7 @@
 import type { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { compare, hash } from 'bcryptjs';
-import { prisma } from './db';
+import { prisma, ensureSchema } from './db';
 
 export type UserRole = 'student' | 'parent' | 'admin';
 
@@ -87,6 +87,7 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
+        await ensureSchema();
         await seedAccounts();
 
         const user = await prisma.user.findUnique({
