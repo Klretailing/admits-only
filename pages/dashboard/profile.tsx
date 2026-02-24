@@ -1,6 +1,6 @@
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import Head from 'next/head';
 import DashboardLayout from '../../components/DashboardLayout';
 
@@ -26,7 +26,6 @@ interface ProfileData {
 
 /* ──────────────────────── SCORING ENGINE ──────────────────────── */
 
-// Simulated comparative dataset (anonymized aggregate of 2,847 students)
 const comparativeData = [
   { gpa: 3.2, sat: 1050, score: 42 }, { gpa: 3.4, sat: 1100, score: 48 },
   { gpa: 3.0, sat: 1020, score: 38 }, { gpa: 3.6, sat: 1200, score: 58 },
@@ -51,7 +50,6 @@ function evaluateExtracurriculars(ecs: Extracurricular[]): { score: number; feed
   let score = 0;
   const factors: string[] = [];
 
-  // Depth: leadership roles
   const leadershipKeywords = ['president', 'founder', 'captain', 'leader', 'chair', 'director', 'head', 'editor', 'chief'];
   const leadershipCount = ecs.filter((ec) =>
     leadershipKeywords.some((k) => ec.role.toLowerCase().includes(k) || ec.name.toLowerCase().includes(k))
@@ -60,12 +58,10 @@ function evaluateExtracurriculars(ecs: Extracurricular[]): { score: number; feed
   if (leadershipCount >= 2) factors.push('Strong leadership presence');
   else if (leadershipCount === 0) factors.push('Consider pursuing leadership roles');
 
-  // Breadth: unique categories
   const categories = new Set(ecs.map((ec) => ec.category));
   score += Math.min(categories.size * 5, 20);
   if (categories.size >= 3) factors.push('Well-rounded across categories');
 
-  // Commitment: years and hours
   const avgYears = ecs.reduce((sum, ec) => sum + ec.years, 0) / ecs.length;
   const avgHours = ecs.reduce((sum, ec) => sum + ec.hoursPerWeek, 0) / ecs.length;
   score += Math.min(avgYears * 4, 16);
@@ -73,7 +69,6 @@ function evaluateExtracurriculars(ecs: Extracurricular[]): { score: number; feed
   if (avgYears >= 3) factors.push('Deep commitment shown');
   if (avgHours >= 8) factors.push('Significant time investment');
 
-  // Impact keywords in descriptions
   const impactKeywords = ['community', 'national', 'state', 'award', 'published', 'research', 'raised', 'organized', 'created', 'launched', 'served', 'mentored'];
   const impactCount = ecs.filter((ec) =>
     impactKeywords.some((k) => ec.description.toLowerCase().includes(k))
@@ -93,28 +88,21 @@ function computeHolisticScore(profile: ProfileData) {
   const satRW = parseInt(profile.satRW) || 0;
   const totalSAT = satMath + satRW;
 
-  // Academic score (0-100)
   const gpaScore = Math.min((normalizedGpa / 4.0) * 100, 100);
   const satScore = Math.min(((totalSAT - 400) / 1200) * 100, 100);
-
-  // Extracurricular score
   const ecEval = evaluateExtracurriculars(profile.extracurriculars);
-
-  // Holistic: 35% GPA, 30% SAT, 35% Extracurriculars
   const holistic = Math.round(gpaScore * 0.35 + satScore * 0.30 + ecEval.score * 0.35);
-
-  // Percentile: compare against dataset
   const betterThan = comparativeData.filter((d) => holistic > d.score).length;
   const percentile = Math.round((betterThan / comparativeData.length) * 100);
 
   return { holistic, percentile, gpaScore: Math.round(gpaScore), satScore: Math.round(satScore), ecScore: ecEval.score, ecFeedback: ecEval.feedback, totalSAT, normalizedGpa };
 }
 
-/* ──────────────────────── SCATTERPLOT ──────────────────────── */
+/* ──────────────────────── MODERN SCATTERPLOT ──────────────────────── */
 
 function Scatterplot({ userGpa, userSat }: { userGpa: number; userSat: number }) {
-  const W = 500, H = 340;
-  const PAD = { top: 20, right: 30, bottom: 45, left: 55 };
+  const W = 520, H = 360;
+  const PAD = { top: 24, right: 34, bottom: 50, left: 58 };
   const plotW = W - PAD.left - PAD.right;
   const plotH = H - PAD.top - PAD.bottom;
 
@@ -124,81 +112,134 @@ function Scatterplot({ userGpa, userSat }: { userGpa: number; userSat: number })
   const toX = (gpa: number) => PAD.left + ((gpa - xMin) / (xMax - xMin)) * plotW;
   const toY = (sat: number) => PAD.top + plotH - ((sat - yMin) / (yMax - yMin)) * plotH;
 
-  // Zone boundaries
-  const zones = [
-    { label: 'Needs Improvement', xStart: xMin, xEnd: 3.3, yStart: yMin, yEnd: 1150, color: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.2)' },
-    { label: 'Developing', xStart: 3.3, xEnd: 3.7, yStart: 1150, yEnd: 1350, color: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)' },
-    { label: 'Competitive', xStart: 3.7, xEnd: xMax, yStart: 1350, yEnd: yMax, color: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.2)' },
-  ];
-
   const hasUser = userGpa > 0 && userSat > 0;
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full max-w-[520px]">
-      {/* Background zones */}
-      {zones.map((z) => (
-        <g key={z.label}>
-          <rect
-            x={toX(z.xStart)} y={toY(z.yEnd)}
-            width={toX(z.xEnd) - toX(z.xStart)} height={toY(z.yStart) - toY(z.yEnd)}
-            fill={z.color} stroke={z.border} strokeWidth="1" strokeDasharray="4 2" rx="4"
-          />
-          <text
-            x={toX(z.xStart) + 6} y={toY(z.yEnd) + 14}
-            className="text-[9px] font-semibold" fill={z.border.replace('0.2', '0.7')}
-          >
-            {z.label}
-          </text>
-        </g>
-      ))}
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full max-w-[540px]">
+      <defs>
+        {/* Gradient backgrounds for zones */}
+        <linearGradient id="zone-red" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#fee2e2" stopOpacity="0.7" />
+          <stop offset="100%" stopColor="#fecaca" stopOpacity="0.3" />
+        </linearGradient>
+        <linearGradient id="zone-amber" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#fef3c7" stopOpacity="0.7" />
+          <stop offset="100%" stopColor="#fde68a" stopOpacity="0.3" />
+        </linearGradient>
+        <linearGradient id="zone-green" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#d1fae5" stopOpacity="0.7" />
+          <stop offset="100%" stopColor="#a7f3d0" stopOpacity="0.3" />
+        </linearGradient>
+        {/* Glow for user dot */}
+        <radialGradient id="user-glow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#6366f1" stopOpacity="0.4" />
+          <stop offset="70%" stopColor="#6366f1" stopOpacity="0.1" />
+          <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
+        </radialGradient>
+        {/* Shadow filter */}
+        <filter id="dot-shadow" x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#6366f1" floodOpacity="0.3" />
+        </filter>
+        <filter id="zone-shadow" x="-2%" y="-2%" width="104%" height="104%">
+          <feDropShadow dx="0" dy="1" stdDeviation="3" floodColor="#000" floodOpacity="0.06" />
+        </filter>
+        {/* Comparative dot gradient */}
+        <radialGradient id="comp-dot" cx="30%" cy="30%" r="70%">
+          <stop offset="0%" stopColor="#c7d2fe" />
+          <stop offset="100%" stopColor="#a5b4fc" />
+        </radialGradient>
+        {/* User dot gradient */}
+        <radialGradient id="user-dot-grad" cx="30%" cy="30%" r="70%">
+          <stop offset="0%" stopColor="#818cf8" />
+          <stop offset="100%" stopColor="#4f46e5" />
+        </radialGradient>
+      </defs>
+
+      {/* Background */}
+      <rect x="0" y="0" width={W} height={H} rx="16" fill="white" />
+
+      {/* Zone: Needs Improvement */}
+      <rect
+        x={toX(xMin)} y={toY(1150)}
+        width={toX(3.3) - toX(xMin)} height={toY(yMin) - toY(1150)}
+        fill="url(#zone-red)" rx="8" filter="url(#zone-shadow)"
+      />
+      <text x={toX(xMin) + 8} y={toY(1150) + 16} className="text-[9px] font-bold" fill="#dc2626" opacity="0.7">
+        Needs Improvement
+      </text>
+
+      {/* Zone: Developing */}
+      <rect
+        x={toX(3.3)} y={toY(1350)}
+        width={toX(3.7) - toX(3.3)} height={toY(1150) - toY(1350)}
+        fill="url(#zone-amber)" rx="8" filter="url(#zone-shadow)"
+      />
+      <text x={toX(3.3) + 8} y={toY(1350) + 16} className="text-[9px] font-bold" fill="#d97706" opacity="0.7">
+        Developing
+      </text>
+
+      {/* Zone: Competitive */}
+      <rect
+        x={toX(3.7)} y={toY(yMax)}
+        width={toX(xMax) - toX(3.7)} height={toY(1350) - toY(yMax)}
+        fill="url(#zone-green)" rx="8" filter="url(#zone-shadow)"
+      />
+      <text x={toX(3.7) + 8} y={toY(yMax) + 16} className="text-[9px] font-bold" fill="#059669" opacity="0.7">
+        Competitive
+      </text>
 
       {/* Grid lines */}
       {[3.0, 3.5, 4.0].map((g) => (
-        <line key={`gx-${g}`} x1={toX(g)} y1={PAD.top} x2={toX(g)} y2={PAD.top + plotH} stroke="#e2e8f0" strokeWidth="0.5" />
+        <line key={`gx-${g}`} x1={toX(g)} y1={PAD.top} x2={toX(g)} y2={PAD.top + plotH} stroke="#e2e8f0" strokeWidth="0.5" strokeDasharray="4 4" />
       ))}
       {[1000, 1200, 1400].map((s) => (
-        <line key={`gy-${s}`} x1={PAD.left} y1={toY(s)} x2={PAD.left + plotW} y2={toY(s)} stroke="#e2e8f0" strokeWidth="0.5" />
+        <line key={`gy-${s}`} x1={PAD.left} y1={toY(s)} x2={PAD.left + plotW} y2={toY(s)} stroke="#e2e8f0" strokeWidth="0.5" strokeDasharray="4 4" />
       ))}
 
       {/* Axes */}
-      <line x1={PAD.left} y1={PAD.top + plotH} x2={PAD.left + plotW} y2={PAD.top + plotH} stroke="#94a3b8" strokeWidth="1" />
-      <line x1={PAD.left} y1={PAD.top} x2={PAD.left} y2={PAD.top + plotH} stroke="#94a3b8" strokeWidth="1" />
+      <line x1={PAD.left} y1={PAD.top + plotH} x2={PAD.left + plotW} y2={PAD.top + plotH} stroke="#cbd5e1" strokeWidth="1.5" />
+      <line x1={PAD.left} y1={PAD.top} x2={PAD.left} y2={PAD.top + plotH} stroke="#cbd5e1" strokeWidth="1.5" />
 
       {/* X axis labels */}
       {[2.5, 3.0, 3.5, 4.0].map((g) => (
-        <text key={`xl-${g}`} x={toX(g)} y={PAD.top + plotH + 18} textAnchor="middle" className="text-[10px]" fill="#94a3b8">{g.toFixed(1)}</text>
+        <text key={`xl-${g}`} x={toX(g)} y={PAD.top + plotH + 20} textAnchor="middle" className="text-[10px] font-medium" fill="#94a3b8">{g.toFixed(1)}</text>
       ))}
-      <text x={PAD.left + plotW / 2} y={H - 5} textAnchor="middle" className="text-[11px] font-semibold" fill="#64748b">GPA</text>
+      <text x={PAD.left + plotW / 2} y={H - 6} textAnchor="middle" className="text-[11px] font-bold" fill="#6366f1">GPA</text>
 
       {/* Y axis labels */}
       {[800, 1000, 1200, 1400, 1600].map((s) => (
-        <text key={`yl-${s}`} x={PAD.left - 8} y={toY(s) + 4} textAnchor="end" className="text-[10px]" fill="#94a3b8">{s}</text>
+        <text key={`yl-${s}`} x={PAD.left - 10} y={toY(s) + 4} textAnchor="end" className="text-[10px] font-medium" fill="#94a3b8">{s}</text>
       ))}
-      <text x={14} y={PAD.top + plotH / 2} textAnchor="middle" className="text-[11px] font-semibold" fill="#64748b" transform={`rotate(-90, 14, ${PAD.top + plotH / 2})`}>SAT Score</text>
+      <text x={14} y={PAD.top + plotH / 2} textAnchor="middle" className="text-[11px] font-bold" fill="#6366f1" transform={`rotate(-90, 14, ${PAD.top + plotH / 2})`}>SAT Score</text>
 
-      {/* Comparative dots */}
+      {/* Comparative dots with 3D effect */}
       {comparativeData.map((d, i) => (
-        <circle key={i} cx={toX(d.gpa)} cy={toY(d.sat)} r="4" fill="#94a3b8" opacity="0.3" />
+        <g key={i}>
+          <circle cx={toX(d.gpa)} cy={toY(d.sat)} r="5" fill="url(#comp-dot)" opacity="0.6" />
+          <circle cx={toX(d.gpa)} cy={toY(d.sat)} r="5" fill="none" stroke="#818cf8" strokeWidth="0.5" opacity="0.3" />
+        </g>
       ))}
 
-      {/* User dot */}
+      {/* User dot with glow + 3D */}
       {hasUser && (
         <g>
-          <circle cx={toX(userGpa)} cy={toY(userSat)} r="10" fill="rgba(99,102,241,0.15)" />
-          <circle cx={toX(userGpa)} cy={toY(userSat)} r="6" fill="#6366f1" stroke="white" strokeWidth="2" />
-          <text x={toX(userGpa) + 12} y={toY(userSat) + 4} className="text-[10px] font-bold" fill="#6366f1">You</text>
+          <circle cx={toX(userGpa)} cy={toY(userSat)} r="20" fill="url(#user-glow)" />
+          <circle cx={toX(userGpa)} cy={toY(userSat)} r="8" fill="url(#user-dot-grad)" filter="url(#dot-shadow)" />
+          <circle cx={toX(userGpa)} cy={toY(userSat)} r="8" fill="none" stroke="white" strokeWidth="2.5" />
+          <circle cx={toX(userGpa) - 2} cy={toY(userSat) - 2} r="2" fill="white" opacity="0.5" />
+          <text x={toX(userGpa) + 14} y={toY(userSat) + 4} className="text-[11px] font-extrabold" fill="#4f46e5">You</text>
         </g>
       )}
 
-      {/* Legend */}
-      <g transform={`translate(${PAD.left + plotW - 130}, ${PAD.top + 5})`}>
-        <rect x="0" y="0" width="130" height="52" rx="6" fill="white" stroke="#e2e8f0" />
-        <circle cx="12" cy="12" r="4" fill="rgba(34,197,94,0.5)" />
-        <text x="22" y="15" className="text-[9px]" fill="#64748b">Competitive</text>
-        <circle cx="12" cy="26" r="4" fill="rgba(245,158,11,0.5)" />
-        <text x="22" y="29" className="text-[9px]" fill="#64748b">Developing</text>
-        <circle cx="12" cy="40" r="4" fill="rgba(239,68,68,0.5)" />
-        <text x="22" y="43" className="text-[9px]" fill="#64748b">Needs Improvement</text>
+      {/* Modern Legend */}
+      <g transform={`translate(${PAD.left + plotW - 140}, ${PAD.top + 4})`}>
+        <rect x="0" y="0" width="138" height="58" rx="10" fill="white" stroke="#e2e8f0" filter="url(#zone-shadow)" />
+        <circle cx="14" cy="14" r="5" fill="#a7f3d0" stroke="#059669" strokeWidth="1" />
+        <text x="26" y="18" className="text-[9px] font-semibold" fill="#374151">Competitive</text>
+        <circle cx="14" cy="30" r="5" fill="#fde68a" stroke="#d97706" strokeWidth="1" />
+        <text x="26" y="34" className="text-[9px] font-semibold" fill="#374151">Developing</text>
+        <circle cx="14" cy="46" r="5" fill="#fecaca" stroke="#dc2626" strokeWidth="1" />
+        <text x="26" y="50" className="text-[9px] font-semibold" fill="#374151">Needs Improvement</text>
       </g>
     </svg>
   );
@@ -207,18 +248,26 @@ function Scatterplot({ userGpa, userSat }: { userGpa: number; userSat: number })
 /* ──────────────────────── SCORE RING ──────────────────────── */
 
 function ScoreRing({ score, label, size = 100, color = '#6366f1' }: { score: number; label: string; size?: number; color?: string }) {
-  const r = (size - 10) / 2;
+  const r = (size - 12) / 2;
   const c = Math.PI * 2 * r;
   const offset = c - (score / 100) * c;
 
   return (
     <div className="flex flex-col items-center gap-1.5">
-      <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#e2e8f0" strokeWidth="6" />
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth="6" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset} className="transition-all duration-1000" />
-      </svg>
-      <div className="absolute flex flex-col items-center justify-center" style={{ width: size, height: size }}>
-        <span className="text-2xl font-extrabold font-display text-primary">{score}</span>
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg width={size} height={size} className="-rotate-90">
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#f1f5f9" strokeWidth="8" />
+          <circle
+            cx={size / 2} cy={size / 2} r={r} fill="none"
+            stroke={color} strokeWidth="8" strokeLinecap="round"
+            strokeDasharray={c} strokeDashoffset={offset}
+            className="transition-all duration-1000"
+            style={{ filter: `drop-shadow(0 0 6px ${color}40)` }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-2xl font-extrabold font-display text-primary">{score}</span>
+        </div>
       </div>
       <p className="text-xs font-semibold text-slate-500 text-center">{label}</p>
     </div>
@@ -256,8 +305,59 @@ export default function StudentProfile() {
   });
 
   const [scored, setScored] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  // Load profile from DB on mount
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    fetch('/api/profile')
+      .then(r => r.json())
+      .then(data => {
+        if (data.profile) {
+          const p = data.profile;
+          setProfile({
+            gpa: p.gpa != null ? p.gpa.toString() : '',
+            gpaScale: (p.gpaScale as '4.0' | '5.0') || '4.0',
+            satMath: p.satMath != null ? p.satMath.toString() : '',
+            satRW: p.satRW != null ? p.satRW.toString() : '',
+            extracurriculars: (p.extracurriculars as Extracurricular[]) || [],
+          });
+          if (p.holisticScore != null) setScored(true);
+        }
+        setLoaded(true);
+      })
+      .catch(() => setLoaded(true));
+  }, [status]);
 
   const results = useMemo(() => computeHolisticScore(profile), [profile]);
+
+  // Save profile to DB
+  const saveProfile = useCallback(async (showScore: boolean) => {
+    setSaving(true);
+    const res = computeHolisticScore(profile);
+    try {
+      await fetch('/api/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          gpa: profile.gpa || null,
+          gpaScale: profile.gpaScale,
+          satMath: profile.satMath || null,
+          satRW: profile.satRW || null,
+          extracurriculars: profile.extracurriculars,
+          holisticScore: showScore ? res.holistic : null,
+          percentile: showScore ? res.percentile : null,
+          gpaScore: showScore ? res.gpaScore : null,
+          satScore: showScore ? res.satScore : null,
+          ecScore: showScore ? res.ecScore : null,
+        }),
+      });
+    } catch (e) {
+      // silently fail for now
+    }
+    setSaving(false);
+  }, [profile]);
 
   const addExtracurricular = () => {
     if (!newEC.name.trim()) return;
@@ -276,6 +376,15 @@ export default function StudentProfile() {
     }));
   };
 
+  // Auto-save when profile changes (debounced)
+  useEffect(() => {
+    if (!loaded) return;
+    const timer = setTimeout(() => {
+      saveProfile(scored);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [profile, scored, loaded, saveProfile]);
+
   if (status !== 'authenticated') return null;
 
   const totalSAT = (parseInt(profile.satMath) || 0) + (parseInt(profile.satRW) || 0);
@@ -285,9 +394,12 @@ export default function StudentProfile() {
       <Head><title>My Profile | AdmitsOnly Dashboard</title></Head>
 
       <div className="space-y-8">
-        <div>
-          <h1 className="text-2xl font-bold font-display text-primary">My Profile</h1>
-          <p className="mt-1 text-slate-500">Enter your stats and extracurriculars to see your holistic admissions evaluation.</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold font-display text-primary">My Profile</h1>
+            <p className="mt-1 text-slate-500">Enter your stats and extracurriculars to see your holistic admissions evaluation.</p>
+          </div>
+          {saving && <span className="text-xs text-slate-400 animate-pulse">Saving...</span>}
         </div>
 
         <div className="grid gap-8 lg:grid-cols-[1fr_1.2fr]">
@@ -297,7 +409,6 @@ export default function StudentProfile() {
             <div className="bg-white rounded-2xl border border-slate-100 p-6">
               <h3 className="text-lg font-bold font-display text-primary mb-5">Academic Stats</h3>
 
-              {/* GPA */}
               <div className="space-y-4">
                 <div className="grid grid-cols-[1fr_auto] gap-3">
                   <div>
@@ -326,7 +437,6 @@ export default function StudentProfile() {
                   </div>
                 </div>
 
-                {/* SAT */}
                 <div>
                   <label className="block text-sm font-medium text-primary mb-1.5">SAT Scores</label>
                   <div className="grid grid-cols-2 gap-3">
@@ -338,7 +448,7 @@ export default function StudentProfile() {
                         value={profile.satMath}
                         onChange={(e) => setProfile({ ...profile, satMath: e.target.value })}
                         className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
-                        placeholder="Math (200–800)"
+                        placeholder="Math (200-800)"
                       />
                       <p className="text-[11px] text-slate-400 mt-1">Math</p>
                     </div>
@@ -350,7 +460,7 @@ export default function StudentProfile() {
                         value={profile.satRW}
                         onChange={(e) => setProfile({ ...profile, satRW: e.target.value })}
                         className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
-                        placeholder="R&W (200–800)"
+                        placeholder="R&W (200-800)"
                       />
                       <p className="text-[11px] text-slate-400 mt-1">Reading & Writing</p>
                     </div>
@@ -386,7 +496,6 @@ export default function StudentProfile() {
                 </div>
               )}
 
-              {/* EC list */}
               <div className="space-y-3">
                 {profile.extracurriculars.map((ec) => (
                   <div key={ec.id} className="p-4 rounded-xl bg-surface border border-slate-100 group">
@@ -410,7 +519,6 @@ export default function StudentProfile() {
                 ))}
               </div>
 
-              {/* Add EC form */}
               {showAddEC && (
                 <div className="mt-4 p-4 rounded-xl bg-accent/5 border border-accent/10 space-y-3">
                   <div className="grid grid-cols-2 gap-3">
@@ -479,7 +587,10 @@ export default function StudentProfile() {
 
             {/* Evaluate button */}
             <button
-              onClick={() => setScored(true)}
+              onClick={() => {
+                setScored(true);
+                saveProfile(true);
+              }}
               disabled={!profile.gpa && !profile.satMath}
               className="btn-primary w-full text-base disabled:opacity-40 disabled:cursor-not-allowed"
             >
@@ -507,12 +618,8 @@ export default function StudentProfile() {
                 <div className="bg-white rounded-2xl border border-slate-100 p-6">
                   <h3 className="text-lg font-bold font-display text-primary mb-5">Holistic Evaluation</h3>
                   <div className="flex items-center justify-around gap-4">
-                    <div className="relative">
-                      <ScoreRing score={results.holistic} label="Overall Score" size={110} />
-                    </div>
-                    <div className="relative">
-                      <ScoreRing score={results.percentile} label="Percentile" size={110} color="#10b981" />
-                    </div>
+                    <ScoreRing score={results.holistic} label="Overall Score" size={110} />
+                    <ScoreRing score={results.percentile} label="Percentile" size={110} color="#10b981" />
                   </div>
 
                   <div className="mt-6 p-4 rounded-xl bg-surface border border-slate-100">
@@ -536,7 +643,6 @@ export default function StudentProfile() {
                     </div>
                   </div>
 
-                  {/* Percentile context */}
                   <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-accent/5 to-purple-50 border border-accent/10">
                     <p className="text-sm font-semibold text-primary">
                       You&apos;re in the <span className="text-accent">{results.percentile}th percentile</span> compared to {comparativeData.length} students on the platform.
@@ -549,7 +655,6 @@ export default function StudentProfile() {
                     </p>
                   </div>
 
-                  {/* EC feedback */}
                   {results.ecFeedback && (
                     <div className="mt-4 p-4 rounded-xl bg-emerald-50 border border-emerald-100">
                       <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-1">AI Extracurricular Assessment</p>

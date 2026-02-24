@@ -1,72 +1,69 @@
 import type { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { compare, hash } from 'bcryptjs';
+import { prisma } from './db';
 
-// In-memory user store for demo — replace with a real database (Supabase, Prisma, etc.)
 export type UserRole = 'student' | 'parent' | 'admin';
 
-export interface StoredUser {
-  id: string;
-  name: string;
-  email: string;
-  password: string;
-  role: UserRole;
-  createdAt: string;
-}
+// Seed default accounts (admin + beta testers) — runs once per server start
+let seeded = false;
+async function seedAccounts() {
+  if (seeded) return;
+  seeded = true;
 
-// This is a demo store. In production, use a proper database.
-const users: StoredUser[] = [];
-
-// Seed default accounts (admin + beta testers)
-// In production, use environment variables or a secure setup flow instead.
-let accountsSeeded = false;
-async function seedAdmin() {
-  if (accountsSeeded) return;
-  accountsSeeded = true;
-
-  const seedAccounts: { id: string; name: string; email: string; password: string; role: UserRole }[] = [
-    // Admin — password: Admin@2024
-    { id: 'admin_default', name: 'Admin', email: 'admin@admitsonly.com', password: 'Admin@2024', role: 'admin' },
-    // Beta testers — password: Beta@2026
-    { id: 'beta_student_1', name: 'Maya Johnson', email: 'maya@beta.admitsonly.com', password: 'Beta@2026', role: 'student' },
-    { id: 'beta_student_2', name: 'Aisha Patel', email: 'aisha@beta.admitsonly.com', password: 'Beta@2026', role: 'student' },
-    { id: 'beta_student_3', name: 'James Williams', email: 'james@beta.admitsonly.com', password: 'Beta@2026', role: 'student' },
-    { id: 'beta_parent_1', name: 'Robert Chen', email: 'robert@beta.admitsonly.com', password: 'Beta@2026', role: 'parent' },
+  const accounts = [
+    { name: 'Admin', email: 'admin@admitsonly.com', password: 'Admin@2024', role: 'admin' },
+    { name: 'Maya Johnson', email: 'maya@beta.admitsonly.com', password: 'Beta@2026', role: 'student' },
+    { name: 'Aisha Patel', email: 'aisha@beta.admitsonly.com', password: 'Beta@2026', role: 'student' },
+    { name: 'James Williams', email: 'james@beta.admitsonly.com', password: 'Beta@2026', role: 'student' },
+    { name: 'Robert Chen', email: 'robert@beta.admitsonly.com', password: 'Beta@2026', role: 'parent' },
   ];
 
-  for (const acct of seedAccounts) {
-    const hashed = await hash(acct.password, 12);
-    users.push({
-      id: acct.id,
-      name: acct.name,
-      email: acct.email,
-      password: hashed,
-      role: acct.role,
-      createdAt: new Date().toISOString(),
-    });
+  for (const acct of accounts) {
+    const exists = await prisma.user.findUnique({ where: { email: acct.email } });
+    if (!exists) {
+      await prisma.user.create({
+        data: {
+          name: acct.name,
+          email: acct.email,
+          password: await hash(acct.password, 12),
+          role: acct.role,
+        },
+      });
+    }
   }
 }
 
-export function getUsers(): Omit<StoredUser, 'password'>[] {
-  return users.map(({ password, ...u }) => u);
+// Reset a specific user to fresh slate (wipe profile + essays)
+export async function resetUserData(userId: string) {
+  await prisma.studentProfile.deleteMany({ where: { userId } });
+  await prisma.essay.deleteMany({ where: { userId } });
+}
+
+export async function getUsers() {
+  const users = await prisma.user.findMany({
+    select: { id: true, name: true, email: true, role: true, createdAt: true },
+  });
+  return users;
 }
 
 export async function createUser(name: string, email: string, password: string, role: UserRole) {
-  await seedAdmin();
-  const exists = users.find((u) => u.email === email);
+  await seedAccounts();
+
+  const exists = await prisma.user.findUnique({ where: { email } });
   if (exists) throw new Error('User already exists');
 
-  const hashed = await hash(password, 12);
-  const user: StoredUser = {
-    id: `user_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-    name,
-    email,
-    password: hashed,
-    role,
-    createdAt: new Date().toISOString(),
-  };
-  users.push(user);
-  return { id: user.id, name: user.name, email: user.email, role: user.role };
+  const user = await prisma.user.create({
+    data: {
+      name,
+      email,
+      password: await hash(password, 12),
+      role,
+    },
+    select: { id: true, name: true, email: true, role: true },
+  });
+
+  return user;
 }
 
 export const authOptions: NextAuthOptions = {
@@ -85,9 +82,11 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        await seedAdmin();
+        await seedAccounts();
 
-        const user = users.find((u) => u.email === credentials.email);
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email },
+        });
         if (!user) return null;
 
         const valid = await compare(credentials.password, user.password);

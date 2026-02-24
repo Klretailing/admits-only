@@ -122,22 +122,18 @@ class Analytics {
     const events = [...this.buffer];
     this.buffer = [];
 
-    // For now, store in sessionStorage so you can inspect in DevTools
-    try {
-      const key = 'ao_analytics';
-      const existing = JSON.parse(sessionStorage.getItem(key) || '[]');
-      sessionStorage.setItem(key, JSON.stringify([...existing, ...events]));
-    } catch {
-      // storage full or unavailable — silent fail
+    const body = JSON.stringify(events);
+    if (sync && navigator.sendBeacon) {
+      navigator.sendBeacon('/api/analytics', body);
+    } else {
+      fetch('/api/analytics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      }).catch(() => {
+        // silent fail — analytics should never block the user
+      });
     }
-
-    // When you have an endpoint, uncomment:
-    // const body = JSON.stringify(events);
-    // if (sync && navigator.sendBeacon) {
-    //   navigator.sendBeacon('/api/analytics', body);
-    // } else {
-    //   fetch('/api/analytics', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
-    // }
   }
 
   destroy() {

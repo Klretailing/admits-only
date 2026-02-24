@@ -1,6 +1,6 @@
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import DashboardLayout from '../../components/DashboardLayout';
@@ -11,20 +11,45 @@ const upcomingSessions = [
   { title: 'STEM Research Check-in', coach: 'Prof. Liu', date: 'Fri, 5:00 PM', type: 'Cohort' },
 ];
 
-const recentActivity = [
-  { action: 'Essay draft submitted', detail: 'Personal Statement — Draft 2', time: '2 hours ago' },
-  { action: 'SAT practice completed', detail: 'Score: 1480 (+40 from last)', time: 'Yesterday' },
-  { action: 'Session completed', detail: 'College List Strategy with Sarah M.', time: '2 days ago' },
-  { action: 'Milestone reached', detail: 'Completed 10 practice essays', time: '3 days ago' },
-];
+interface DashboardStats {
+  satScore: string;
+  essayCount: string;
+  essayStatus: string;
+  holisticScore: string;
+  percentile: string;
+  gpa: string;
+}
+
+interface DashboardProfile {
+  gpaScore: number | null;
+  satScore: number | null;
+  ecScore: number | null;
+  holisticScore: number | null;
+  percentile: number | null;
+}
 
 export default function Dashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [profile, setProfile] = useState<DashboardProfile | null>(null);
+
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/login');
   }, [status, router]);
+
+  // Fetch real dashboard data
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    fetch('/api/dashboard')
+      .then(r => r.json())
+      .then(data => {
+        setStats(data.stats);
+        setProfile(data.profile);
+      })
+      .catch(() => {});
+  }, [status]);
 
   if (status === 'loading' || !session) {
     return (
@@ -34,6 +59,8 @@ export default function Dashboard() {
     );
   }
 
+  const hasProfile = profile && profile.holisticScore != null;
+
   return (
     <DashboardLayout>
       <Head>
@@ -41,7 +68,6 @@ export default function Dashboard() {
       </Head>
 
       <div className="space-y-8">
-        {/* Welcome + payment success banner */}
         {router.query.payment === 'success' && (
           <div className="p-4 bg-green-50 border border-green-100 rounded-2xl text-sm text-green-700 font-medium">
             Payment successful! Your subscription is now active.
@@ -55,15 +81,15 @@ export default function Dashboard() {
           <p className="mt-1 text-slate-500">Here&apos;s your academic progress at a glance.</p>
         </div>
 
-        {/* Stat cards */}
+        {/* Stat cards — real data from DB */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'SAT Score', value: '1480', change: '+40', positive: true },
-            { label: 'Essays Drafted', value: '7', change: '3 in review', positive: true },
-            { label: 'Sessions Completed', value: '24', change: 'this semester', positive: true },
-            { label: 'College List', value: '12', change: 'schools', positive: true },
+            { label: 'SAT Score', value: stats?.satScore || '—', change: hasProfile ? 'from profile' : 'add in profile', positive: hasProfile },
+            { label: 'Essays', value: stats?.essayCount || '0', change: stats?.essayStatus || 'none yet', positive: (parseInt(stats?.essayCount || '0') > 0) },
+            { label: 'Holistic Score', value: stats?.holisticScore || '—', change: hasProfile ? '/100' : 'evaluate profile', positive: hasProfile },
+            { label: 'GPA', value: stats?.gpa || '—', change: hasProfile ? 'from profile' : 'add in profile', positive: hasProfile },
           ].map((stat) => (
-            <div key={stat.label} className="bg-white rounded-2xl border border-slate-100 p-5">
+            <Link href="/dashboard/profile" key={stat.label} className="bg-white rounded-2xl border border-slate-100 p-5 hover:shadow-md hover:border-slate-200 transition-all">
               <p className="text-sm text-slate-500 font-medium">{stat.label}</p>
               <div className="mt-2 flex items-end gap-2">
                 <span className="text-2xl font-bold font-display text-primary">{stat.value}</span>
@@ -71,40 +97,59 @@ export default function Dashboard() {
                   {stat.change}
                 </span>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
 
+        {/* Progress / CTA */}
         <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
-          {/* Progress chart placeholder */}
-          <div className="bg-white rounded-2xl border border-slate-100 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold font-display text-primary">Academic Progress</h3>
-              <span className="badge-accent">This Semester</span>
+          {hasProfile ? (
+            <div className="bg-white rounded-2xl border border-slate-100 p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-bold font-display text-primary">Score Breakdown</h3>
+                <Link href="/dashboard/profile" className="text-sm font-semibold text-accent hover:underline">Update Profile</Link>
+              </div>
+              <div className="space-y-4">
+                {[
+                  { subject: 'GPA Score', pct: profile?.gpaScore || 0, color: 'bg-accent' },
+                  { subject: 'SAT Score', pct: profile?.satScore || 0, color: 'bg-purple-500' },
+                  { subject: 'Extracurriculars', pct: profile?.ecScore || 0, color: 'bg-emerald-500' },
+                  { subject: 'Overall Holistic', pct: profile?.holisticScore || 0, color: 'bg-gradient-to-r from-accent to-purple-500' },
+                ].map((item) => (
+                  <div key={item.subject}>
+                    <div className="flex justify-between text-sm mb-1.5">
+                      <span className="font-medium text-primary">{item.subject}</span>
+                      <span className="font-semibold text-slate-500">{item.pct}/100</span>
+                    </div>
+                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full ${item.color} rounded-full transition-all duration-1000`}
+                        style={{ width: `${item.pct}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="space-y-4">
-              {[
-                { subject: 'SAT Math', pct: 88, color: 'bg-accent' },
-                { subject: 'SAT Reading & Writing', pct: 82, color: 'bg-purple-500' },
-                { subject: 'Essay Writing', pct: 75, color: 'bg-emerald-500' },
-                { subject: 'Research Project', pct: 60, color: 'bg-amber-500' },
-                { subject: 'Extracurricular Portfolio', pct: 45, color: 'bg-rose-500' },
-              ].map((item) => (
-                <div key={item.subject}>
-                  <div className="flex justify-between text-sm mb-1.5">
-                    <span className="font-medium text-primary">{item.subject}</span>
-                    <span className="font-semibold text-slate-500">{item.pct}%</span>
-                  </div>
-                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full ${item.color} rounded-full transition-all duration-1000`}
-                      style={{ width: `${item.pct}%` }}
-                    />
-                  </div>
+          ) : (
+            <div className="bg-white rounded-2xl border border-slate-100 p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-bold font-display text-primary">Get Started</h3>
+              </div>
+              <div className="text-center py-6">
+                <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-accent/10 to-purple-100 flex items-center justify-center mb-4">
+                  <svg className="w-7 h-7 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
                 </div>
-              ))}
+                <p className="text-sm text-slate-600 font-medium mb-1">Build your student profile</p>
+                <p className="text-xs text-slate-400 mb-4">Add your GPA, SAT scores, and extracurriculars to see your holistic evaluation.</p>
+                <Link href="/dashboard/profile" className="btn-primary text-sm inline-block">
+                  Go to Profile
+                </Link>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Upcoming sessions */}
           <div className="bg-white rounded-2xl border border-slate-100 p-6">
@@ -133,21 +178,35 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Recent activity */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-6">
-          <h3 className="text-lg font-bold font-display text-primary mb-6">Recent Activity</h3>
-          <div className="space-y-4">
-            {recentActivity.map((a, i) => (
-              <div key={i} className="flex items-center gap-4">
-                <div className="w-2 h-2 rounded-full bg-accent flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-primary">{a.action}</p>
-                  <p className="text-xs text-slate-500">{a.detail}</p>
-                </div>
-                <span className="text-xs text-slate-400 whitespace-nowrap">{a.time}</span>
-              </div>
-            ))}
-          </div>
+        {/* Quick links */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Link href="/dashboard/profile" className="bg-white rounded-2xl border border-slate-100 p-5 hover:shadow-md hover:border-slate-200 transition-all group">
+            <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center mb-3">
+              <svg className="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            <p className="text-sm font-bold text-primary group-hover:text-accent transition-colors">My Profile</p>
+            <p className="text-xs text-slate-400 mt-0.5">Update scores & activities</p>
+          </Link>
+          <Link href="/dashboard/essays" className="bg-white rounded-2xl border border-slate-100 p-5 hover:shadow-md hover:border-slate-200 transition-all group">
+            <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center mb-3">
+              <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <p className="text-sm font-bold text-primary group-hover:text-purple-600 transition-colors">Essay Workspace</p>
+            <p className="text-xs text-slate-400 mt-0.5">Write & analyze essays</p>
+          </Link>
+          <Link href="/dashboard/sessions" className="bg-white rounded-2xl border border-slate-100 p-5 hover:shadow-md hover:border-slate-200 transition-all group">
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center mb-3">
+              <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <p className="text-sm font-bold text-primary group-hover:text-emerald-600 transition-colors">Sessions</p>
+            <p className="text-xs text-slate-400 mt-0.5">View upcoming coaching</p>
+          </Link>
         </div>
       </div>
     </DashboardLayout>

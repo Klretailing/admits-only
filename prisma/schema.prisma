@@ -1,0 +1,77 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("student") // student | parent | admin
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  profile StudentProfile?
+  essays  Essay[]
+
+  @@map("users")
+}
+
+model StudentProfile {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  gpa              Float?
+  gpaScale         String   @default("4.0")
+  satMath          Int?
+  satRW            Int?
+  extracurriculars Json     @default("[]") // Array of EC objects
+  holisticScore    Int?
+  percentile       Int?
+  gpaScore         Int?
+  satScore         Int?
+  ecScore          Int?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("student_profiles")
+}
+
+model Essay {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  prompt    String   @default("")
+  content   String   @default("")
+  status    String   @default("Draft") // Draft | In Review | Complete
+  aiScore       Float?
+  vocabScore    Float?
+  grammarScore  Float?
+  originalityScore Float?
+  overallScore  Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("essays")
+}
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  type      String   // pageview | click | session | event
+  timestamp DateTime
+  path      String
+  referrer  String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([type])
+  @@index([timestamp])
+  @@map("analytics_events")
+}
