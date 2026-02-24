@@ -11,26 +11,31 @@ async function seedAccounts() {
   if (seeded) return;
   seeded = true;
 
-  const accounts = [
-    { name: 'Admin', email: 'admin@admitsonly.com', password: 'Admin@2024', role: 'admin' },
-    { name: 'Maya Johnson', email: 'maya@beta.admitsonly.com', password: 'Beta@2026', role: 'student' },
-    { name: 'Aisha Patel', email: 'aisha@beta.admitsonly.com', password: 'Beta@2026', role: 'student' },
-    { name: 'James Williams', email: 'james@beta.admitsonly.com', password: 'Beta@2026', role: 'student' },
-    { name: 'Robert Chen', email: 'robert@beta.admitsonly.com', password: 'Beta@2026', role: 'parent' },
-  ];
+  try {
+    const accounts = [
+      { name: 'Admin', email: 'admin@admitsonly.com', password: 'Admin@2024', role: 'admin' },
+      { name: 'Maya Johnson', email: 'maya@beta.admitsonly.com', password: 'Beta@2026', role: 'student' },
+      { name: 'Aisha Patel', email: 'aisha@beta.admitsonly.com', password: 'Beta@2026', role: 'student' },
+      { name: 'James Williams', email: 'james@beta.admitsonly.com', password: 'Beta@2026', role: 'student' },
+      { name: 'Robert Chen', email: 'robert@beta.admitsonly.com', password: 'Beta@2026', role: 'parent' },
+    ];
 
-  for (const acct of accounts) {
-    const exists = await prisma.user.findUnique({ where: { email: acct.email } });
-    if (!exists) {
-      await prisma.user.create({
-        data: {
-          name: acct.name,
-          email: acct.email,
-          password: await hash(acct.password, 12),
-          role: acct.role,
-        },
-      });
+    for (const acct of accounts) {
+      const exists = await prisma.user.findUnique({ where: { email: acct.email } });
+      if (!exists) {
+        await prisma.user.create({
+          data: {
+            name: acct.name,
+            email: acct.email,
+            password: await hash(acct.password, 12),
+            role: acct.role,
+          },
+        });
+      }
     }
+  } catch (e) {
+    // Log but don't crash — allows login to proceed if users table exists
+    console.error('Seed error (non-fatal):', (e as Error).message);
   }
 }
 
