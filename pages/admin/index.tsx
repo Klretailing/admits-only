@@ -1,6 +1,6 @@
 import Head from 'next/head';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AdminLayout from '../../components/AdminLayout';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
 
@@ -95,6 +95,11 @@ function RevenueChart({ data }: { data: typeof revenueByMonth }) {
 export default function AdminDashboard() {
   const { loading } = useAdminGuard();
   const [viewMode, setViewMode] = useState<'admin' | 'student'>('admin');
+  const [stats, setStats] = useState({ totalUsers: 0, totalStudents: 0, totalEssays: 0, unreadContacts: 0 });
+
+  useEffect(() => {
+    fetch('/api/admin/stats').then((r) => r.json()).then(setStats).catch(() => {});
+  }, []);
 
   if (loading) {
     return (
@@ -228,6 +233,28 @@ export default function AdminDashboard() {
         ) : (
           /* ─── ADMIN COMMAND CENTER ─── */
           <>
+            {/* Live Stats */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white rounded-2xl border border-slate-100 p-5">
+                <p className="text-sm text-slate-500 font-medium">Registered Users</p>
+                <p className="mt-2 text-2xl font-bold font-display text-primary">{stats.totalUsers}</p>
+              </div>
+              <div className="bg-white rounded-2xl border border-slate-100 p-5">
+                <p className="text-sm text-slate-500 font-medium">Students</p>
+                <p className="mt-2 text-2xl font-bold font-display text-primary">{stats.totalStudents}</p>
+              </div>
+              <div className="bg-white rounded-2xl border border-slate-100 p-5">
+                <p className="text-sm text-slate-500 font-medium">Essays Written</p>
+                <p className="mt-2 text-2xl font-bold font-display text-primary">{stats.totalEssays}</p>
+              </div>
+              <Link href="/admin/messages" className="bg-white rounded-2xl border border-slate-100 p-5 hover:border-accent/30 transition-colors">
+                <p className="text-sm text-slate-500 font-medium">Unread Messages</p>
+                <p className={`mt-2 text-2xl font-bold font-display ${stats.unreadContacts > 0 ? 'text-accent' : 'text-primary'}`}>
+                  {stats.unreadContacts}
+                </p>
+              </Link>
+            </div>
+
             {/* Operational Alerts */}
             <div className="space-y-2">
               {operationalAlerts.map((alert, i) => (

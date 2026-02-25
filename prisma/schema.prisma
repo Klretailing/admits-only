@@ -62,6 +62,18 @@ model Essay {
   @@map("essays")
 }
 
+model ContactSubmission {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("contact_submissions")
+}
+
 model AnalyticsEvent {
   id        String   @id @default(cuid())
   type      String   // pageview | click | session | event
