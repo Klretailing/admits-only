@@ -1,7 +1,7 @@
 import type { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { compare, hash } from 'bcryptjs';
-import { prisma } from './db';
+import { prisma, ensureSchema } from './db';
 
 export type UserRole = 'student' | 'parent' | 'admin';
 
@@ -12,6 +12,8 @@ async function seedAccounts() {
   seeded = true;
 
   try {
+    await ensureSchema();
+
     const accounts = [
       { name: 'Admin', email: 'admin@admitsonly.com', password: 'Admin@2024', role: 'admin' },
       { name: 'Maya Johnson', email: 'maya@beta.admitsonly.com', password: 'Beta@2026', role: 'student' },
