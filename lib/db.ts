@@ -18,11 +18,26 @@ if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;
 }
 
-// Create new tables if they don't exist yet (runs once per cold start)
+// Create tables if they don't exist yet (runs once per cold start)
 export async function ensureSchema() {
   if (globalForPrisma.schemaReady) return;
 
   try {
+    // Users table must exist first (referenced by foreign keys)
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "users" (
+        "id"        TEXT NOT NULL,
+        "name"      TEXT NOT NULL,
+        "email"     TEXT NOT NULL,
+        "password"  TEXT NOT NULL,
+        "role"      TEXT NOT NULL DEFAULT 'student',
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "users_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "users_email_key" UNIQUE ("email")
+      );
+    `);
+
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "student_profiles" (
         "id"               TEXT NOT NULL,
@@ -62,6 +77,19 @@ export async function ensureSchema() {
         "updatedAt"        TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         CONSTRAINT "essays_pkey" PRIMARY KEY ("id"),
         CONSTRAINT "essays_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "analytics_events" (
+        "id"        TEXT NOT NULL,
+        "type"      TEXT NOT NULL,
+        "timestamp" TIMESTAMP(3) NOT NULL,
+        "path"      TEXT NOT NULL,
+        "referrer"  TEXT,
+        "meta"      JSONB,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "analytics_events_pkey" PRIMARY KEY ("id")
       );
     `);
 
