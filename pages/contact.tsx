@@ -1,7 +1,28 @@
 import Head from 'next/head';
 import Link from 'next/link';
+import { useState, FormEvent } from 'react';
 
 export default function Contact() {
+  const [form, setForm] = useState({ name: '', email: '', phone: '', message: '' });
+  const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setStatus('sending');
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) throw new Error('Failed to send');
+      setStatus('sent');
+      setForm({ name: '', email: '', phone: '', message: '' });
+    } catch {
+      setStatus('error');
+    }
+  }
+
   return (
     <>
       <Head>
@@ -42,13 +63,27 @@ export default function Contact() {
                   Fill out the form below and a member of our team will reach out to discuss how we can help.
                 </p>
 
-                <form className="space-y-5">
+                {status === 'sent' ? (
+                  <div className="p-6 rounded-2xl bg-green-50 border border-green-100 text-center">
+                    <svg className="w-12 h-12 text-green-500 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <h3 className="text-lg font-bold text-primary">Message sent!</h3>
+                    <p className="mt-2 text-slate-500">We&apos;ll get back to you within one business day.</p>
+                    <button onClick={() => setStatus('idle')} className="mt-4 text-sm font-semibold text-accent hover:underline">
+                      Send another message
+                    </button>
+                  </div>
+                ) : (
+                <form className="space-y-5" onSubmit={handleSubmit}>
                   <div className="grid gap-5 sm:grid-cols-2">
                     <div>
                       <label className="block mb-2 text-sm font-semibold text-primary">Full Name</label>
                       <input
                         type="text"
-                        name="name"
+                        required
+                        value={form.name}
+                        onChange={(e) => setForm({ ...form, name: e.target.value })}
                         className="w-full border border-slate-200 bg-surface p-3.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-colors"
                         placeholder="Your name"
                       />
@@ -57,7 +92,9 @@ export default function Contact() {
                       <label className="block mb-2 text-sm font-semibold text-primary">Email Address</label>
                       <input
                         type="email"
-                        name="email"
+                        required
+                        value={form.email}
+                        onChange={(e) => setForm({ ...form, email: e.target.value })}
                         className="w-full border border-slate-200 bg-surface p-3.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-colors"
                         placeholder="you@example.com"
                       />
@@ -67,7 +104,8 @@ export default function Contact() {
                     <label className="block mb-2 text-sm font-semibold text-primary">Phone (optional)</label>
                     <input
                       type="tel"
-                      name="phone"
+                      value={form.phone}
+                      onChange={(e) => setForm({ ...form, phone: e.target.value })}
                       className="w-full border border-slate-200 bg-surface p-3.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-colors"
                       placeholder="(555) 123-4567"
                     />
@@ -75,16 +113,22 @@ export default function Contact() {
                   <div>
                     <label className="block mb-2 text-sm font-semibold text-primary">How can we help?</label>
                     <textarea
-                      name="message"
+                      required
+                      value={form.message}
+                      onChange={(e) => setForm({ ...form, message: e.target.value })}
                       rows={5}
                       className="w-full border border-slate-200 bg-surface p-3.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-colors resize-none"
                       placeholder="Tell us about your student's grade level, goals, and any specific areas where you'd like support."
                     />
                   </div>
-                  <button type="submit" className="btn-primary text-base w-full sm:w-auto">
-                    Send Message
+                  {status === 'error' && (
+                    <p className="text-sm text-red-600 font-medium">Something went wrong. Please try again.</p>
+                  )}
+                  <button type="submit" disabled={status === 'sending'} className="btn-primary text-base w-full sm:w-auto disabled:opacity-60">
+                    {status === 'sending' ? 'Sending...' : 'Send Message'}
                   </button>
                 </form>
+                )}
               </div>
 
               {/* Contact Info */}

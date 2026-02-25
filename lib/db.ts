@@ -81,6 +81,19 @@ export async function ensureSchema() {
     `);
 
     await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "contact_submissions" (
+        "id"        TEXT NOT NULL,
+        "name"      TEXT NOT NULL,
+        "email"     TEXT NOT NULL,
+        "phone"     TEXT,
+        "message"   TEXT NOT NULL,
+        "read"      BOOLEAN NOT NULL DEFAULT false,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "contact_submissions_pkey" PRIMARY KEY ("id")
+      );
+    `);
+
+    await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "analytics_events" (
         "id"        TEXT NOT NULL,
         "type"      TEXT NOT NULL,
