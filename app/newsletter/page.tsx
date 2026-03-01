@@ -70,11 +70,12 @@ function NewsletterForm() {
     return Object.keys(errs).length === 0;
   }
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!validate()) return;
 
     setSubmitting(true);
+    setErrors({});
 
     const data = {
       firstName: firstName.trim(),
@@ -87,29 +88,30 @@ function NewsletterForm() {
       consentNewsletter: consentEmail,
       consentContact,
       consentSMS,
-      timestamp: new Date().toISOString(),
       source: typeof window !== "undefined" ? window.location.href : "",
     };
 
-    // ── INTEGRATION POINT ──
-    // Replace the setTimeout below with your actual API call once you have a backend:
-    //
-    // Option A — Beehiiv API:
-    // fetch('https://api.beehiiv.com/v2/publications/YOUR_PUB_ID/subscriptions', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer YOUR_API_KEY' },
-    //   body: JSON.stringify({ email: data.email, utm_source: 'website_form', custom_fields: [{ name: 'first_name', value: data.firstName }, { name: 'grade', value: data.grade }] })
-    // })
-    //
-    // Option B — Mailchimp:
-    // POST to your Mailchimp list endpoint with merge fields
-    //
-    // For now: simulates a successful submission and shows the thank-you screen
-    setTimeout(() => {
+    try {
+      const res = await fetch("/api/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        setErrors({ form: result.error || "Something went wrong. Please try again." });
+        setSubmitting(false);
+        return;
+      }
+
       setSubmitting(false);
       setSubmitted(true);
-      console.log("Form submitted:", data);
-    }, 1000);
+    } catch {
+      setErrors({ form: "Network error. Please check your connection and try again." });
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -644,6 +646,12 @@ function NewsletterForm() {
                     frequency varies. Reply STOP to cancel, HELP for help.
                   </div>
                 </div>
+
+                {errors.form && (
+                  <div className={s.fieldErrorVisible} style={{ marginBottom: 8, textAlign: "center" }}>
+                    {errors.form}
+                  </div>
+                )}
 
                 {submitting ? (
                   <button type="button" className={s.submitBtnDisabled} disabled>
