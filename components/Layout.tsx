@@ -34,6 +34,7 @@ const navLinks = [
   { href: '/pricing', label: 'Pricing' },
   { href: '/about', label: 'About' },
   { href: '/faq', label: 'FAQ' },
+  { href: '/newsletter', label: 'Newsletter' },
   { href: '/contact', label: 'Contact' },
 ];
 
@@ -132,8 +133,8 @@ export default function Layout({ children }: LayoutProps) {
         {/* Footer */}
         <footer className="bg-primary text-white">
           <div className="max-w-7xl mx-auto px-6 py-16">
-            <div className="grid gap-12 md:grid-cols-4">
-              <div className="md:col-span-2">
+            <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-5">
+              <div className="lg:col-span-2">
                 <div className="flex items-center gap-2.5">
                   <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-accent to-purple-600 flex items-center justify-center">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -167,6 +168,25 @@ export default function Layout({ children }: LayoutProps) {
                   <li><Link href="/contact" className="hover:text-white transition-colors">Contact</Link></li>
                   <li><a href="mailto:info@admitsonly.com" className="hover:text-white transition-colors">info@admitsonly.com</a></li>
                 </ul>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-4">Newsletter</h4>
+                <p className="text-sm text-slate-400 leading-relaxed mb-4">Free weekly education insights for Bay Area families.</p>
+                <ul className="space-y-3 text-sm text-slate-300 mb-4">
+                  <li><Link href="/newsletter" className="hover:text-white transition-colors">Subscribe</Link></li>
+                </ul>
+                <form action="/newsletter" className="flex gap-2">
+                  <input
+                    type="email"
+                    name="email"
+                    placeholder="Email address"
+                    className="flex-1 min-w-0 px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-accent"
+                  />
+                  <button type="submit" className="px-3 py-2 bg-accent text-white text-xs font-semibold rounded-lg hover:bg-accent/90 transition-colors whitespace-nowrap">
+                    Subscribe
+                  </button>
+                </form>
               </div>
             </div>
 

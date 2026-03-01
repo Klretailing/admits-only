@@ -1,9 +1,19 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { Suspense, useState, useEffect, FormEvent } from "react";
+import { useSearchParams } from "next/navigation";
 import s from "./newsletter.module.css";
 
 export default function NewsletterPage() {
+  return (
+    <Suspense>
+      <NewsletterForm />
+    </Suspense>
+  );
+}
+
+function NewsletterForm() {
+  const searchParams = useSearchParams();
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -11,6 +21,11 @@ export default function NewsletterPage() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
+
+  useEffect(() => {
+    const prefill = searchParams.get("email");
+    if (prefill) setEmail(prefill);
+  }, [searchParams]);
   const [phone, setPhone] = useState("");
   const [grade, setGrade] = useState("");
   const [district, setDistrict] = useState("");

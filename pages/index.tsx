@@ -380,6 +380,42 @@ export default function Home() {
             </RevealSection>
           </div>
         </section>
+
+        {/* ─── NEWSLETTER ─── */}
+        <section className="section-padding bg-primary relative overflow-hidden">
+          <div className="absolute inset-0 bg-grid opacity-20" />
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/10 rounded-full blur-3xl" />
+          <div className="relative max-w-3xl mx-auto px-6 text-center">
+            <RevealSection>
+              <div className="badge bg-accent/10 text-accent border-accent/20 mb-4">Free Weekly Newsletter</div>
+              <h2 className="text-3xl lg:text-4xl font-bold font-display text-white tracking-tight">
+                Learner&apos;s Edge Weekly
+              </h2>
+              <p className="mt-4 text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed">
+                The Bay Area&apos;s most useful free education newsletter — internships, volunteer events,
+                college admissions insights, and EdTech picks for K–12 families, delivered every week.
+              </p>
+              <form
+                action="/newsletter"
+                className="mt-8 flex flex-col sm:flex-row gap-3 max-w-lg mx-auto"
+              >
+                <input
+                  type="email"
+                  name="email"
+                  placeholder="Enter your email address"
+                  required
+                  className="flex-1 px-5 py-3.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder-slate-400 text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+                />
+                <button
+                  type="submit"
+                  className="px-7 py-3.5 bg-accent text-white font-semibold rounded-xl hover:bg-accent/90 transition-all duration-200 hover:shadow-lg hover:shadow-accent/25 hover:-translate-y-0.5 text-sm whitespace-nowrap"
+                >
+                  Subscribe Free &rarr;
+                </button>
+              </form>
+            </RevealSection>
+          </div>
+        </section>
       </div>
     </>
   );
