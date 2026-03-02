@@ -4,6 +4,19 @@ const BEEHIIV_API_KEY = process.env.BEEHIIV_API_KEY;
 const BEEHIIV_PUB_ID =
   process.env.BEEHIIV_PUB_ID || "pub_ca9aad2c-57c8-49f0-9975-bae892918bdf";
 
+const BEEHIIV_URL = `https://api.beehiiv.com/v2/publications/${BEEHIIV_PUB_ID}/subscriptions`;
+
+async function callBeehiiv(payload: Record<string, unknown>) {
+  return fetch(BEEHIIV_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${BEEHIIV_API_KEY}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -39,7 +52,7 @@ export async function POST(request: NextRequest) {
     if (!BEEHIIV_API_KEY) {
       console.error("BEEHIIV_API_KEY is not set in environment variables");
       return NextResponse.json(
-        { error: "Newsletter service is not configured." },
+        { error: "Newsletter service is not configured. Please contact support." },
         { status: 500 }
       );
     }
@@ -56,31 +69,47 @@ export async function POST(request: NextRequest) {
       { name: "consent_sms", value: consentSMS ? "yes" : "no" },
     ];
 
-    const beehiivResponse = await fetch(
-      `https://api.beehiiv.com/v2/publications/${BEEHIIV_PUB_ID}/subscriptions`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${BEEHIIV_API_KEY}`,
-        },
-        body: JSON.stringify({
-          email,
-          reactivate_existing: true,
-          send_welcome_email: true,
-          utm_source: "website_form",
-          referring_site: body.source || "",
-          custom_fields,
-        }),
-      }
-    );
+    const basePayload = {
+      email,
+      reactivate_existing: true,
+      send_welcome_email: true,
+      utm_source: "website_form",
+      referring_site: body.source || "",
+    };
+
+    // Try with custom fields first
+    let beehiivResponse = await callBeehiiv({
+      ...basePayload,
+      custom_fields,
+    });
+
+    // If custom fields caused a 4xx error, retry without them
+    // (custom fields must be created in Beehiiv dashboard first)
+    if (!beehiivResponse.ok && beehiivResponse.status >= 400 && beehiivResponse.status < 500) {
+      const firstError = await beehiivResponse.json().catch(() => null);
+      console.warn(
+        "Beehiiv rejected custom fields, retrying without them:",
+        beehiivResponse.status,
+        firstError
+      );
+      beehiivResponse = await callBeehiiv(basePayload);
+    }
 
     if (!beehiivResponse.ok) {
       const errorData = await beehiivResponse.json().catch(() => null);
       console.error("Beehiiv API error:", beehiivResponse.status, errorData);
+
+      // Surface specific errors for debugging
+      if (beehiivResponse.status === 401) {
+        return NextResponse.json(
+          { error: "Newsletter service authentication failed. Please contact support." },
+          { status: 500 }
+        );
+      }
+
       return NextResponse.json(
         { error: "Failed to subscribe. Please try again." },
-        { status: beehiivResponse.status }
+        { status: 502 }
       );
     }
 
