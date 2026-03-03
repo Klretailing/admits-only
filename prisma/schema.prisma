@@ -15,8 +15,10 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  profile StudentProfile?
-  essays  Essay[]
+  profile      StudentProfile?
+  essays       Essay[]
+  podMembers   PodMember[]
+  podMessages  PodMessage[]
 
   @@map("users")
 }
@@ -86,4 +88,47 @@ model AnalyticsEvent {
   @@index([type])
   @@index([timestamp])
   @@map("analytics_events")
+}
+
+model StudyPod {
+  id          String   @id @default(cuid())
+  name        String
+  description String   @default("")
+  inviteCode  String   @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members  PodMember[]
+  messages PodMessage[]
+
+  @@map("study_pods")
+}
+
+model PodMember {
+  id       String   @id @default(cuid())
+  podId    String
+  userId   String
+  role     String   @default("member") // admin | member
+  joinedAt DateTime @default(now())
+
+  pod  StudyPod @relation(fields: [podId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([podId, userId])
+  @@map("pod_members")
+}
+
+model PodMessage {
+  id        String   @id @default(cuid())
+  podId     String
+  userId    String
+  content   String
+  type      String   @default("discussion") // discussion | essay_share | feedback
+  essayId   String?
+  createdAt DateTime @default(now())
+
+  pod  StudyPod @relation(fields: [podId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("pod_messages")
 }

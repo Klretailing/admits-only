@@ -182,7 +182,29 @@ const TRANSITION_WORDS = new Set([
   'then','next','later','finally','afterward','subsequently',
 ]);
 
-function analyzeStructure(text: string, sentences: string[], wordCount: number): number {
+// Semantic topic clusters for detecting real topic changes
+const TOPIC_CLUSTERS: Record<string, Set<string>> = {
+  cooking: new Set(['cook','cooking','kitchen','recipe','bake','baking','food','chef','meal','ingredient','oven','dish','stove','flour','taste','dinner','lunch','breakfast','restaurant','culinary','spice','flavor','plate','serve','dough','pan','pot']),
+  sports: new Set(['sport','team','game','play','score','win','lose','coach','practice','athlete','field','court','ball','race','swim','train','tournament','championship','compete','match','season','captain']),
+  leadership: new Set(['lead','leader','leadership','manage','direct','organize','president','captain','guide','mentor','initiative','responsibility','delegate','decision','authority','influence','inspire','motivate','vision','strategic']),
+  science: new Set(['research','experiment','hypothesis','data','lab','laboratory','science','scientific','biology','chemistry','physics','study','analysis','theory','discovery','molecule','cell','gene','equation','variable']),
+  music: new Set(['music','instrument','play','song','band','orchestra','choir','sing','concert','perform','piano','guitar','violin','drum','melody','harmony','rhythm','compose','note','practice']),
+  writing: new Set(['write','writing','essay','story','poem','author','book','read','literature','novel','journal','publish','edit','draft','word','chapter','paragraph','narrative','creative','fiction']),
+  volunteer: new Set(['volunteer','community','service','help','donate','charity','nonprofit','fundraise','shelter','tutor','mentor','serve','impact','support','advocate','outreach','humanitarian']),
+  technology: new Set(['code','program','software','computer','tech','technology','app','website','develop','algorithm','digital','data','cyber','hack','build','design','engineer','system','network','database']),
+};
+
+function detectTopicCluster(keywords: Set<string>): { cluster: string; strength: number }[] {
+  const results: { cluster: string; strength: number }[] = [];
+  for (const [cluster, words] of Object.entries(TOPIC_CLUSTERS)) {
+    let matches = 0;
+    for (const w of keywords) { if (words.has(w)) matches++; }
+    if (matches >= 2) results.push({ cluster, strength: matches });
+  }
+  return results.sort((a, b) => b.strength - a.strength);
+}
+
+function analyzeStructure(text: string, sentences: string[], wordCount: number, prompt: string = ''): number {
   let score = 80;
 
   // Grammar issues
@@ -197,13 +219,26 @@ function analyzeStructure(text: string, sentences: string[], wordCount: number):
   const fragments = sentences.filter(s => s.trim().split(/\s+/).length < 3 && s.trim().length > 0);
   score -= Math.max(0, (fragments.length - 1) * 3);
 
-  // ─── Coherence: paragraph keyword overlap ───
+  // ─── Coherence: multi-layer topic drift detection ───
   const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
 
   if (paragraphs.length >= 2) {
     const paraKeywords = paragraphs.map(p => extractKeywords(p));
 
-    // Check consecutive paragraph coherence
+    // Layer 1: Build essay-wide topic profile
+    const allKeywords = extractKeywords(text);
+    const essayTopics = detectTopicCluster(allKeywords);
+    const dominantTopic = essayTopics[0]?.cluster || '';
+
+    // Layer 2: Prompt-anchored coherence
+    const promptKeywords = prompt ? extractKeywords(prompt) : new Set<string>();
+    const promptTopics = prompt ? detectTopicCluster(promptKeywords) : [];
+    const promptTopic = promptTopics[0]?.cluster || '';
+
+    // Layer 3: Per-paragraph topic analysis
+    const paraTopics = paragraphs.map(p => detectTopicCluster(extractKeywords(p)));
+
+    // Check consecutive paragraph coherence (keyword overlap)
     for (let i = 1; i < paraKeywords.length; i++) {
       const prev = paraKeywords[i - 1];
       const curr = paraKeywords[i];
@@ -213,8 +248,66 @@ function analyzeStructure(text: string, sentences: string[], wordCount: number):
       for (const w of curr) { if (prev.has(w)) overlap++; }
       const overlapRatio = overlap / Math.min(prev.size, curr.size);
 
-      if (overlapRatio < 0.03) score -= 12; // severe topic drift
-      else if (overlapRatio < 0.08) score -= 6; // weak transition
+      if (overlapRatio < 0.03) score -= 18; // severe topic drift
+      else if (overlapRatio < 0.08) score -= 10; // weak transition
+    }
+
+    // Check semantic topic shifts between paragraphs
+    for (let i = 1; i < paraTopics.length; i++) {
+      const prevClusters = new Set(paraTopics[i - 1].map(t => t.cluster));
+      const currClusters = paraTopics[i].map(t => t.cluster);
+
+      if (prevClusters.size > 0 && currClusters.length > 0) {
+        const hasCommonTopic = currClusters.some(c => prevClusters.has(c));
+        if (!hasCommonTopic) {
+          // Different semantic topics in consecutive paragraphs
+          score -= 15;
+        }
+      }
+    }
+
+    // Check for orphan paragraphs (no overlap with ANY other paragraph)
+    for (let i = 0; i < paraKeywords.length; i++) {
+      if (paraKeywords[i].size < 3) continue;
+      let hasConnectionToAny = false;
+      for (let j = 0; j < paraKeywords.length; j++) {
+        if (i === j || paraKeywords[j].size < 3) continue;
+        let overlap = 0;
+        for (const w of paraKeywords[i]) { if (paraKeywords[j].has(w)) overlap++; }
+        if (overlap / Math.min(paraKeywords[i].size, paraKeywords[j].size) >= 0.05) {
+          hasConnectionToAny = true;
+          break;
+        }
+      }
+      if (!hasConnectionToAny) score -= 15; // orphan paragraph — completely disconnected
+    }
+
+    // Check if paragraphs match the dominant essay topic
+    if (dominantTopic && paraTopics.length >= 3) {
+      for (let i = 0; i < paraTopics.length; i++) {
+        const paraClusters = paraTopics[i].map(t => t.cluster);
+        if (paraClusters.length > 0 && !paraClusters.includes(dominantTopic)) {
+          // This paragraph is about a different topic than the essay's main theme
+          score -= 8;
+        }
+      }
+    }
+
+    // Prompt-anchored: penalize paragraphs that don't relate to prompt topic
+    if (promptTopic && paraTopics.length >= 2) {
+      let offTopicCount = 0;
+      for (let i = 0; i < paraTopics.length; i++) {
+        const paraClusters = paraTopics[i].map(t => t.cluster);
+        // Only check paragraphs that have detectable topics
+        if (paraClusters.length > 0 && !paraClusters.includes(promptTopic)) {
+          // Check keyword overlap with prompt as fallback
+          let promptOverlap = 0;
+          for (const w of paraKeywords[i]) { if (promptKeywords.has(w)) promptOverlap++; }
+          if (promptOverlap === 0) offTopicCount++;
+        }
+      }
+      if (offTopicCount >= 2) score -= 12;
+      else if (offTopicCount === 1) score -= 5;
     }
 
     // Check if later paragraphs relate to intro
@@ -225,7 +318,7 @@ function analyzeStructure(text: string, sentences: string[], wordCount: number):
         let introOverlap = 0;
         for (const w of paraKeywords[i]) { if (introKeys.has(w)) introOverlap++; }
         // Last paragraph should circle back
-        if (i === paraKeywords.length - 1 && introOverlap === 0) score -= 8;
+        if (i === paraKeywords.length - 1 && introOverlap === 0) score -= 10;
       }
     }
   }
@@ -236,7 +329,7 @@ function analyzeStructure(text: string, sentences: string[], wordCount: number):
   if (paragraphs.length >= 3 && transitionCount >= paragraphs.length - 1) score += 5;
   else if (paragraphs.length >= 3 && transitionCount < 1) score -= 5;
 
-  return Math.max(10, Math.min(100, Math.round(score)));
+  return Math.max(5, Math.min(100, Math.round(score)));
 }
 
 /* ──── 4. STORYTELLING (Show-vs-Tell + Narrative Arc + Originality) ──── */
@@ -476,7 +569,7 @@ function scoreEssay(content: string, prompt: string = '') {
 
   const voiceScore = analyzeVoice(text, sentences, wordCount);
   const languageScore = analyzeLanguage(words, wordCount, text);
-  const structureScore = analyzeStructure(text, sentences, wordCount);
+  const structureScore = analyzeStructure(text, sentences, wordCount, prompt);
   const storytellingScore = analyzeStorytelling(text, sentences, wordCount);
   const impactScore = analyzeImpact(text, prompt, wordCount, voiceScore, languageScore, structureScore, storytellingScore);
 

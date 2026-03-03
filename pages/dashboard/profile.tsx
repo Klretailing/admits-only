@@ -537,7 +537,7 @@ export default function StudentProfile() {
 
   const [showAddEC, setShowAddEC] = useState(false);
   const [newEC, setNewEC] = useState<Omit<Extracurricular, 'id'>>({
-    name: '', role: '', description: '', years: 1, hoursPerWeek: 3, category: 'Clubs',
+    name: '', role: '', description: '', years: 0, hoursPerWeek: 0, category: 'Clubs',
   });
   const [editingEcId, setEditingEcId] = useState<string | null>(null);
   const [editDescription, setEditDescription] = useState('');
@@ -612,11 +612,13 @@ export default function StudentProfile() {
 
   const addExtracurricular = () => {
     if (!newEC.name.trim()) return;
+    const years = newEC.years || 1;
+    const hoursPerWeek = newEC.hoursPerWeek || 1;
     setProfile(prev => ({
       ...prev,
-      extracurriculars: [...prev.extracurriculars, { ...newEC, id: `ec_${Date.now()}` }],
+      extracurriculars: [...prev.extracurriculars, { ...newEC, years, hoursPerWeek, id: `ec_${Date.now()}` }],
     }));
-    setNewEC({ name: '', role: '', description: '', years: 1, hoursPerWeek: 3, category: 'Clubs' });
+    setNewEC({ name: '', role: '', description: '', years: 0, hoursPerWeek: 0, category: 'Clubs' });
     setShowAddEC(false);
   };
 
@@ -831,11 +833,11 @@ export default function StudentProfile() {
                       {EC_BUCKETS.map(b => (<option key={b.key} value={b.key}>{b.label}</option>))}
                     </select>
                     <div>
-                      <input type="number" min="1" max="12" value={newEC.years} onChange={e => setNewEC({ ...newEC, years: parseInt(e.target.value) || 1 })} className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30" />
+                      <input type="number" min="1" max="12" value={newEC.years || ''} onChange={e => setNewEC({ ...newEC, years: e.target.value === '' ? 0 : Math.min(12, Math.max(0, parseInt(e.target.value) || 0)) })} placeholder="1-12" className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30" />
                       <p className="text-[10px] text-slate-400 mt-0.5">Years</p>
                     </div>
                     <div>
-                      <input type="number" min="1" max="40" value={newEC.hoursPerWeek} onChange={e => setNewEC({ ...newEC, hoursPerWeek: parseInt(e.target.value) || 1 })} className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30" />
+                      <input type="number" min="1" max="40" value={newEC.hoursPerWeek || ''} onChange={e => setNewEC({ ...newEC, hoursPerWeek: e.target.value === '' ? 0 : Math.min(40, Math.max(0, parseInt(e.target.value) || 0)) })} placeholder="1-40" className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30" />
                       <p className="text-[10px] text-slate-400 mt-0.5">Hrs/week</p>
                     </div>
                   </div>

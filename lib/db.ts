@@ -106,6 +106,48 @@ export async function ensureSchema() {
       );
     `);
 
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "study_pods" (
+        "id"          TEXT NOT NULL,
+        "name"        TEXT NOT NULL,
+        "description" TEXT NOT NULL DEFAULT '',
+        "inviteCode"  TEXT NOT NULL,
+        "createdAt"   TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt"   TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "study_pods_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "study_pods_inviteCode_key" UNIQUE ("inviteCode")
+      );
+    `);
+
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "pod_members" (
+        "id"       TEXT NOT NULL,
+        "podId"    TEXT NOT NULL,
+        "userId"   TEXT NOT NULL,
+        "role"     TEXT NOT NULL DEFAULT 'member',
+        "joinedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "pod_members_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "pod_members_podId_userId_key" UNIQUE ("podId", "userId"),
+        CONSTRAINT "pod_members_podId_fkey" FOREIGN KEY ("podId") REFERENCES "study_pods"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "pod_members_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "pod_messages" (
+        "id"        TEXT NOT NULL,
+        "podId"     TEXT NOT NULL,
+        "userId"    TEXT NOT NULL,
+        "content"   TEXT NOT NULL,
+        "type"      TEXT NOT NULL DEFAULT 'discussion',
+        "essayId"   TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "pod_messages_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "pod_messages_podId_fkey" FOREIGN KEY ("podId") REFERENCES "study_pods"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "pod_messages_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+
     globalForPrisma.schemaReady = true;
   } catch (e) {
     // Tables likely already exist — mark as ready
