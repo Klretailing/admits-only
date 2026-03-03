@@ -19,6 +19,7 @@ model User {
   essays       Essay[]
   podMembers   PodMember[]
   podMessages  PodMessage[]
+  motifBoards  MotifBoard[]
 
   @@map("users")
 }
@@ -131,4 +132,18 @@ model PodMessage {
   user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("pod_messages")
+}
+
+model MotifBoard {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String   @default("Untitled Board")
+  bullets   Json     @default("[]")
+  analysis  Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("motif_boards")
 }

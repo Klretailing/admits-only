@@ -417,6 +417,574 @@ function generateLiveTips(content: string, prompt: string, ecs: Extracurricular[
 }
 
 /* ══════════════════════════════════════════════════════════════════════
+   MOTIFS ENGINE — Story Stitching
+   ══════════════════════════════════════════════════════════════════════
+
+   Motifs helps students brainstorm essay ideas by finding hidden
+   connections between their experiences. Students type bullet-point
+   ideas, and the engine detects shared themes, complementary arcs,
+   and narrative threads — then visualizes them on a storyboard.
+   ══════════════════════════════════════════════════════════════════════ */
+
+interface MotifBullet {
+  id: string;
+  text: string;
+  themes: string[];
+  domains: string[];
+  keywords: string[];
+}
+
+interface MotifConnection {
+  fromId: string;
+  toId: string;
+  strength: number;
+  label: string;
+  type: 'shared_theme' | 'complementary' | 'shared_domain' | 'keyword';
+}
+
+interface MotifGroup {
+  id: string;
+  name: string;
+  narrative: string;
+  bulletIds: string[];
+  dominantThemes: string[];
+  colorIdx: number;
+}
+
+interface MotifAnalysis {
+  bullets: MotifBullet[];
+  connections: MotifConnection[];
+  motifs: MotifGroup[];
+  orphanIds: string[];
+}
+
+interface SavedBoard {
+  id: string;
+  title: string;
+  bullets: unknown;
+  analysis: unknown;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/* ─── Theme & Domain Detection ─── */
+
+const MOTIF_THEMES: Record<string, RegExp> = {
+  resilience: /\b(?:overcame?|struggle|challeng|difficult|tough|hardship|failure|setback|persever|persist|endur|bounce|recover|adapt|obstacle|fight|survive|broke|heal)\b/i,
+  leadership: /\b(?:led|lead|leader|captain|president|found|organiz|manag|direct|coordinat|mentor|inspir|initiative|responsib|delegate|guide|mobiliz)\b/i,
+  creativity: /\b(?:creat|design|invent|imagin|innovat|built|original|unique|artistic|compose|paint|draw|code|program|craft|experiment|improv)\b/i,
+  growth: /\b(?:learn|grew|grow|change|transform|develop|improve|progress|evolve|mature|discover|realiz|understand|adapt|expand|open)\b/i,
+  community: /\b(?:communit|volunteer|serve|help|impact|together|team|neighbor|family|friend|connect|belong|support|uplift|fundrais|donat)\b/i,
+  identity: /\b(?:cultur|heritage|identity|tradition|value|belief|who\s*i\s*am|roots|background|immigra|religion|language|bilingual|diaspora|home)\b/i,
+  passion: /\b(?:passion|love|fascin|obsess|dedicate|commit|drive|motivate|excit|inspir|eager|curious|wonder|thrill|devot)\b/i,
+  intellectual: /\b(?:research|study|read|think|analyz|question|hypothesis|theory|philosophy|debate|academic|scholar|puzzle|logic|invest)\b/i,
+  empathy: /\b(?:empathy|compassion|understand|listen|care|emotion|perspective|relate|human|kind|gentle|comfort|witness|feel\s+for)\b/i,
+  ambition: /\b(?:goal|dream|aspir|ambition|future|career|achiev|success|strive|pursu|determin|driven|envision|someday)\b/i,
+};
+
+const MOTIF_DOMAINS: Record<string, RegExp> = {
+  sports: /\b(?:sport|team|game|play|field|court|ball|race|swim|run|compet|athlet|train|coach|practice|win|tournament|track|gym|varsity)\b/i,
+  science: /\b(?:science|lab|experiment|research|biology|chemistry|physics|math|equation|data|hypothesis|molecule|cell|gene|specimen|microscop)\b/i,
+  arts: /\b(?:art|music|paint|draw|sing|dance|theater|perform|stage|gallery|exhibit|instrument|piano|guitar|violin|choir|orchestra|film|photograph)\b/i,
+  technology: /\b(?:code|program|computer|tech|software|app|website|robot|AI|machine|digital|hack|engineer|algorithm|database|startup)\b/i,
+  nature: /\b(?:nature|environment|outdoor|hike|camp|garden|animal|plant|climate|earth|ocean|mountain|forest|wildlife|sustain|ecolog)\b/i,
+  family: /\b(?:family|parent|mother|father|mom|dad|sibling|brother|sister|grandparent|home|household|generation|relative|aunt|uncle)\b/i,
+  school: /\b(?:school|class|teacher|student|grade|homework|college|university|campus|education|curriculum|exam|tutor|professor|lecture)\b/i,
+  social_justice: /\b(?:justice|equality|rights|protest|advocat|awareness|policy|society|systemic|inequit|poverty|racism|privilege|margin|activis)\b/i,
+  health: /\b(?:health|hospital|doctor|nurse|patient|medic|illness|diagnos|mental\s+health|therapy|disabilit|surgery|clinic|wellness)\b/i,
+  food: /\b(?:cook|food|kitchen|recipe|bake|meal|restaurant|culinary|spice|flavor|dish|eat|taste|nourish|ingredient|chef)\b/i,
+};
+
+const MOTIF_STOP_WORDS = new Set([
+  'the','a','an','is','was','were','are','been','be','have','has','had','do','does','did','will','would','could','should',
+  'may','might','can','this','that','these','those','i','me','my','mine','you','your','we','our','he','she','it','they',
+  'them','their','its','and','but','or','not','no','so','if','then','than','when','while','of','in','on','at','to','for',
+  'with','by','from','as','into','about','between','through','during','before','after','above','below','up','down','out',
+  'off','over','under','again','further','once','here','there','all','each','every','both','few','more','most','other',
+  'some','such','only','own','same','just','also','very','really','because','until','where','how','what','which','who',
+  'whom','why','being','having','doing','going','wanted','like','even','still','much','many',
+]);
+
+function extractMotifKeywords(text: string): string[] {
+  return text.toLowerCase()
+    .replace(/[^a-z'\s-]/g, '')
+    .split(/\s+/)
+    .filter(w => w.length > 3 && !MOTIF_STOP_WORDS.has(w));
+}
+
+function detectThemes(text: string): string[] {
+  return Object.entries(MOTIF_THEMES)
+    .filter(([, rx]) => rx.test(text))
+    .map(([k]) => k);
+}
+
+function detectDomains(text: string): string[] {
+  return Object.entries(MOTIF_DOMAINS)
+    .filter(([, rx]) => rx.test(text))
+    .map(([k]) => k);
+}
+
+/* ─── Complementary theme pairs that form narrative arcs ─── */
+
+const COMPLEMENTARY_PAIRS: [string, string, string][] = [
+  ['resilience', 'growth', 'Struggle led to transformation'],
+  ['identity', 'community', 'Cultural roots shape how you serve others'],
+  ['passion', 'ambition', 'Deep interest driving purposeful pursuit'],
+  ['empathy', 'leadership', 'Understanding others makes you a stronger leader'],
+  ['creativity', 'intellectual', 'Where imagination meets analytical rigor'],
+  ['resilience', 'leadership', 'Adversity forged leadership capacity'],
+  ['identity', 'growth', 'Exploring identity as a journey of becoming'],
+  ['community', 'empathy', 'Service deepened understanding of others'],
+  ['passion', 'creativity', 'Passion fueling creative expression'],
+  ['intellectual', 'ambition', 'Curiosity driving ambitious goals'],
+  ['resilience', 'identity', 'Challenges clarified who you really are'],
+  ['growth', 'leadership', 'Personal evolution enabling you to lead others'],
+  ['creativity', 'community', 'Creative skills applied to community impact'],
+  ['empathy', 'growth', 'Seeing through others\' eyes changed your worldview'],
+  ['passion', 'community', 'Your passion becoming a vehicle for collective good'],
+];
+
+/* ─── Evocative motif names ─── */
+
+const MOTIF_NAMES: Record<string, string[]> = {
+  resilience: ['Rising Phoenix', 'Against the Tide', 'Unbroken', 'Through the Storm'],
+  leadership: ['The Catalyst', 'Quiet Authority', 'The Architect', 'Ripple Maker'],
+  creativity: ['The Maker', 'Blank Canvas', 'Uncharted', 'Spark & Wire'],
+  growth: ['Metamorphosis', 'New Lens', 'The Turning Point', 'Unfolding'],
+  community: ['Common Ground', 'The Village', 'Woven Together', 'Shared Roots'],
+  identity: ['True North', 'Roots & Wings', 'The Mosaic', 'Mirror & Window'],
+  passion: ['The Fire Within', 'Magnetic Pull', 'Heart & Soul', 'The Calling'],
+  intellectual: ['The Question', 'Deeper Dive', 'Mind Palace', 'The Puzzle'],
+  empathy: ['Walking Alongside', 'Through Their Eyes', 'The Bridge', 'Tender Strength'],
+  ambition: ['The Summit', 'Charting the Course', 'Beyond the Horizon', 'The Vision'],
+};
+
+const COMBO_NAMES: Record<string, string> = {
+  'resilience+growth': 'The Phoenix Arc',
+  'identity+community': 'Roots & Branches',
+  'passion+creativity': 'The Maker\'s Fire',
+  'empathy+leadership': 'The Servant Leader',
+  'intellectual+ambition': 'The Driven Mind',
+  'resilience+leadership': 'Forged in Fire',
+  'identity+growth': 'Becoming',
+  'community+empathy': 'The Ripple Effect',
+  'passion+ambition': 'The Pursuit',
+  'creativity+intellectual': 'The Innovator',
+  'resilience+identity': 'Unshakable Core',
+  'growth+leadership': 'The Evolving Leader',
+  'creativity+community': 'Art as Impact',
+  'empathy+growth': 'The Widening Lens',
+  'passion+community': 'Passion in Service',
+};
+
+/* ─── Connection Finding ─── */
+
+function findMotifConnections(bullets: MotifBullet[]): MotifConnection[] {
+  const connections: MotifConnection[] = [];
+
+  for (let i = 0; i < bullets.length; i++) {
+    for (let j = i + 1; j < bullets.length; j++) {
+      const a = bullets[i], b = bullets[j];
+      let bestStrength = 0;
+      let bestLabel = '';
+      let bestType: MotifConnection['type'] = 'keyword';
+
+      // Shared themes
+      const sharedThemes = a.themes.filter(t => b.themes.includes(t));
+      if (sharedThemes.length > 0) {
+        const s = Math.min(1, sharedThemes.length * 0.4 + 0.3);
+        if (s > bestStrength) {
+          bestStrength = s;
+          const themeName = sharedThemes[0].charAt(0).toUpperCase() + sharedThemes[0].slice(1);
+          bestLabel = `Both reflect ${themeName.toLowerCase()}`;
+          bestType = 'shared_theme';
+        }
+      }
+
+      // Complementary themes
+      for (const [t1, t2, desc] of COMPLEMENTARY_PAIRS) {
+        const hasArc = (a.themes.includes(t1) && b.themes.includes(t2)) ||
+                       (a.themes.includes(t2) && b.themes.includes(t1));
+        if (hasArc) {
+          const s = 0.8;
+          if (s > bestStrength) {
+            bestStrength = s;
+            bestLabel = desc;
+            bestType = 'complementary';
+          }
+        }
+      }
+
+      // Shared domains
+      const sharedDomains = a.domains.filter(d => b.domains.includes(d));
+      if (sharedDomains.length > 0) {
+        const s = 0.5 + sharedDomains.length * 0.15;
+        if (s > bestStrength) {
+          bestStrength = s;
+          const domainName = sharedDomains[0].replace('_', ' ');
+          bestLabel = `Connected through ${domainName}`;
+          bestType = 'shared_domain';
+        }
+      }
+
+      // Keyword overlap
+      const sharedKw = a.keywords.filter(k => b.keywords.includes(k));
+      if (sharedKw.length >= 2 && bestStrength < 0.3) {
+        bestStrength = 0.3 + Math.min(sharedKw.length * 0.1, 0.3);
+        bestLabel = `Shared: ${sharedKw.slice(0, 3).join(', ')}`;
+        bestType = 'keyword';
+      }
+
+      if (bestStrength >= 0.25) {
+        connections.push({
+          fromId: a.id,
+          toId: b.id,
+          strength: bestStrength,
+          label: bestLabel,
+          type: bestType,
+        });
+      }
+    }
+  }
+
+  return connections.sort((a, b) => b.strength - a.strength);
+}
+
+/* ─── Motif Grouping (greedy clustering, no overlap) ─── */
+
+function groupMotifs(bullets: MotifBullet[], connections: MotifConnection[]): { motifs: MotifGroup[]; orphanIds: string[] } {
+  const assigned = new Set<string>();
+  const motifs: MotifGroup[] = [];
+
+  // Build adjacency with strong connections only
+  const adj: Record<string, { id: string; strength: number }[]> = {};
+  for (const b of bullets) adj[b.id] = [];
+
+  for (const c of connections) {
+    if (c.strength >= 0.4) {
+      adj[c.fromId]?.push({ id: c.toId, strength: c.strength });
+      adj[c.toId]?.push({ id: c.fromId, strength: c.strength });
+    }
+  }
+
+  // Greedy: pick the most-connected unassigned bullet, flood-fill
+  const bulletsByConnections = bullets
+    .map(b => ({ bullet: b, conns: adj[b.id]?.length || 0 }))
+    .sort((a, b) => b.conns - a.conns);
+
+  let motifIdx = 0;
+
+  for (const { bullet } of bulletsByConnections) {
+    if (assigned.has(bullet.id)) continue;
+    if ((adj[bullet.id]?.length || 0) === 0) continue;
+
+    // BFS to find cluster
+    const cluster: string[] = [bullet.id];
+    assigned.add(bullet.id);
+    const queue = [bullet.id];
+
+    while (queue.length > 0) {
+      const curr = queue.shift()!;
+      for (const neighbor of adj[curr] || []) {
+        if (!assigned.has(neighbor.id) && neighbor.strength >= 0.35) {
+          assigned.add(neighbor.id);
+          cluster.push(neighbor.id);
+          queue.push(neighbor.id);
+        }
+      }
+    }
+
+    if (cluster.length < 2) {
+      assigned.delete(bullet.id);
+      continue;
+    }
+
+    // Determine dominant themes
+    const themeCount: Record<string, number> = {};
+    for (const bid of cluster) {
+      const b = bullets.find(x => x.id === bid);
+      if (b) for (const t of b.themes) themeCount[t] = (themeCount[t] || 0) + 1;
+    }
+    const sortedThemes = Object.entries(themeCount).sort((a, b) => b[1] - a[1]).map(([t]) => t);
+    const top2 = sortedThemes.slice(0, 2);
+
+    // Name the motif
+    let name = 'Thread ' + (motifIdx + 1);
+    if (top2.length >= 2) {
+      const key = [top2[0], top2[1]].sort().join('+');
+      name = COMBO_NAMES[key] || MOTIF_NAMES[top2[0]]?.[motifIdx % 4] || name;
+    } else if (top2.length === 1) {
+      name = MOTIF_NAMES[top2[0]]?.[motifIdx % 4] || name;
+    }
+
+    // Generate narrative suggestion
+    const clusterBullets = cluster.map(cid => bullets.find(x => x.id === cid)!).filter(Boolean);
+    const narrative = generateMotifNarrative(clusterBullets, top2, connections.filter(c => cluster.includes(c.fromId) && cluster.includes(c.toId)));
+
+    motifs.push({
+      id: `motif_${motifIdx}`,
+      name,
+      narrative,
+      bulletIds: cluster,
+      dominantThemes: top2,
+      colorIdx: motifIdx,
+    });
+    motifIdx++;
+  }
+
+  const orphanIds = bullets.filter(b => !assigned.has(b.id)).map(b => b.id);
+  return { motifs, orphanIds };
+}
+
+/* ─── Narrative Generation ─── */
+
+function generateMotifNarrative(bullets: MotifBullet[], themes: string[], connections: MotifConnection[]): string {
+  const n = bullets.length;
+  const texts = bullets.map(b => `"${b.text.length > 50 ? b.text.slice(0, 47) + '...' : b.text}"`);
+
+  if (n === 0) return '';
+
+  const arcConnection = connections.find(c => c.type === 'complementary');
+
+  if (themes.includes('resilience') && themes.includes('growth')) {
+    return `Start by placing the reader inside the struggle from ${texts[0]}. Use sensory details — what did the room look like, what were you thinking? Then shift to ${texts[n > 1 ? 1 : 0]}, showing how you emerged different. The gap between who you were and who you became IS the essay.`;
+  }
+  if (themes.includes('identity') && themes.includes('community')) {
+    return `Open with a specific scene rooted in your cultural experience from ${texts[0]}. Let the reader feel what it's like to walk in your shoes. Then bridge to ${texts[n > 1 ? 1 : 0]} to show how those roots shape how you show up for others. The throughline: your background isn't just context, it's a compass.`;
+  }
+  if (themes.includes('passion') && themes.includes('creativity')) {
+    return `Begin with the moment of creative obsession — ${texts[0]}. What does it feel like when you're in the zone? Then weave in ${texts[n > 1 ? 1 : 0]} to show that this isn't a hobby, it's how your mind works. AOs love seeing the internal creative process, not just the output.`;
+  }
+  if (themes.includes('empathy') && themes.includes('leadership')) {
+    return `Start with a quiet moment of listening or observing from ${texts[0]}. Then show how that understanding informed a leadership decision in ${texts[n > 1 ? 1 : 0]}. The most compelling leaders in admissions essays don't command — they understand first, then act.`;
+  }
+
+  if (arcConnection) {
+    return `These experiences create a natural narrative arc: ${arcConnection.label}. Start with ${texts[0]}, which sets up the tension or context. Then transition to ${texts[n > 1 ? 1 : 0]}, which reveals the resolution or growth. ${n > 2 ? `The other ideas (${texts.slice(2).join(', ')}) can serve as supporting details that enrich the central arc.` : ''} The connection between these moments is what makes your essay feel cohesive rather than a list of accomplishments.`;
+  }
+
+  if (themes.length > 0) {
+    const themeName = themes[0].charAt(0).toUpperCase() + themes[0].slice(1);
+    return `The thread connecting these ideas is ${themeName.toLowerCase()}. Open with the most vivid, specific moment from ${texts[0]}. Each subsequent idea (${texts.slice(1).join(', ')}) becomes a new facet of the same core theme. The key: don't announce the theme — let the reader discover it through the accumulated weight of your details.`;
+  }
+
+  return `These experiences share underlying connections. Open with the most specific, visual moment. Let each idea build on the previous one, creating a layered narrative that reveals different dimensions of who you are. The reader should finish thinking: "I know this person."`;
+}
+
+/* ─── Full Analysis Pipeline ─── */
+
+function analyzeMotifs(rawBullets: string[]): MotifAnalysis {
+  const bullets: MotifBullet[] = rawBullets
+    .filter(t => t.trim().length > 0)
+    .map((text, i) => ({
+      id: `b_${i}`,
+      text: text.trim(),
+      themes: detectThemes(text),
+      domains: detectDomains(text),
+      keywords: extractMotifKeywords(text),
+    }));
+
+  const connections = findMotifConnections(bullets);
+  const { motifs, orphanIds } = groupMotifs(bullets, connections);
+
+  return { bullets, connections, motifs, orphanIds };
+}
+
+/* ─── Visual Board: Color palette ─── */
+
+const MOTIF_PALETTE = [
+  { bg: '#EEF2FF', border: '#6366F1', text: '#3730A3', accent: '#818CF8', light: '#C7D2FE' },
+  { bg: '#FEF3C7', border: '#D97706', text: '#78350F', accent: '#FBBF24', light: '#FDE68A' },
+  { bg: '#D1FAE5', border: '#059669', text: '#064E3B', accent: '#34D399', light: '#A7F3D0' },
+  { bg: '#FFE4E6', border: '#E11D48', text: '#881337', accent: '#FB7185', light: '#FECDD3' },
+  { bg: '#E0F2FE', border: '#0284C7', text: '#0C4A6E', accent: '#38BDF8', light: '#BAE6FD' },
+  { bg: '#F3E8FF', border: '#9333EA', text: '#581C87', accent: '#C084FC', light: '#DDD6FE' },
+];
+
+/* ─── SVG Storyboard Component ─── */
+
+function MotifStoryboard({ analysis }: { analysis: MotifAnalysis }) {
+  const { bullets, connections, motifs, orphanIds } = analysis;
+  if (bullets.length === 0) return null;
+
+  const ISLAND_W = 240;
+  const ISLAND_GAP = 100;
+  const NODE_H = 70;
+  const NODE_GAP = 14;
+  const PAD = 24;
+  const HEADER_H = 44;
+
+  // Build layout
+  const groups = [...motifs];
+  const orphanBullets = orphanIds.map(id => bullets.find(b => b.id === id)!).filter(Boolean);
+  const hasOrphans = orphanBullets.length > 0;
+
+  type NodePos = { id: string; x: number; y: number; w: number; h: number; groupIdx: number };
+  const nodePositions: Record<string, NodePos> = {};
+
+  let totalX = PAD;
+  const islandRects: { x: number; y: number; w: number; h: number; idx: number; name: string }[] = [];
+
+  groups.forEach((motif, gi) => {
+    const mBullets = motif.bulletIds.map(id => bullets.find(b => b.id === id)!).filter(Boolean);
+    const islandH = HEADER_H + mBullets.length * (NODE_H + NODE_GAP) + PAD;
+
+    islandRects.push({ x: totalX, y: PAD, w: ISLAND_W, h: islandH, idx: gi, name: motif.name });
+
+    mBullets.forEach((b, bi) => {
+      nodePositions[b.id] = {
+        id: b.id,
+        x: totalX + PAD,
+        y: PAD + HEADER_H + bi * (NODE_H + NODE_GAP),
+        w: ISLAND_W - PAD * 2,
+        h: NODE_H,
+        groupIdx: gi,
+      };
+    });
+
+    totalX += ISLAND_W + ISLAND_GAP;
+  });
+
+  // Orphan island
+  if (hasOrphans) {
+    const islandH = HEADER_H + orphanBullets.length * (NODE_H + NODE_GAP) + PAD;
+    islandRects.push({ x: totalX, y: PAD, w: ISLAND_W, h: islandH, idx: -1, name: 'Unconnected Ideas' });
+
+    orphanBullets.forEach((b, bi) => {
+      nodePositions[b.id] = {
+        id: b.id,
+        x: totalX + PAD,
+        y: PAD + HEADER_H + bi * (NODE_H + NODE_GAP),
+        w: ISLAND_W - PAD * 2,
+        h: NODE_H,
+        groupIdx: -1,
+      };
+    });
+    totalX += ISLAND_W + PAD;
+  } else {
+    totalX += PAD - ISLAND_GAP; // Remove last gap
+  }
+
+  const maxIslandH = Math.max(...islandRects.map(r => r.h + PAD * 2), 300);
+  const totalW = Math.max(totalX, 400);
+  const totalH = maxIslandH + 60; // room for bottom narrative
+
+  // Wrap text helper
+  const wrapText = (text: string, maxChars: number): string[] => {
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let current = '';
+    for (const w of words) {
+      if ((current + ' ' + w).trim().length > maxChars) {
+        if (current) lines.push(current.trim());
+        current = w;
+      } else {
+        current = current ? current + ' ' + w : w;
+      }
+    }
+    if (current) lines.push(current.trim());
+    return lines.slice(0, 3); // Max 3 lines
+  };
+
+  return (
+    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-slate-50/50">
+      <svg viewBox={`0 0 ${totalW} ${totalH}`} style={{ minWidth: totalW, minHeight: totalH }} className="w-full">
+        <defs>
+          <filter id="node-shadow" x="-10%" y="-10%" width="120%" height="130%">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000" floodOpacity="0.06" />
+          </filter>
+          <filter id="island-shadow" x="-2%" y="-2%" width="104%" height="104%">
+            <feDropShadow dx="0" dy="3" stdDeviation="6" floodColor="#000" floodOpacity="0.04" />
+          </filter>
+          <marker id="arrowhead" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8" />
+          </marker>
+        </defs>
+
+        {/* Island backgrounds */}
+        {islandRects.map((rect, i) => {
+          const pal = rect.idx >= 0 ? MOTIF_PALETTE[rect.idx % MOTIF_PALETTE.length] : { bg: '#F8FAFC', border: '#CBD5E1', text: '#475569', accent: '#94A3B8', light: '#E2E8F0' };
+          return (
+            <g key={`island-${i}`}>
+              <rect x={rect.x} y={rect.y} width={rect.w} height={rect.h} rx={16} fill={pal.bg} stroke={pal.border} strokeWidth={1.5} filter="url(#island-shadow)" />
+              <text x={rect.x + PAD} y={rect.y + 28} fill={pal.text} fontWeight="800" fontSize="13" fontFamily="system-ui, sans-serif">{rect.name}</text>
+              <line x1={rect.x + PAD} y1={rect.y + HEADER_H - 4} x2={rect.x + rect.w - PAD} y2={rect.y + HEADER_H - 4} stroke={pal.border} strokeWidth={1} strokeOpacity={0.3} />
+            </g>
+          );
+        })}
+
+        {/* Connection lines (draw before nodes so they're behind) */}
+        {connections.filter(c => c.strength >= 0.25).map((conn, i) => {
+          const from = nodePositions[conn.fromId];
+          const to = nodePositions[conn.toId];
+          if (!from || !to) return null;
+
+          const sameGroup = from.groupIdx === to.groupIdx && from.groupIdx >= 0;
+          const x1 = from.x + from.w;
+          const y1 = from.y + from.h / 2;
+          const x2 = to.x;
+          const y2 = to.y + to.h / 2;
+
+          let path: string;
+          if (sameGroup) {
+            // Within-group: small arc to the right
+            const midX = Math.max(x1, x2) + 30;
+            path = `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2 + from.w} ${y2}`;
+          } else {
+            // Cross-group: bezier curve
+            const midX = (x1 + x2) / 2;
+            path = `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`;
+          }
+
+          const opacity = 0.15 + conn.strength * 0.5;
+          const strokeWidth = 1 + conn.strength * 2;
+
+          // Label position at midpoint
+          const labelX = (x1 + x2) / 2;
+          const labelY = (y1 + y2) / 2 - 8;
+
+          return (
+            <g key={`conn-${i}`}>
+              <path d={path} fill="none" stroke="#94a3b8" strokeWidth={strokeWidth} strokeOpacity={opacity} strokeDasharray={conn.type === 'keyword' ? '4 4' : 'none'} />
+              {conn.strength >= 0.4 && !sameGroup && (
+                <>
+                  <rect x={labelX - conn.label.length * 3} y={labelY - 8} width={Math.min(conn.label.length * 6, 160)} height={16} rx={8} fill="white" stroke="#e2e8f0" strokeWidth={1} />
+                  <text x={labelX} y={labelY + 3} textAnchor="middle" fill="#64748b" fontSize="8" fontFamily="system-ui, sans-serif" fontWeight="600">{conn.label.length > 28 ? conn.label.slice(0, 25) + '...' : conn.label}</text>
+                </>
+              )}
+            </g>
+          );
+        })}
+
+        {/* Bullet nodes */}
+        {bullets.map(b => {
+          const pos = nodePositions[b.id];
+          if (!pos) return null;
+          const pal = pos.groupIdx >= 0 ? MOTIF_PALETTE[pos.groupIdx % MOTIF_PALETTE.length] : { bg: '#FFFFFF', border: '#CBD5E1', text: '#334155', accent: '#94A3B8', light: '#F1F5F9' };
+          const lines = wrapText(b.text, 28);
+
+          return (
+            <g key={b.id}>
+              <rect x={pos.x} y={pos.y} width={pos.w} height={pos.h} rx={10} fill="white" stroke={pal.border} strokeWidth={1} filter="url(#node-shadow)" />
+              {lines.map((line, li) => (
+                <text key={li} x={pos.x + 10} y={pos.y + 18 + li * 14} fill={pal.text} fontSize="10.5" fontFamily="system-ui, sans-serif" fontWeight={li === 0 ? '600' : '400'}>{line}</text>
+              ))}
+              {/* Theme pills */}
+              {b.themes.slice(0, 2).map((theme, ti) => (
+                <g key={ti}>
+                  <rect x={pos.x + 10 + ti * 65} y={pos.y + pos.h - 20} width={58} height={14} rx={7} fill={pal.light} />
+                  <text x={pos.x + 10 + ti * 65 + 29} y={pos.y + pos.h - 11} textAnchor="middle" fill={pal.text} fontSize="7.5" fontWeight="700" fontFamily="system-ui, sans-serif">{theme}</text>
+                </g>
+              ))}
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════
    SCORE BAR COMPONENT (compact for sidebar)
    ══════════════════════════════════════════════════════════════════════ */
 
@@ -473,11 +1041,21 @@ export default function Essays() {
   const [ecs, setEcs] = useState<Extracurricular[]>([]);
   const [ecsLoading, setEcsLoading] = useState(true);
 
+  // ─── Motifs state ───
+  const [mode, setMode] = useState<'essays' | 'motifs'>('essays');
+  const [motifInput, setMotifInput] = useState('');
+  const [motifAnalysis, setMotifAnalysis] = useState<MotifAnalysis | null>(null);
+  const [savedBoards, setSavedBoards] = useState<SavedBoard[]>([]);
+  const [activeBoardId, setActiveBoardId] = useState<string | null>(null);
+  const [boardTitle, setBoardTitle] = useState('');
+  const [savingBoard, setSavingBoard] = useState(false);
+
   // Load essays + ECs
   useEffect(() => {
     if (status !== 'authenticated') return;
     fetch('/api/essays').then(r => r.json()).then(d => { setEssays(d.essays || []); setLoading(false); }).catch(() => setLoading(false));
     fetch('/api/profile').then(r => r.json()).then(d => { if (d.profile?.extracurriculars) setEcs(d.profile.extracurriculars as Extracurricular[]); setEcsLoading(false); }).catch(() => setEcsLoading(false));
+    fetch('/api/motifs').then(r => r.json()).then(d => setSavedBoards(d.boards || [])).catch(() => {});
   }, [status]);
 
   // EC insights (debounced via content)
@@ -538,6 +1116,65 @@ export default function Essays() {
     setSaving(false);
   };
 
+  // ─── Motif actions ───
+  const runMotifAnalysis = useCallback(() => {
+    const lines = motifInput.split('\n').map(l => l.replace(/^[\s\-\u2022\*]+/, '').trim()).filter(l => l.length > 0);
+    if (lines.length < 2) return;
+    const result = analyzeMotifs(lines);
+    setMotifAnalysis(result);
+  }, [motifInput]);
+
+  const saveMotifBoard = useCallback(async () => {
+    if (!motifAnalysis || motifAnalysis.bullets.length === 0) return;
+    setSavingBoard(true);
+    try {
+      const body: Record<string, unknown> = {
+        title: boardTitle.trim() || 'Untitled Board',
+        bullets: motifAnalysis.bullets.map(b => b.text),
+        analysis: motifAnalysis,
+      };
+      if (activeBoardId) body.id = activeBoardId;
+      const r = await fetch('/api/motifs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const data = await r.json();
+      if (data.board) {
+        if (activeBoardId) {
+          setSavedBoards(prev => prev.map(b => b.id === data.board.id ? data.board : b));
+        } else {
+          setSavedBoards(prev => [data.board, ...prev]);
+          setActiveBoardId(data.board.id);
+        }
+      }
+    } catch { /* ignore */ }
+    setSavingBoard(false);
+  }, [motifAnalysis, boardTitle, activeBoardId]);
+
+  const loadBoard = useCallback((board: SavedBoard) => {
+    setActiveBoardId(board.id);
+    setBoardTitle(board.title);
+    const bulletTexts = Array.isArray(board.bullets) ? (board.bullets as string[]) : [];
+    setMotifInput(bulletTexts.join('\n'));
+    if (board.analysis && typeof board.analysis === 'object' && 'bullets' in (board.analysis as Record<string, unknown>)) {
+      setMotifAnalysis(board.analysis as MotifAnalysis);
+    } else if (bulletTexts.length >= 2) {
+      setMotifAnalysis(analyzeMotifs(bulletTexts));
+    }
+  }, []);
+
+  const deleteBoard = useCallback(async (id: string) => {
+    try {
+      await fetch('/api/motifs', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+      setSavedBoards(prev => prev.filter(b => b.id !== id));
+      if (activeBoardId === id) { setActiveBoardId(null); setMotifAnalysis(null); setMotifInput(''); setBoardTitle(''); }
+    } catch { /* ignore */ }
+  }, [activeBoardId]);
+
+  const newBoard = useCallback(() => {
+    setActiveBoardId(null);
+    setMotifAnalysis(null);
+    setMotifInput('');
+    setBoardTitle('');
+  }, []);
+
   if (status !== 'authenticated') return null;
 
   const wordCount = editContent.trim() ? editContent.trim().split(/\s+/).length : 0;
@@ -549,17 +1186,239 @@ export default function Essays() {
       <Head><title>Essays | AdmitsOnly Dashboard</title></Head>
 
       <div className="flex flex-col" style={{ height: 'calc(100vh - 7rem)' }}>
-        {/* Header */}
+        {/* Header with mode tabs */}
         <div className="flex items-center justify-between mb-4 flex-shrink-0">
-          <div>
-            <h1 className="text-2xl font-bold font-display text-primary">Essay Workspace</h1>
-            <p className="mt-0.5 text-sm text-slate-500">Write, analyze, and get real-time admissions-grade feedback.</p>
+          <div className="flex items-center gap-6">
+            <div>
+              <h1 className="text-2xl font-bold font-display text-primary">Essay Workspace</h1>
+              <p className="mt-0.5 text-sm text-slate-500">{mode === 'essays' ? 'Write, analyze, and get real-time admissions-grade feedback.' : 'Discover hidden connections between your ideas and stitch them into compelling stories.'}</p>
+            </div>
+            <div className="flex bg-slate-100 rounded-xl p-1 gap-0.5">
+              <button
+                onClick={() => setMode('essays')}
+                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${mode === 'essays' ? 'bg-white text-accent shadow-sm' : 'text-slate-500 hover:text-primary'}`}
+              >
+                My Essays
+              </button>
+              <button
+                onClick={() => setMode('motifs')}
+                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${mode === 'motifs' ? 'bg-white text-accent shadow-sm' : 'text-slate-500 hover:text-primary'}`}
+              >
+                Motifs
+              </button>
+            </div>
           </div>
-          <button onClick={() => setShowNewForm(true)} className="btn-primary text-sm">+ New Essay</button>
+          {mode === 'essays' && <button onClick={() => setShowNewForm(true)} className="btn-primary text-sm">+ New Essay</button>}
         </div>
 
+        {/* ═══════════════ MOTIFS MODE ═══════════════ */}
+        {mode === 'motifs' && (
+          <div className="flex-1 min-h-0 grid lg:grid-cols-[280px_1fr] gap-4">
+
+            {/* ─── Left: Input + Saved Boards ─── */}
+            <div className="flex flex-col gap-3 overflow-y-auto pr-1">
+              {/* Description card */}
+              <div className="bg-gradient-to-br from-accent/5 to-purple-50 rounded-xl border border-accent/10 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-accent to-purple-600 flex items-center justify-center">
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-primary">Motifs</h3>
+                    <p className="text-[10px] text-slate-400">Story Stitching Engine</p>
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-relaxed">
+                  Type your ideas, experiences, and moments as bullet points. Motifs finds the hidden threads between them and shows you how to weave them into a multi-dimensional essay.
+                </p>
+              </div>
+
+              {/* Input area */}
+              <div className="bg-white rounded-xl border border-slate-100 p-4 flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Your Ideas</label>
+                  {activeBoardId && <button onClick={newBoard} className="text-[10px] text-accent font-semibold hover:text-accent/80">+ New Board</button>}
+                </div>
+                <textarea
+                  value={motifInput}
+                  onChange={e => setMotifInput(e.target.value)}
+                  placeholder={"Drop your ideas here, one per line:\n\n- The summer I spent cooking with my grandmother\n- Leading the debate team to nationals\n- When I failed my first AP exam\n- Teaching coding to kids at the library\n- My family's immigration story"}
+                  rows={8}
+                  className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-accent/30 resize-none font-sans"
+                />
+                <button
+                  onClick={runMotifAnalysis}
+                  disabled={motifInput.split('\n').filter(l => l.trim().length > 0).length < 2}
+                  className="w-full py-2.5 text-xs font-bold text-white bg-gradient-to-r from-accent to-purple-600 rounded-lg hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Find Motifs
+                </button>
+              </div>
+
+              {/* Save controls */}
+              {motifAnalysis && motifAnalysis.bullets.length > 0 && (
+                <div className="bg-white rounded-xl border border-slate-100 p-4 space-y-2">
+                  <input
+                    type="text"
+                    value={boardTitle}
+                    onChange={e => setBoardTitle(e.target.value)}
+                    placeholder="Board title (e.g. Personal Statement Ideas)"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-accent/30"
+                  />
+                  <button
+                    onClick={saveMotifBoard}
+                    disabled={savingBoard}
+                    className="w-full py-2 text-xs font-semibold text-accent border border-accent/30 rounded-lg hover:bg-accent/5 transition-colors disabled:opacity-40"
+                  >
+                    {savingBoard ? 'Saving...' : activeBoardId ? 'Update Board' : 'Save Board'}
+                  </button>
+                </div>
+              )}
+
+              {/* Saved boards list */}
+              {savedBoards.length > 0 && (
+                <div className="bg-white rounded-xl border border-slate-100 p-4">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Saved Boards ({savedBoards.length})</p>
+                  <div className="space-y-1.5">
+                    {savedBoards.map(board => (
+                      <div
+                        key={board.id}
+                        className={`flex items-center justify-between p-2.5 rounded-lg cursor-pointer group transition-all ${
+                          activeBoardId === board.id ? 'bg-accent/5 border border-accent/20' : 'hover:bg-slate-50 border border-transparent'
+                        }`}
+                      >
+                        <button onClick={() => loadBoard(board)} className="text-left flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-primary truncate">{board.title}</p>
+                          <p className="text-[10px] text-slate-400">
+                            {Array.isArray(board.bullets) ? (board.bullets as string[]).length : 0} ideas &middot; {new Date(board.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </p>
+                        </button>
+                        <button
+                          onClick={() => deleteBoard(board.id)}
+                          className="text-slate-300 hover:text-red-400 opacity-0 group-hover:opacity-100 flex-shrink-0 ml-2"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ─── Right: Visual Storyboard ─── */}
+            <div className="flex flex-col gap-4 overflow-y-auto min-h-0">
+              {motifAnalysis ? (
+                <>
+                  {/* Stats bar */}
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-slate-100">
+                      <span className="text-[10px] text-slate-400">Ideas:</span>
+                      <span className="text-xs font-bold text-primary">{motifAnalysis.bullets.length}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-slate-100">
+                      <span className="text-[10px] text-slate-400">Motifs found:</span>
+                      <span className="text-xs font-bold text-accent">{motifAnalysis.motifs.length}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-slate-100">
+                      <span className="text-[10px] text-slate-400">Connections:</span>
+                      <span className="text-xs font-bold text-purple-600">{motifAnalysis.connections.filter(c => c.strength >= 0.4).length}</span>
+                    </div>
+                    {motifAnalysis.orphanIds.length > 0 && (
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 rounded-lg border border-amber-200">
+                        <span className="text-[10px] text-amber-600">Unconnected:</span>
+                        <span className="text-xs font-bold text-amber-700">{motifAnalysis.orphanIds.length}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Visual Board */}
+                  <MotifStoryboard analysis={motifAnalysis} />
+
+                  {/* Motif narratives */}
+                  {motifAnalysis.motifs.length > 0 && (
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-bold font-display text-primary">Narrative Threads</h3>
+                      <p className="text-[11px] text-slate-400 -mt-1">Each motif is a potential essay narrative. Here&apos;s how to weave your ideas together.</p>
+                      {motifAnalysis.motifs.map((motif, mi) => {
+                        const pal = MOTIF_PALETTE[motif.colorIdx % MOTIF_PALETTE.length];
+                        const mBullets = motif.bulletIds.map(id => motifAnalysis.bullets.find(b => b.id === id)).filter(Boolean);
+                        return (
+                          <div key={motif.id} className="rounded-xl border p-4" style={{ borderColor: pal.border + '40', backgroundColor: pal.bg + '80' }}>
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: pal.border }} />
+                              <h4 className="text-xs font-bold" style={{ color: pal.text }}>{motif.name}</h4>
+                              <span className="text-[10px] font-medium" style={{ color: pal.accent }}>
+                                {motif.dominantThemes.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(' + ')}
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5 mb-3">
+                              {mBullets.map(b => b && (
+                                <span key={b.id} className="px-2 py-0.5 rounded-full text-[9px] font-medium" style={{ backgroundColor: pal.light, color: pal.text }}>
+                                  {b.text.length > 40 ? b.text.slice(0, 37) + '...' : b.text}
+                                </span>
+                              ))}
+                            </div>
+                            <div className="p-3 rounded-lg bg-white/70 border" style={{ borderColor: pal.border + '20' }}>
+                              <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: pal.border }}>How to write this</p>
+                              <p className="text-[11px] text-slate-600 leading-relaxed">{motif.narrative}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Orphan ideas */}
+                  {motifAnalysis.orphanIds.length > 0 && (
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <h4 className="text-xs font-bold text-slate-500 mb-2">Standalone Ideas</h4>
+                      <p className="text-[10px] text-slate-400 mb-3">These ideas didn&apos;t connect strongly to others. They might work as standalone essay topics, or try adding more related experiences to find connections.</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {motifAnalysis.orphanIds.map(id => {
+                          const b = motifAnalysis.bullets.find(x => x.id === id);
+                          return b ? (
+                            <span key={id} className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-[10px] text-slate-600">{b.text}</span>
+                          ) : null;
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                /* Empty state */
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-center max-w-md px-6">
+                    <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-accent/10 to-purple-100 flex items-center justify-center mb-5">
+                      <svg className="w-10 h-10 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                      </svg>
+                    </div>
+                    <h3 className="text-xl font-bold font-display text-primary mb-2">Motifs — Story Stitching</h3>
+                    <p className="text-sm text-slate-500 mb-4">
+                      Drop in your ideas, experiences, and moments as bullet points. Motifs discovers the hidden threads between them and maps out how to weave them into a compelling, multi-dimensional essay.
+                    </p>
+                    <div className="text-left bg-slate-50 rounded-xl p-4 border border-slate-100">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">How it works</p>
+                      <ol className="space-y-1.5 text-[11px] text-slate-500">
+                        <li className="flex gap-2"><span className="text-accent font-bold">1.</span> Type your experiences, memories, and ideas as bullet points</li>
+                        <li className="flex gap-2"><span className="text-accent font-bold">2.</span> Click &ldquo;Find Motifs&rdquo; to discover hidden connections</li>
+                        <li className="flex gap-2"><span className="text-accent font-bold">3.</span> See how your ideas cluster into essay-worthy narrative threads</li>
+                        <li className="flex gap-2"><span className="text-accent font-bold">4.</span> Get specific advice on how to structure each motif into an essay</li>
+                        <li className="flex gap-2"><span className="text-accent font-bold">5.</span> Save boards to reference while writing</li>
+                      </ol>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════ ESSAYS MODE ═══════════════ */}
+
         {/* New Essay Form */}
-        {showNewForm && (
+        {mode === 'essays' && showNewForm && (
           <div className="bg-white rounded-2xl border border-accent/20 p-5 shadow-lg mb-4 flex-shrink-0">
             <h3 className="text-base font-bold font-display text-primary mb-3">Create New Essay</h3>
             <div className="grid grid-cols-2 gap-3">
@@ -574,7 +1433,7 @@ export default function Essays() {
         )}
 
         {/* ═══ 3-COLUMN LAYOUT ═══ */}
-        <div className="flex-1 min-h-0 grid lg:grid-cols-[220px_1fr_320px] gap-4">
+        {mode === 'essays' && <div className="flex-1 min-h-0 grid lg:grid-cols-[220px_1fr_320px] gap-4">
 
           {/* ─── LEFT: Essay List ─── */}
           <div className="overflow-y-auto space-y-2 pr-1">
@@ -756,7 +1615,7 @@ export default function Essays() {
               </>
             )}
           </div>
-        </div>
+        </div>}
       </div>
     </DashboardLayout>
   );
