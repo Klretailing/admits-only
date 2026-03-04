@@ -936,171 +936,446 @@ function findMotifConnections(bullets: MotifBullet[]): MotifConnection[] {
   return connections.sort((a, b) => b.strength - a.strength);
 }
 
-/* ─── Step 3: Generate Candidate Motifs ─── */
+/* ─── Step 2: Generate 6–10 Candidate Motifs ─── */
 
-const MOTIF_NAME_BANK: Record<string, string[]> = {
-  translation: ['The Translator', 'Between Two Worlds', 'Lost & Found in Translation', 'The Interpreter'],
-  calibration: ['The Calibrator', 'Finding the Frequency', 'Tuning the Instrument', 'Precision & Grace'],
-  repair: ['The Restorer', 'Mending What\'s Broken', 'Kintsugi', 'The Art of Repair'],
-  threshold: ['At the Threshold', 'The In-Between', 'Crossing Over', 'Standing at the Door'],
-  mapping: ['The Cartographer', 'Uncharted Territory', 'Drawing the Map', 'Finding the Way'],
-  signal_noise: ['Signal Through Noise', 'Cutting Through', 'The Filter', 'Finding Clarity'],
-  attention: ['The Observer', 'Paying Attention', 'Seeing What Others Miss', 'The Quiet Eye'],
-  building_systems: ['The Architect', 'Building From Scratch', 'The Blueprint', 'Systems & Structures'],
-  navigating_uncertainty: ['Into the Fog', 'Navigating Blind', 'The Uncertain Path', 'Embracing the Unknown'],
-  balancing_contradictions: ['Both/And', 'The Paradox', 'Holding Contradictions', 'Two Truths'],
-  resilience: ['Rising Phoenix', 'Against the Tide', 'Unbroken', 'Through the Storm'],
-  leadership: ['The Catalyst', 'Quiet Authority', 'The Architect', 'Ripple Maker'],
-  creativity: ['The Maker', 'Blank Canvas', 'Uncharted', 'Spark & Wire'],
-  growth: ['Metamorphosis', 'New Lens', 'The Turning Point', 'Unfolding'],
-  community: ['Common Ground', 'The Village', 'Woven Together', 'Shared Roots'],
-  identity: ['True North', 'Roots & Wings', 'The Mosaic', 'Mirror & Window'],
-  passion: ['The Fire Within', 'Magnetic Pull', 'Heart & Soul', 'The Calling'],
-  intellectual: ['The Question', 'Deeper Dive', 'Mind Palace', 'The Puzzle'],
-  empathy: ['Walking Alongside', 'Through Their Eyes', 'The Bridge', 'Tender Strength'],
-  ambition: ['The Summit', 'Charting the Course', 'Beyond the Horizon', 'The Vision'],
-};
+// Motif templates: specific, original lenses (NOT generic words)
+const MOTIF_LENSES: {
+  id: string;
+  name: string;
+  description: string;
+  symbolImage: string;
+  matchThemes: string[];
+  matchValues: string[];
+  matchTensions: string[];
+  matchImagery: string[];
+  insightTemplate: (bullets: MotifBullet[]) => string;
+}[] = [
+  {
+    id: 'translation',
+    name: 'The Translator',
+    description: 'Moving between worlds, languages, codes, or contexts — carrying meaning across borders.',
+    symbolImage: 'A dictionary open to a page where two languages share the same word but mean different things.',
+    matchThemes: ['translation', 'identity', 'balancing_contradictions'],
+    matchValues: ['authenticity', 'empathy_val', 'connection'],
+    matchTensions: ['tradition_vs_self', 'individual_vs_group'],
+    matchImagery: [],
+    insightTemplate: (bs) => `This student exists at the intersection of multiple worlds. Their ability to translate — not just language, but meaning, expectation, and identity — reveals a sophistication that goes far beyond "being bilingual." The tension of carrying two (or more) contexts at once IS the insight.`,
+  },
+  {
+    id: 'calibration',
+    name: 'The Calibrator',
+    description: 'Fine-tuning, adjusting, seeking the right balance — precision as a way of engaging with the world.',
+    symbolImage: 'A hand turning a dial, searching for the exact frequency where static becomes music.',
+    matchThemes: ['calibration', 'attention', 'building_systems'],
+    matchValues: ['excellence', 'curiosity'],
+    matchTensions: ['expectation_vs_reality'],
+    matchImagery: ['lab_space', 'digital_space'],
+    insightTemplate: (bs) => `This student approaches life like an instrument that needs tuning. They don't accept defaults — they adjust, refine, and recalibrate until things feel right. This reveals a rare combination of patience and perfectionism that drives everything they do.`,
+  },
+  {
+    id: 'repair',
+    name: 'The Restorer',
+    description: 'Fixing what\'s broken — in systems, relationships, communities, or themselves.',
+    symbolImage: 'Kintsugi — a cracked bowl mended with gold, more beautiful for having been broken.',
+    matchThemes: ['repair', 'resilience', 'community'],
+    matchValues: ['resilience_val', 'responsibility', 'empathy_val'],
+    matchTensions: ['internal_conflict'],
+    matchImagery: ['home_space', 'body'],
+    insightTemplate: (bs) => `This student has a restorer's instinct — they see broken things not as failures but as opportunities for care. Whether fixing code, mending relationships, or healing from setbacks, the impulse is the same: take what's damaged and make it whole again. The gold in the cracks is the story.`,
+  },
+  {
+    id: 'threshold',
+    name: 'At the Threshold',
+    description: 'Standing at doorways, boundaries, and turning points — the liminal space between who you were and who you\'re becoming.',
+    symbolImage: 'A doorframe with one foot on each side — neither fully in nor fully out.',
+    matchThemes: ['threshold', 'growth', 'navigating_uncertainty'],
+    matchValues: ['autonomy', 'curiosity'],
+    matchTensions: ['aspiration_vs_constraint', 'expectation_vs_reality'],
+    matchImagery: ['home_space', 'academic_space'],
+    insightTemplate: (bs) => `These experiences all involve moments of transition — not the arrival, but the standing-at-the-door. This student is most alive in the in-between, which suggests a comfort with uncertainty and change that most applicants can't demonstrate.`,
+  },
+  {
+    id: 'mapping',
+    name: 'The Cartographer',
+    description: 'Charting unknown territory, finding paths where none existed, making the invisible visible.',
+    symbolImage: 'A hand-drawn map with blank edges and a compass pointing somewhere unnamed.',
+    matchThemes: ['mapping', 'intellectual', 'creativity'],
+    matchValues: ['curiosity', 'creativity_val'],
+    matchTensions: [],
+    matchImagery: ['natural_space', 'digital_space'],
+    insightTemplate: (bs) => `This student is a mapmaker — they navigate uncharted territory and create frameworks for understanding. Whether exploring a subject, a community, or their own identity, they don't follow existing paths. They draw new ones.`,
+  },
+  {
+    id: 'signal_noise',
+    name: 'Signal Through Noise',
+    description: 'Finding what matters amid chaos, distraction, or overwhelming information.',
+    symbolImage: 'A radio dial mid-turn, the static fading into a single clear voice.',
+    matchThemes: ['signal_noise', 'attention', 'intellectual'],
+    matchValues: ['curiosity', 'excellence'],
+    matchTensions: ['individual_vs_group'],
+    matchImagery: ['digital_space', 'sound'],
+    insightTemplate: (bs) => `In a world of noise, this student has the rare ability to find the signal. They cut through complexity, distraction, and surface-level thinking to get to what actually matters. This is a mind built for depth, not volume.`,
+  },
+  {
+    id: 'building',
+    name: 'The Architect',
+    description: 'Constructing systems, structures, processes — creating order from chaos.',
+    symbolImage: 'Blueprints unrolled on a table, with pencil marks showing revision after revision.',
+    matchThemes: ['building_systems', 'leadership', 'creativity'],
+    matchValues: ['creativity_val', 'responsibility', 'excellence'],
+    matchTensions: [],
+    matchImagery: ['digital_space', 'academic_space'],
+    insightTemplate: (bs) => `This student doesn't just participate in systems — they build them. Whether it's founding a club, writing code, or reorganizing how their family does things, the instinct is the same: see a need, design a solution, iterate until it works.`,
+  },
+  {
+    id: 'uncertainty',
+    name: 'Into the Fog',
+    description: 'Navigating when the path is unclear — embracing not-knowing as a form of courage.',
+    symbolImage: 'Headlights illuminating only the next ten feet of a fog-covered road.',
+    matchThemes: ['navigating_uncertainty', 'resilience', 'growth'],
+    matchValues: ['resilience_val', 'autonomy'],
+    matchTensions: ['aspiration_vs_constraint', 'expectation_vs_reality'],
+    matchImagery: ['light_dark'],
+    insightTemplate: (bs) => `These experiences share a common thread: the student didn't know where they were going. But instead of freezing, they moved forward anyway. This reveals a kind of courage that's rarer than it sounds — the willingness to act without a guarantee.`,
+  },
+  {
+    id: 'contradictions',
+    name: 'Both/And',
+    description: 'Holding two opposing truths simultaneously — being the scientist who dances, the leader who listens.',
+    symbolImage: 'Two hands holding different objects, both equally real, neither letting go.',
+    matchThemes: ['balancing_contradictions', 'identity'],
+    matchValues: ['authenticity', 'connection'],
+    matchTensions: ['tradition_vs_self', 'individual_vs_group', 'internal_conflict'],
+    matchImagery: [],
+    insightTemplate: (bs) => `This student resists being one thing. They hold contradictions — not as conflicts to resolve, but as dimensions to embrace. The essay's power would come from showing how these opposing sides don't cancel each other out; they multiply.`,
+  },
+  {
+    id: 'attention',
+    name: 'The Quiet Eye',
+    description: 'Noticing what others miss — details, people, patterns, silences.',
+    symbolImage: 'A magnifying glass held over an ordinary surface, revealing hidden texture.',
+    matchThemes: ['attention', 'empathy'],
+    matchValues: ['empathy_val', 'curiosity'],
+    matchTensions: [],
+    matchImagery: ['body', 'light_dark', 'sound'],
+    insightTemplate: (bs) => `This student pays attention differently. They catch what others overlook — a detail in a room, a shift in someone's tone, a pattern in data. This quality of attention is what makes their writing (and their thinking) distinctive.`,
+  },
+  {
+    id: 'craft',
+    name: 'The Craftsperson',
+    description: 'The same careful, practiced skill applied across different materials and domains.',
+    symbolImage: 'Hands shaping clay, then later shaping code, then later shaping an argument — the same motion.',
+    matchThemes: ['creativity', 'passion', 'calibration'],
+    matchValues: ['excellence', 'creativity_val'],
+    matchTensions: ['success_vs_cost'],
+    matchImagery: ['kitchen', 'lab_space', 'performance_space', 'digital_space'],
+    insightTemplate: (bs) => `This student has a craftsperson's approach to everything they touch. The same precision, care, and iterative refinement shows up in completely different domains. That transferable craft IS the motif — it's not about what they do, but how they do it.`,
+  },
+  {
+    id: 'roots_wings',
+    name: 'Roots & Wings',
+    description: 'The tension between where you come from and where you\'re going.',
+    symbolImage: 'A tree with deep roots and branches reaching beyond the frame.',
+    matchThemes: ['identity', 'community', 'growth', 'ambition'],
+    matchValues: ['connection', 'autonomy', 'responsibility'],
+    matchTensions: ['tradition_vs_self', 'aspiration_vs_constraint'],
+    matchImagery: ['home_space', 'natural_space'],
+    insightTemplate: (bs) => `This student is navigating the universal but deeply personal tension between origin and aspiration. They're rooted in family, culture, or community — but they're also reaching toward something new. The most powerful version of this essay doesn't resolve the tension; it inhabits it.`,
+  },
+];
 
-const COMBO_MOTIF_NAMES: Record<string, string> = {
-  'resilience+growth': 'The Phoenix Arc',
-  'identity+community': 'Roots & Branches',
-  'passion+creativity': 'The Maker\'s Fire',
-  'empathy+leadership': 'The Servant Leader',
-  'intellectual+ambition': 'The Driven Mind',
-  'resilience+leadership': 'Forged in Fire',
-  'identity+growth': 'Becoming',
-  'community+empathy': 'The Ripple Effect',
-  'passion+ambition': 'The Pursuit',
-  'creativity+intellectual': 'The Innovator',
-  'resilience+identity': 'Unshakable Core',
-  'growth+leadership': 'The Evolving Leader',
-  'creativity+community': 'Art as Impact',
-  'empathy+growth': 'The Widening Lens',
-  'passion+community': 'Passion in Service',
-  'translation+identity': 'The Bridge Builder',
-  'calibration+excellence': 'The Precision Artist',
-  'repair+resilience': 'Kintsugi — Beauty in Breaking',
-  'threshold+growth': 'Standing at the Door',
-  'mapping+intellectual': 'The Explorer\'s Mind',
-  'attention+empathy': 'The Quiet Witness',
-  'navigating_uncertainty+resilience': 'Sailing Without a Map',
-  'balancing_contradictions+identity': 'The Both/And Self',
-};
+function generateCandidateMotifs(bullets: MotifBullet[], connections: MotifConnection[]): CandidateMotif[] {
+  const candidates: CandidateMotif[] = [];
 
-/* ─── Motif Grouping with deeper clustering ─── */
+  // Score each lens against the bullet set
+  for (const lens of MOTIF_LENSES) {
+    let score = 0;
+    const matchedBulletIds: string[] = [];
 
-function groupMotifs(bullets: MotifBullet[], connections: MotifConnection[]): { motifs: MotifGroup[]; orphanIds: string[] } {
-  const assigned = new Set<string>();
-  const motifs: MotifGroup[] = [];
+    for (const b of bullets) {
+      let bulletScore = 0;
 
-  // Build weighted adjacency
-  const adj: Record<string, { id: string; strength: number; label: string }[]> = {};
-  for (const b of bullets) adj[b.id] = [];
+      // Theme matches
+      const themeMatch = b.themes.filter(t => lens.matchThemes.includes(t)).length;
+      bulletScore += themeMatch * 2;
 
-  // Use lower threshold to catch more connections
-  for (const c of connections) {
-    if (c.strength >= 0.3) {
-      adj[c.fromId]?.push({ id: c.toId, strength: c.strength, label: c.label });
-      adj[c.toId]?.push({ id: c.fromId, strength: c.strength, label: c.label });
-    }
-  }
+      // Value matches
+      const valMatch = b.analysis.values.filter(v => lens.matchValues.includes(v)).length;
+      bulletScore += valMatch * 1.5;
 
-  // Sort bullets by total connection weight (not just count)
-  const bulletsByWeight = bullets
-    .map(b => ({
-      bullet: b,
-      totalWeight: (adj[b.id] || []).reduce((sum, n) => sum + n.strength, 0),
-      connCount: (adj[b.id] || []).length,
-    }))
-    .sort((a, b) => b.totalWeight - a.totalWeight);
+      // Tension matches
+      const tensionMatch = b.analysis.tensions.filter(t => lens.matchTensions.includes(t)).length;
+      bulletScore += tensionMatch * 2;
 
-  let motifIdx = 0;
+      // Imagery matches
+      if (lens.matchImagery.length > 0) {
+        const imgMatch = b.analysis.imagery.filter(i => lens.matchImagery.includes(i)).length;
+        bulletScore += imgMatch * 1;
+      }
 
-  for (const { bullet } of bulletsByWeight) {
-    if (assigned.has(bullet.id)) continue;
-    if ((adj[bullet.id]?.length || 0) === 0) continue;
-
-    // BFS with lower threshold
-    const cluster: string[] = [bullet.id];
-    assigned.add(bullet.id);
-    const queue = [bullet.id];
-
-    while (queue.length > 0) {
-      const curr = queue.shift()!;
-      for (const neighbor of adj[curr] || []) {
-        if (!assigned.has(neighbor.id) && neighbor.strength >= 0.3) {
-          assigned.add(neighbor.id);
-          cluster.push(neighbor.id);
-          queue.push(neighbor.id);
-        }
+      if (bulletScore > 0) {
+        matchedBulletIds.push(b.id);
+        score += bulletScore;
       }
     }
 
-    if (cluster.length < 2) {
-      assigned.delete(bullet.id);
-      continue;
+    // Need at least 2 bullet connections to be a valid candidate
+    if (matchedBulletIds.length >= 2) {
+      // Bonus for connecting bullets that are in different domains
+      const matchedBullets = matchedBulletIds.map(id => bullets.find(b => b.id === id)!);
+      const domainSet = new Set(matchedBullets.flatMap(b => b.domains));
+      if (domainSet.size >= 2) score += 3; // Cross-domain bonus
+
+      candidates.push({
+        name: lens.name,
+        description: lens.description,
+        bulletIds: matchedBulletIds,
+        insight: lens.insightTemplate(matchedBullets),
+        symbolImage: lens.symbolImage,
+      });
+    }
+  }
+
+  // Also generate dynamic candidates from strong bridge connections
+  const strongBridges = connections.filter(c => c.bridge && c.strength >= 0.7);
+  for (const bridge of strongBridges) {
+    const fromB = bullets.find(b => b.id === bridge.fromId);
+    const toB = bullets.find(b => b.id === bridge.toId);
+    if (!fromB || !toB) continue;
+
+    // Check if any existing candidate already covers both bullets
+    const alreadyCovered = candidates.some(c => c.bulletIds.includes(bridge.fromId) && c.bulletIds.includes(bridge.toId));
+    if (alreadyCovered) continue;
+
+    const bridgeTypeNames: Record<string, string> = {
+      contrast_resolution: 'The Paradox',
+      cause_effect: 'Chain Reaction',
+      shared_craft: 'The Common Thread',
+      recurring_constraint: 'The Recurring Challenge',
+      concrete_metaphor: 'The Recurring Image',
+      evolving_question: 'The Evolving Question',
+    };
+
+    const bridgeTypeDescs: Record<string, string> = {
+      contrast_resolution: 'Two contrasting experiences that reveal depth when held together.',
+      cause_effect: 'One experience directly shaped how you approached another.',
+      shared_craft: 'The same underlying skill or mindset applied in different worlds.',
+      recurring_constraint: 'The same obstacle keeps appearing across different contexts.',
+      concrete_metaphor: 'A physical image or object that connects different experiences.',
+      evolving_question: 'A question that started simple and became more complex.',
+    };
+
+    candidates.push({
+      name: bridgeTypeNames[bridge.bridge!.type] || 'Dynamic Thread',
+      description: bridgeTypeDescs[bridge.bridge!.type] || bridge.label,
+      bulletIds: [bridge.fromId, bridge.toId],
+      insight: bridge.label,
+      symbolImage: `The connection between "${fromB.text.slice(0, 30)}..." and "${toB.text.slice(0, 30)}..."`,
+    });
+  }
+
+  // Sort by number of bullets connected (more = stronger), then by specificity
+  return candidates
+    .sort((a, b) => b.bulletIds.length - a.bulletIds.length || a.name.localeCompare(b.name))
+    .slice(0, 10); // Cap at 10
+}
+
+/* ─── Step 3: Select Strongest 2-4 Motifs ─── */
+
+function selectStrongestMotifs(
+  candidates: CandidateMotif[],
+  bullets: MotifBullet[],
+  connections: MotifConnection[]
+): { selected: MotifGroup[]; reasoning: string[] } {
+  if (candidates.length === 0) return { selected: [], reasoning: [] };
+
+  // Score each candidate
+  const scored = candidates.map((c, idx) => {
+    let score = 0;
+    const reasons: string[] = [];
+
+    // Coverage: how many bullets does it connect?
+    const coverage = c.bulletIds.length / bullets.length;
+    score += coverage * 10;
+    if (coverage >= 0.5) reasons.push(`Connects ${Math.round(coverage * 100)}% of your ideas`);
+
+    // Cross-domain: does it connect different worlds?
+    const cBullets = c.bulletIds.map(id => bullets.find(b => b.id === id)!).filter(Boolean);
+    const domainSet = new Set(cBullets.flatMap(b => b.domains));
+    if (domainSet.size >= 2) {
+      score += domainSet.size * 2;
+      reasons.push(`Bridges ${domainSet.size} different worlds (${[...domainSet].slice(0, 3).join(', ')})`);
     }
 
-    const clusterBullets = cluster.map(cid => bullets.find(x => x.id === cid)!).filter(Boolean);
-    const clusterConns = connections.filter(c => cluster.includes(c.fromId) && cluster.includes(c.toId));
+    // Specificity: prefer non-cliché motifs
+    const clicheNames = ['leadership', 'growth', 'passion', 'perseverance', 'resilience', 'ambition', 'hard work', 'making an impact'];
+    const isSpecific = !clicheNames.some(cl => c.name.toLowerCase().includes(cl) || c.description.toLowerCase().includes(cl));
+    if (isSpecific) {
+      score += 3;
+      reasons.push('Feels original and specific');
+    }
 
-    // Determine dominant themes + values
+    // Connection strength between covered bullets
+    const internalConns = connections.filter(conn =>
+      c.bulletIds.includes(conn.fromId) && c.bulletIds.includes(conn.toId)
+    );
+    const avgStrength = internalConns.length > 0
+      ? internalConns.reduce((s, conn) => s + conn.strength, 0) / internalConns.length
+      : 0;
+    score += avgStrength * 5;
+    if (avgStrength >= 0.7) reasons.push('Strong internal connections');
+
+    // Bridge quality: does it have deep bridge mechanisms?
+    const hasBridge = internalConns.some(conn => conn.bridge);
+    if (hasBridge) {
+      score += 4;
+      reasons.push('Has creative narrative bridge');
+    }
+
+    return { candidate: c, score, reasons, idx };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+
+  // Select 2-4 non-overlapping motifs
+  const selected: typeof scored = [];
+  const usedBullets = new Set<string>();
+
+  for (const item of scored) {
+    if (selected.length >= 4) break;
+
+    // Check overlap with already selected
+    const overlapCount = item.candidate.bulletIds.filter(id => usedBullets.has(id)).length;
+    const overlapRatio = overlapCount / item.candidate.bulletIds.length;
+
+    if (overlapRatio < 0.5) { // Allow some overlap but not too much
+      selected.push(item);
+      for (const id of item.candidate.bulletIds) usedBullets.add(id);
+    }
+  }
+
+  // Convert to MotifGroup format
+  const reasoning: string[] = [];
+  const motifs: MotifGroup[] = selected.map((item, mi) => {
+    const c = item.candidate;
+    const cBullets = c.bulletIds.map(id => bullets.find(b => b.id === id)!).filter(Boolean);
+    const internalConns = connections.filter(conn =>
+      c.bulletIds.includes(conn.fromId) && c.bulletIds.includes(conn.toId)
+    );
+
+    // Collect themes from covered bullets
     const themeCount: Record<string, number> = {};
-    const valueCount: Record<string, number> = {};
-    for (const b of clusterBullets) {
+    for (const b of cBullets) {
       for (const t of b.themes) themeCount[t] = (themeCount[t] || 0) + 1;
-      for (const v of b.analysis.values) valueCount[v] = (valueCount[v] || 0) + 1;
     }
     const sortedThemes = Object.entries(themeCount).sort((a, b) => b[1] - a[1]).map(([t]) => t);
-    const top2 = sortedThemes.slice(0, 2);
-
-    // Name the motif (prefer specific names over generic)
-    let name = 'Thread ' + (motifIdx + 1);
-    if (top2.length >= 2) {
-      const key = [top2[0], top2[1]].sort().join('+');
-      name = COMBO_MOTIF_NAMES[key] || MOTIF_NAME_BANK[top2[0]]?.[motifIdx % 4] || name;
-    } else if (top2.length === 1) {
-      name = MOTIF_NAME_BANK[top2[0]]?.[motifIdx % 4] || name;
-    }
-
-    // Find the best bridge mechanism in this cluster
-    const bestBridge = clusterConns.find(c => c.bridge)?.bridge;
 
     // Generate narrative
-    const narrative = generateMotifNarrative(clusterBullets, top2, clusterConns);
+    const narrative = generateMotifNarrative(cBullets, sortedThemes.slice(0, 2), internalConns);
 
-    // Identify central tension
-    const tensions = clusterBullets.flatMap(b => b.analysis.tensions);
+    // Generate structure
+    const structure = generateEssayStructure(cBullets, internalConns, sortedThemes.slice(0, 2));
+
+    // Flag clichés (Step 6)
+    const weakConnections = flagWeakConnections(c, cBullets, internalConns, sortedThemes);
+
+    // Find central tension
+    const tensions = cBullets.flatMap(b => b.analysis.tensions);
     const tensionCount: Record<string, number> = {};
     for (const t of tensions) tensionCount[t] = (tensionCount[t] || 0) + 1;
     const topTension = Object.entries(tensionCount).sort((a, b) => b[1] - a[1])[0]?.[0];
 
-    // Suggested structure
-    const structure = generateEssayStructure(clusterBullets, clusterConns, top2);
+    // Build reasoning
+    const reasonText = `**${c.name}** — ${item.reasons.join('. ')}.`;
+    reasoning.push(reasonText);
 
-    // Flag weak/cliché connections
-    const weakConnections: string[] = [];
-    const clicheThemes = ['leadership', 'growth', 'passion', 'resilience', 'ambition'];
-    if (top2.length > 0 && clicheThemes.includes(top2[0]) && !bestBridge) {
-      weakConnections.push(`"${top2[0]}" is a common theme — make it specific. Instead of saying you showed ${top2[0]}, show a concrete moment that embodies it without naming it.`);
-    }
-
-    motifs.push({
-      id: `motif_${motifIdx}`,
-      name,
+    return {
+      id: `motif_${mi}`,
+      name: c.name,
       narrative,
-      bulletIds: cluster,
-      dominantThemes: top2,
-      colorIdx: motifIdx,
+      bulletIds: c.bulletIds,
+      dominantThemes: sortedThemes.slice(0, 2),
+      colorIdx: mi,
       centralTension: topTension,
       suggestedStructure: structure,
       weakConnections,
-    });
-    motifIdx++;
+    };
+  });
+
+  return { selected: motifs, reasoning };
+}
+
+/* ─── Step 6: Flag Weak and Cliché Connections ─── */
+
+const CLICHE_PATTERNS: { pattern: RegExp; warning: string; fix: string }[] = [
+  {
+    pattern: /\b(?:taught\s+me|learned\s+(?:that|to)|showed\s+me)\b/i,
+    warning: '"Taught me" / "Showed me" is a cliché essay framing',
+    fix: 'Instead of saying what you learned, show the moment of change through action and detail. Let the reader infer the lesson.',
+  },
+  {
+    pattern: /\b(?:leader(?:ship)?|passion|perseveran|growth\s+(?:journey|mindset)|making?\s+(?:a|an)\s+(?:impact|difference)|hard\s*work|work\s+(?:ethic|hard))\b/i,
+    warning: 'This theme appears in thousands of admissions essays',
+    fix: 'These words are red flags for admissions officers. Replace the label with a specific scene that embodies it. Show the reader a leader — don\'t use the word "leader."',
+  },
+  {
+    pattern: /\b(?:changed?\s+(?:my\s+)?(?:life|perspective|world)|eye[\s-]open|transformative?\s+experience|changed?\s+(?:who\s+i\s+am|everything|me\s+as\s+a\s+person))\b/i,
+    warning: '"Changed my life/perspective" is vague and overused',
+    fix: 'Instead of claiming transformation, show two concrete moments — one before and one after — and let the contrast speak for itself.',
+  },
+  {
+    pattern: /\b(?:i\s+(?:am\s+)?passion(?:ate)?\s+about|my\s+passion\s+(?:for|is)|i\s+love\s+(?:to\s+)?(?:help|make|create))\b/i,
+    warning: 'Declaring passion directly weakens the essay',
+    fix: 'If you have to say you\'re passionate, the writing isn\'t showing it. Describe the 3am obsession, the thing you do when nobody\'s watching, the problem that won\'t leave your mind.',
+  },
+  {
+    pattern: /\b(?:since\s+(?:i\s+was\s+)?(?:a\s+)?(?:young|little|child|kid)|ever\s+since\s+i\s+(?:was|can\s+remember)|from\s+a\s+young\s+age|growing\s+up)\b/i,
+    warning: '"Ever since I was young" is one of the most common essay openings',
+    fix: 'Start in a specific moment instead. "I was seven when..." is more powerful than "Ever since I was young..." because it grounds the reader in a real scene.',
+  },
+];
+
+function flagWeakConnections(
+  candidate: CandidateMotif,
+  bullets: MotifBullet[],
+  connections: MotifConnection[],
+  themes: string[]
+): string[] {
+  const warnings: string[] = [];
+
+  // Check for cliché themes
+  const clicheThemes = ['leadership', 'growth', 'passion', 'resilience', 'ambition'];
+  const dominantCliche = themes.filter(t => clicheThemes.includes(t));
+  if (dominantCliche.length > 0 && !connections.some(c => c.bridge)) {
+    warnings.push(
+      `Your dominant theme "${dominantCliche[0]}" is one of the most common in admissions essays. To stand out: don't name the theme. Instead, show a specific moment that embodies it so clearly that the reader discovers it themselves. Replace the abstract word with a concrete image.`
+    );
   }
 
-  const orphanIds = bullets.filter(b => !assigned.has(b.id)).map(b => b.id);
-  return { motifs, orphanIds };
+  // Check bullet texts for cliché patterns
+  for (const b of bullets) {
+    for (const { pattern, warning, fix } of CLICHE_PATTERNS) {
+      if (pattern.test(b.text)) {
+        warnings.push(`In "${b.text.slice(0, 40)}...": ${warning}. ${fix}`);
+        break; // One warning per bullet
+      }
+    }
+  }
+
+  // Check for weak connections (generic labels)
+  for (const conn of connections) {
+    if (conn.strength < 0.4 && conn.type !== 'deep_bridge') {
+      const fromB = bullets.find(x => x.id === conn.fromId);
+      const toB = bullets.find(x => x.id === conn.toId);
+      if (fromB && toB) {
+        warnings.push(
+          `The connection between "${fromB.text.slice(0, 30)}..." and "${toB.text.slice(0, 30)}..." feels thin. Try adding more specific detail to both ideas — physical details, dialogue, or sensory descriptions — to strengthen the bridge.`
+        );
+      }
+    }
+  }
+
+  return warnings.slice(0, 4); // Cap at 4 warnings to not overwhelm
 }
 
 /* ─── Step 5: Narrative Direction & Structure ─── */
@@ -1109,33 +1384,37 @@ function generateEssayStructure(bullets: MotifBullet[], connections: MotifConnec
   const n = bullets.length;
   if (n === 0) return '';
 
-  const hasBridge = connections.some(c => c.bridge);
   const hasContrast = connections.some(c => c.bridge?.type === 'contrast_resolution');
   const hasCauseEffect = connections.some(c => c.bridge?.type === 'cause_effect');
   const hasMetaphor = connections.some(c => c.bridge?.type === 'concrete_metaphor');
+  const hasQuestion = connections.some(c => c.bridge?.type === 'evolving_question');
+  const hasBridge = connections.some(c => c.bridge);
 
   if (hasMetaphor) {
-    const metaphorConn = connections.find(c => c.bridge?.type === 'concrete_metaphor')!;
-    return `Open with the concrete image — describe it in sensory detail. Return to this image throughout the essay, but each time it appears, it carries new meaning because of what you've revealed. End by showing how this image has transformed, just as you have.`;
+    return `Act 1 — Setup: Open with the concrete image. Describe it in sensory detail — what it looks like, feels like, sounds like. Place the reader inside the first experience.\n\nAct 2 — Expansion: Show your other experiences, but let the image reappear naturally. Each time it shows up, it should carry new meaning because of what you've just revealed.\n\nAct 3 — Integration: Return to the image one final time. Now it has been transformed by everything the reader has learned about you. The image hasn't changed — you have.`;
   }
 
   if (hasContrast) {
-    return `Act 1: Introduce one side of the tension — the experience that set up a particular worldview or expectation. Act 2: Show the contrasting experience that complicated or challenged that view. Don't rush the resolution. Act 3: Don't resolve the tension neatly — show how you hold both truths. The sophistication IS the essay.`;
+    return `Act 1 — Setup: Introduce one side of the tension — the experience that established a particular worldview, habit, or expectation. Immerse the reader.\n\nAct 2 — Expansion: Show the contrasting experience that complicated or challenged that view. Don't rush the resolution. Let the reader sit in the discomfort.\n\nAct 3 — Integration: Don't resolve the tension neatly. Show how you hold both truths simultaneously. The sophistication of embracing contradiction IS the essay's insight.`;
   }
 
   if (hasCauseEffect) {
-    return `Open in the middle of the second experience — the one that was shaped by the first. Let the reader wonder why you approach things this way. Then flash back to the formative experience. The "aha" moment isn't when you learned the lesson — it's when the reader connects the dots between the two experiences.`;
+    return `Act 1 — Setup: Open in the middle of the later experience — the one shaped by the first. Show the reader how you operate, but don't explain why yet.\n\nAct 2 — Expansion: Flash back to the formative experience. Now the reader understands the origin of the instinct or approach they just witnessed.\n\nAct 3 — Integration: Return to the present. The "aha" moment isn't when you learned the lesson — it's when the reader connects the dots.`;
+  }
+
+  if (hasQuestion) {
+    return `Act 1 — Setup: Introduce the question through your first experience. It should feel simple, maybe even naive, at this stage.\n\nAct 2 — Expansion: Show how subsequent experiences deepened, complicated, or transformed the question. It should evolve — not get answered.\n\nAct 3 — Integration: End with the question in its most evolved form. The best essays don't answer their central question — they show how the student's relationship with it has deepened.`;
   }
 
   if (hasBridge) {
     const bestBridge = connections.find(c => c.bridge)!;
-    return `Structure around the bridge: "${bestBridge.label}". Open with the most vivid scene. Each paragraph should deepen the reader's understanding of this connection. End with a forward-looking moment that shows how these experiences will continue to shape you.`;
+    return `Act 1 — Setup: Open with the most vivid scene. Ground the reader in sensory detail.\n\nAct 2 — Expansion: Introduce the bridge: "${bestBridge.label}." Each paragraph should deepen the reader's understanding of this connection.\n\nAct 3 — Integration: End with a forward-looking moment that shows how these connected experiences will continue to shape who you're becoming.`;
   }
 
-  return `Open with your most specific, visual moment. Each subsequent experience should build on the previous one like layers of paint on a canvas. End by stepping back to reveal the full picture — what these moments, taken together, reveal about who you are.`;
+  return `Act 1 — Setup: Open with your most specific, visual moment. Use sensory detail to put the reader in the scene.\n\nAct 2 — Expansion: Layer in your other experiences. Each one should build on the previous, like layers of paint on a canvas — adding depth and dimension.\n\nAct 3 — Integration: Step back to reveal the full picture. What do these moments, taken together, reveal about who you are? Let the reader discover it rather than stating it.`;
 }
 
-/* ─── Narrative Generation (much deeper) ─── */
+/* ─── Narrative Generation (with bridge-aware specificity) ─── */
 
 function generateMotifNarrative(bullets: MotifBullet[], themes: string[], connections: MotifConnection[]): string {
   const n = bullets.length;
@@ -1149,35 +1428,35 @@ function generateMotifNarrative(bullets: MotifBullet[], themes: string[], connec
     const bridgeType = bridgeConn.bridge.type;
 
     if (bridgeType === 'contrast_resolution') {
-      return `These experiences create a powerful contrast. Start inside ${texts[0]} — immerse the reader in that world. Then pivot to ${texts[n > 1 ? 1 : 0]}, which reveals a completely different side of you. The essay's power comes from showing how these seemingly contradictory experiences coexist in one person. Don't explain the connection — let the reader feel it.`;
+      return `These experiences create a powerful contrast. Start inside ${texts[0]} — immerse the reader in that world. Then pivot to ${texts[n > 1 ? 1 : 0]}, which reveals a completely different side of you. The essay's power comes from showing how these seemingly contradictory experiences coexist in one person. Don't explain the connection — let the reader feel it through the juxtaposition.`;
     }
     if (bridgeType === 'cause_effect') {
-      return `One experience directly shaped the other. Open mid-action in the later experience (${texts[n > 1 ? 1 : 0]}), showing the reader how you operate. Then rewind to ${texts[0]} to reveal what forged this approach. The "before" and "after" versions of you ARE the narrative arc.`;
+      return `One experience directly shaped the other. Open mid-action in the later experience (${texts[n > 1 ? 1 : 0]}), showing the reader how you operate. Then rewind to ${texts[0]} to reveal what forged this approach. The "before" and "after" versions of you ARE the narrative arc — don't state the change, embody it.`;
     }
     if (bridgeType === 'shared_craft') {
-      return `You bring the same mindset to completely different worlds — that's your superpower. Open with ${texts[0]}, showing your approach in action. Then jump to ${texts[n > 1 ? 1 : 0]}, and let the reader discover that the same instinct, the same way of thinking, drives you in a totally different context. This reveals depth of character that a single-topic essay can't match.`;
+      return `You bring the same mindset to completely different worlds — that's your superpower. Open with ${texts[0]}, showing your approach in action through specific detail. Then jump to ${texts[n > 1 ? 1 : 0]}, and let the reader discover that the same instinct drives you in a totally different context. This reveals a depth of character that a single-topic essay can't match.`;
     }
     if (bridgeType === 'recurring_constraint') {
-      return `The same challenge keeps finding you in different forms. Start with ${texts[0]} where you first encountered it. Then show it again in ${texts[n > 1 ? 1 : 0]}, but this time you recognize it. The essay isn't about overcoming the obstacle — it's about your evolving relationship with it.`;
+      return `The same challenge keeps finding you in different forms. Start with ${texts[0]} where you first encountered it. Then show it again in ${texts[n > 1 ? 1 : 0]}, but this time you recognize it — and your response is different. The essay isn't about overcoming the obstacle; it's about your evolving relationship with it.`;
     }
     if (bridgeType === 'concrete_metaphor') {
-      return `You have a powerful recurring image connecting these experiences. Open with a vivid, sensory description of it in the context of ${texts[0]}. When it reappears in ${texts[n > 1 ? 1 : 0]}, it should carry new weight. This image IS your motif — let it do the narrative work so you don't have to state the theme directly.`;
+      return `You have a powerful recurring image connecting these experiences. Open with a vivid, sensory description in the context of ${texts[0]}. When it reappears in ${texts[n > 1 ? 1 : 0]}, it should carry new weight. This image IS your motif — let it do the narrative work so you never have to state the theme directly.`;
     }
     if (bridgeType === 'evolving_question') {
-      return `There's a fundamental question running through these experiences. In ${texts[0]}, the question first emerges. By ${texts[n > 1 ? 1 : 0]}, it has evolved but not resolved. The best essays don't answer their central question — they show how the student's relationship with the question has deepened.`;
+      return `There's a fundamental question running through these experiences. In ${texts[0]}, the question first emerges — maybe without you even realizing it. By ${texts[n > 1 ? 1 : 0]}, it has evolved but not resolved. The best essays don't answer their central question — they show how the student's relationship with the question has deepened and become more nuanced.`;
     }
   }
 
-  // Fallback: theme-based narrative (still good, just less specific)
+  // Theme-based narrative
   if (themes.length > 0) {
     const themeName = themes[0].replace(/_/g, ' ');
-    return `The thread connecting these ideas is ${themeName}. Open with the most vivid, specific moment from ${texts[0]}. Each subsequent idea (${texts.slice(1).join(', ')}) becomes a new facet of the same core theme. The key: don't announce the theme — let the reader discover it through the accumulated weight of your details. Show, never tell.`;
+    return `The thread connecting these ideas is ${themeName} — but don't name it. Open with the most vivid, specific moment from ${texts[0]}. Each subsequent experience (${texts.slice(1).join(', ')}) becomes a new facet of the same core theme. Let the reader discover it through the accumulated weight of your concrete details. Show, never tell.`;
   }
 
-  return `These experiences connect in ways that aren't obvious at first — and that's what makes them powerful. Open with the most specific, visual moment. Let each idea build on the previous one, creating a layered narrative. The reader should finish thinking: "I know this person." The unexpected connections between your experiences are what make your essay uniquely yours.`;
+  return `These experiences connect in ways that aren't obvious at first — and that's exactly what makes them powerful for an essay. Open with your most specific, sensory moment. Let each idea build on the previous one, creating a layered narrative. The reader should finish thinking: "I know this person." The unexpected connections between your experiences are what make your story uniquely yours.`;
 }
 
-/* ─── Full Analysis Pipeline ─── */
+/* ─── Full Analysis Pipeline (follows the 7-step model) ─── */
 
 function analyzeMotifs(rawBullets: string[]): MotifAnalysis {
   // Step 1: Deep analysis of each bullet
@@ -1195,13 +1474,27 @@ function analyzeMotifs(rawBullets: string[]): MotifAnalysis {
       };
     });
 
-  // Step 2-4: Find connections using deep bridge mechanisms
+  // Find all connections with bridge mechanisms
   const connections = findMotifConnections(bullets);
 
-  // Step 3 & 5: Group into motifs with narrative direction
-  const { motifs, orphanIds } = groupMotifs(bullets, connections);
+  // Step 2: Generate 6-10 candidate motifs
+  const candidateMotifs = generateCandidateMotifs(bullets, connections);
 
-  return { bullets, connections, motifs, orphanIds, bridges: connections.filter(c => c.bridge) };
+  // Step 3: Select strongest 2-4 non-overlapping motifs
+  const { selected: motifs, reasoning } = selectStrongestMotifs(candidateMotifs, bullets, connections);
+
+  // Determine orphans (bullets not in any selected motif)
+  const assignedIds = new Set(motifs.flatMap(m => m.bulletIds));
+  const orphanIds = bullets.filter(b => !assignedIds.has(b.id)).map(b => b.id);
+
+  return {
+    bullets,
+    connections,
+    motifs,
+    orphanIds,
+    candidateMotifs,
+    bridges: connections.filter(c => c.bridge),
+  };
 }
 
 /* ─── Visual Board: Color palette ─── */
@@ -1802,10 +2095,47 @@ export default function Essays() {
                   <MotifStoryboard analysis={motifAnalysis} expandedCard={expandedCard} setExpandedCard={setExpandedCard} />
                 ) : (
                   /* ── Narrative view ── */
-                  <div className="space-y-5">
+                  <div className="space-y-6">
+
+                    {/* Candidate motifs explored (collapsible) */}
+                    {motifAnalysis.candidateMotifs && motifAnalysis.candidateMotifs.length > 0 && (
+                      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+                        <div className="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-purple-50 to-white">
+                          <div className="flex items-center gap-2">
+                            <svg className="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
+                            <h3 className="text-sm font-bold text-primary">Candidate Motifs Explored</h3>
+                            <span className="text-[10px] text-purple-500 font-medium ml-1">({motifAnalysis.candidateMotifs.length} lenses tested)</span>
+                          </div>
+                          <p className="text-xs text-slate-400 mt-1">We explored these potential narrative lenses against your ideas. The strongest {motifAnalysis.motifs.length} were selected below.</p>
+                        </div>
+                        <div className="p-4 grid grid-cols-2 lg:grid-cols-3 gap-3">
+                          {motifAnalysis.candidateMotifs.map((cm, ci) => {
+                            const isSelected = motifAnalysis.motifs.some(m => m.name === cm.name);
+                            return (
+                              <div key={ci} className={`p-4 rounded-xl border-2 transition-all ${isSelected ? 'border-accent/40 bg-accent/5' : 'border-slate-100 bg-slate-50/50'}`}>
+                                <div className="flex items-center gap-2 mb-2">
+                                  {isSelected && <span className="text-[9px] font-bold text-white bg-accent px-1.5 py-0.5 rounded-md uppercase">Selected</span>}
+                                  <h4 className="text-xs font-bold text-primary">{cm.name}</h4>
+                                </div>
+                                <p className="text-[11px] text-slate-500 leading-relaxed mb-2">{cm.description}</p>
+                                <p className="text-[10px] text-slate-400 italic">{cm.symbolImage}</p>
+                                <div className="mt-2 flex items-center gap-1">
+                                  <span className="text-[9px] text-slate-400">Connects:</span>
+                                  <span className="text-[10px] font-semibold text-accent">{cm.bulletIds.length} ideas</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Selected motifs (the main output) */}
                     {motifAnalysis.motifs.map((motif, mi) => {
                       const pal = MOTIF_PALETTE[motif.colorIdx % MOTIF_PALETTE.length];
                       const mBullets = motif.bulletIds.map(id => motifAnalysis.bullets.find(b => b.id === id)).filter(Boolean);
+                      const candidateInfo = motifAnalysis.candidateMotifs?.find(cm => cm.name === motif.name);
+
                       return (
                         <div key={motif.id} className="bg-white rounded-2xl border-2 overflow-hidden shadow-sm" style={{ borderColor: pal.border + '30' }}>
                           {/* Header */}
@@ -1829,13 +2159,25 @@ export default function Essays() {
                           </div>
 
                           <div className="p-6 space-y-5">
+                            {/* Candidate insight (what this motif reveals about the student) */}
+                            {candidateInfo && (
+                              <div className="p-4 rounded-xl border" style={{ borderColor: pal.border + '15', backgroundColor: pal.bg + '30' }}>
+                                <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: pal.border }}>What this motif reveals</p>
+                                <p className="text-sm text-slate-700 leading-relaxed">{candidateInfo.insight}</p>
+                                <p className="text-xs text-slate-400 italic mt-2">Visual: {candidateInfo.symbolImage}</p>
+                              </div>
+                            )}
+
                             {/* Ideas in this motif */}
-                            <div className="flex flex-wrap gap-2">
-                              {mBullets.map(b => b && (
-                                <div key={b.id} className="px-3 py-2 rounded-xl border text-sm" style={{ backgroundColor: pal.bg + '60', borderColor: pal.border + '25', color: pal.text }}>
-                                  {b.text}
-                                </div>
-                              ))}
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Connected experiences</p>
+                              <div className="flex flex-wrap gap-2">
+                                {mBullets.map(b => b && (
+                                  <div key={b.id} className="px-3 py-2 rounded-xl border text-sm" style={{ backgroundColor: pal.bg + '60', borderColor: pal.border + '25', color: pal.text }}>
+                                    {b.text}
+                                  </div>
+                                ))}
+                              </div>
                             </div>
 
                             {/* Narrative advice */}
@@ -1844,21 +2186,38 @@ export default function Essays() {
                               <p className="text-sm text-slate-700 leading-relaxed">{motif.narrative}</p>
                             </div>
 
-                            {/* Structure suggestion */}
+                            {/* Structure suggestion (formatted with acts) */}
                             {motif.suggestedStructure && (
                               <div className="p-5 rounded-xl bg-slate-50 border border-slate-100">
-                                <p className="text-[10px] font-bold uppercase tracking-wider mb-2 text-slate-500">Suggested structure</p>
-                                <p className="text-sm text-slate-600 leading-relaxed">{motif.suggestedStructure}</p>
+                                <p className="text-[10px] font-bold uppercase tracking-wider mb-3 text-slate-500">Suggested essay structure</p>
+                                <div className="space-y-3">
+                                  {motif.suggestedStructure.split('\n\n').map((para, pi) => {
+                                    const isAct = para.startsWith('Act');
+                                    return (
+                                      <div key={pi} className={isAct ? 'pl-4 border-l-2 border-accent/30' : ''}>
+                                        <p className="text-sm text-slate-600 leading-relaxed">{para}</p>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
                               </div>
                             )}
 
-                            {/* Weak connection warnings */}
+                            {/* Weak connection / cliché warnings (Step 6) */}
                             {motif.weakConnections && motif.weakConnections.length > 0 && (
-                              <div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
-                                <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5 text-amber-600">Watch out</p>
-                                {motif.weakConnections.map((w, i) => (
-                                  <p key={i} className="text-xs text-amber-700 leading-relaxed">{w}</p>
-                                ))}
+                              <div className="p-5 rounded-xl bg-amber-50 border border-amber-200">
+                                <div className="flex items-center gap-2 mb-3">
+                                  <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                  <p className="text-xs font-bold text-amber-700">Cliché & Weakness Alerts</p>
+                                </div>
+                                <div className="space-y-2.5">
+                                  {motif.weakConnections.map((w, i) => (
+                                    <div key={i} className="flex items-start gap-2">
+                                      <div className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 flex-shrink-0" />
+                                      <p className="text-xs text-amber-800 leading-relaxed">{w}</p>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
                             )}
                           </div>
@@ -1871,14 +2230,22 @@ export default function Essays() {
                       <div className="bg-white rounded-2xl border-2 border-slate-200 overflow-hidden">
                         <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
                           <h3 className="text-sm font-bold text-slate-500">Standalone Ideas</h3>
-                          <p className="text-xs text-slate-400 mt-0.5">These didn&apos;t connect strongly yet. Try adding more detail or related experiences.</p>
+                          <p className="text-xs text-slate-400 mt-0.5">These didn&apos;t connect strongly to the selected motifs. Try adding more specific detail — physical descriptions, dialogue, or sensory information — to strengthen connections.</p>
                         </div>
-                        <div className="p-5 flex flex-wrap gap-2">
+                        <div className="p-5 space-y-2">
                           {motifAnalysis.orphanIds.map(id => {
                             const b = motifAnalysis.bullets.find(x => x.id === id);
-                            return b ? (
-                              <div key={id} className="px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-600">{b.text}</div>
-                            ) : null;
+                            if (!b) return null;
+                            return (
+                              <div key={id} className="px-4 py-3 rounded-xl bg-slate-50 border border-slate-200">
+                                <p className="text-sm text-slate-600">{b.text}</p>
+                                {b.analysis.values.length > 0 && (
+                                  <p className="text-[10px] text-slate-400 mt-1.5">
+                                    Underlying values: {b.analysis.values.map(v => v.replace(/_val$/, '')).join(', ')} — try adding related experiences about {b.analysis.values[0]?.replace(/_val$/, '') || 'this value'}.
+                                  </p>
+                                )}
+                              </div>
+                            );
                           })}
                         </div>
                       </div>
