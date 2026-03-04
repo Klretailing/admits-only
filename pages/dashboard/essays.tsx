@@ -417,14 +417,23 @@ function generateLiveTips(content: string, prompt: string, ecs: Extracurricular[
 }
 
 /* ══════════════════════════════════════════════════════════════════════
-   MOTIFS ENGINE — Story Stitching
+   MOTIFS ENGINE — Story Stitching (Deep Analysis)
    ══════════════════════════════════════════════════════════════════════
 
-   Motifs helps students brainstorm essay ideas by finding hidden
-   connections between their experiences. Students type bullet-point
-   ideas, and the engine detects shared themes, complementary arcs,
-   and narrative threads — then visualizes them on a storyboard.
+   A college essay story architect that discovers hidden connections
+   between seemingly unrelated student experiences. Uses deep semantic
+   analysis across multiple dimensions: scene, stakes, shift, values,
+   imagery, craft, constraints, and evolving questions.
    ══════════════════════════════════════════════════════════════════════ */
+
+interface BulletAnalysis {
+  scene: string;
+  stakes: string;
+  shift: string;
+  imagery: string[];
+  values: string[];
+  tensions: string[];
+}
 
 interface MotifBullet {
   id: string;
@@ -432,6 +441,12 @@ interface MotifBullet {
   themes: string[];
   domains: string[];
   keywords: string[];
+  analysis: BulletAnalysis;
+}
+
+interface BridgeMechanism {
+  type: 'contrast_resolution' | 'cause_effect' | 'shared_craft' | 'recurring_constraint' | 'concrete_metaphor' | 'evolving_question';
+  label: string;
 }
 
 interface MotifConnection {
@@ -439,7 +454,8 @@ interface MotifConnection {
   toId: string;
   strength: number;
   label: string;
-  type: 'shared_theme' | 'complementary' | 'shared_domain' | 'keyword';
+  type: 'shared_theme' | 'complementary' | 'shared_domain' | 'keyword' | 'deep_bridge';
+  bridge?: BridgeMechanism;
 }
 
 interface MotifGroup {
@@ -449,6 +465,9 @@ interface MotifGroup {
   bulletIds: string[];
   dominantThemes: string[];
   colorIdx: number;
+  centralTension?: string;
+  suggestedStructure?: string;
+  weakConnections?: string[];
 }
 
 interface MotifAnalysis {
@@ -456,6 +475,16 @@ interface MotifAnalysis {
   connections: MotifConnection[];
   motifs: MotifGroup[];
   orphanIds: string[];
+  candidateMotifs?: CandidateMotif[];
+  bridges?: MotifConnection[];
+}
+
+interface CandidateMotif {
+  name: string;
+  description: string;
+  bulletIds: string[];
+  insight: string;
+  symbolImage: string;
 }
 
 interface SavedBoard {
@@ -467,33 +496,7 @@ interface SavedBoard {
   updatedAt: string;
 }
 
-/* ─── Theme & Domain Detection ─── */
-
-const MOTIF_THEMES: Record<string, RegExp> = {
-  resilience: /\b(?:overcame?|struggle|challeng|difficult|tough|hardship|failure|setback|persever|persist|endur|bounce|recover|adapt|obstacle|fight|survive|broke|heal)\b/i,
-  leadership: /\b(?:led|lead|leader|captain|president|found|organiz|manag|direct|coordinat|mentor|inspir|initiative|responsib|delegate|guide|mobiliz)\b/i,
-  creativity: /\b(?:creat|design|invent|imagin|innovat|built|original|unique|artistic|compose|paint|draw|code|program|craft|experiment|improv)\b/i,
-  growth: /\b(?:learn|grew|grow|change|transform|develop|improve|progress|evolve|mature|discover|realiz|understand|adapt|expand|open)\b/i,
-  community: /\b(?:communit|volunteer|serve|help|impact|together|team|neighbor|family|friend|connect|belong|support|uplift|fundrais|donat)\b/i,
-  identity: /\b(?:cultur|heritage|identity|tradition|value|belief|who\s*i\s*am|roots|background|immigra|religion|language|bilingual|diaspora|home)\b/i,
-  passion: /\b(?:passion|love|fascin|obsess|dedicate|commit|drive|motivate|excit|inspir|eager|curious|wonder|thrill|devot)\b/i,
-  intellectual: /\b(?:research|study|read|think|analyz|question|hypothesis|theory|philosophy|debate|academic|scholar|puzzle|logic|invest)\b/i,
-  empathy: /\b(?:empathy|compassion|understand|listen|care|emotion|perspective|relate|human|kind|gentle|comfort|witness|feel\s+for)\b/i,
-  ambition: /\b(?:goal|dream|aspir|ambition|future|career|achiev|success|strive|pursu|determin|driven|envision|someday)\b/i,
-};
-
-const MOTIF_DOMAINS: Record<string, RegExp> = {
-  sports: /\b(?:sport|team|game|play|field|court|ball|race|swim|run|compet|athlet|train|coach|practice|win|tournament|track|gym|varsity)\b/i,
-  science: /\b(?:science|lab|experiment|research|biology|chemistry|physics|math|equation|data|hypothesis|molecule|cell|gene|specimen|microscop)\b/i,
-  arts: /\b(?:art|music|paint|draw|sing|dance|theater|perform|stage|gallery|exhibit|instrument|piano|guitar|violin|choir|orchestra|film|photograph)\b/i,
-  technology: /\b(?:code|program|computer|tech|software|app|website|robot|AI|machine|digital|hack|engineer|algorithm|database|startup)\b/i,
-  nature: /\b(?:nature|environment|outdoor|hike|camp|garden|animal|plant|climate|earth|ocean|mountain|forest|wildlife|sustain|ecolog)\b/i,
-  family: /\b(?:family|parent|mother|father|mom|dad|sibling|brother|sister|grandparent|home|household|generation|relative|aunt|uncle)\b/i,
-  school: /\b(?:school|class|teacher|student|grade|homework|college|university|campus|education|curriculum|exam|tutor|professor|lecture)\b/i,
-  social_justice: /\b(?:justice|equality|rights|protest|advocat|awareness|policy|society|systemic|inequit|poverty|racism|privilege|margin|activis)\b/i,
-  health: /\b(?:health|hospital|doctor|nurse|patient|medic|illness|diagnos|mental\s+health|therapy|disabilit|surgery|clinic|wellness)\b/i,
-  food: /\b(?:cook|food|kitchen|recipe|bake|meal|restaurant|culinary|spice|flavor|dish|eat|taste|nourish|ingredient|chef)\b/i,
-};
+/* ─── Deep Semantic Analysis Dimensions ─── */
 
 const MOTIF_STOP_WORDS = new Set([
   'the','a','an','is','was','were','are','been','be','have','has','had','do','does','did','will','would','could','should',
@@ -502,7 +505,9 @@ const MOTIF_STOP_WORDS = new Set([
   'with','by','from','as','into','about','between','through','during','before','after','above','below','up','down','out',
   'off','over','under','again','further','once','here','there','all','each','every','both','few','more','most','other',
   'some','such','only','own','same','just','also','very','really','because','until','where','how','what','which','who',
-  'whom','why','being','having','doing','going','wanted','like','even','still','much','many',
+  'whom','why','being','having','doing','going','wanted','like','even','still','much','many','would','about','been',
+  'when','first','time','really','always','never','something','everything','nothing','started','began','went','came',
+  'made','back','after','before','during','year','years','day','days',
 ]);
 
 function extractMotifKeywords(text: string): string[] {
@@ -512,41 +517,438 @@ function extractMotifKeywords(text: string): string[] {
     .filter(w => w.length > 3 && !MOTIF_STOP_WORDS.has(w));
 }
 
+/* ─── VALUE / TENSION / SHIFT detection (deep semantic layer) ─── */
+
+const VALUE_PATTERNS: Record<string, RegExp> = {
+  authenticity: /\b(?:real|true|honest|genuine|authentic|pretend|mask|facade|surface|underneath|who\s+i\s+(?:really|truly)|myself)\b/i,
+  justice: /\b(?:fair|unfair|right|wrong|equal|inequal|justice|unjust|discriminat|bias|privilege|margin|oppress|rights|deserve)\b/i,
+  connection: /\b(?:connect|bond|close|relationship|together|apart|lonely|isolat|belong|understood|accepted|rejected|friend|trust)\b/i,
+  autonomy: /\b(?:independen|freedom|my\s+own|choose|chose|decision|control|agency|self-relian|on\s+my\s+own|alone|myself)\b/i,
+  excellence: /\b(?:best|perfect|excellen|master|expert|skill|practice|improve|polish|refine|precise|meticulous|standard)\b/i,
+  curiosity: /\b(?:wonder|curious|question|why|how|discover|explore|fascin|puzzle|mystery|understand|figure\s+out|investigat)\b/i,
+  responsibility: /\b(?:responsib|duty|obligat|owe|should|must|take\s+care|protect|provide|support|depend|rely|count\s+on)\b/i,
+  creativity_val: /\b(?:creat|imagin|invent|design|build|make|original|new\s+way|different\s+approach|outside\s+the\s+box|experiment)\b/i,
+  empathy_val: /\b(?:empathy|compassion|understand|felt\s+(?:for|their)|perspective|walk\s+in|shoes|listen|hear|witness|see\s+(?:their|how))\b/i,
+  resilience_val: /\b(?:kept\s+going|didn't\s+give\s+up|persever|persist|endur|surviv|overcame|bounce|recover|despite|anyway|still)\b/i,
+};
+
+const TENSION_PATTERNS: [RegExp, string][] = [
+  [/\b(?:but|however|yet|although|though|despite|even\s+though|on\s+the\s+other\s+hand|instead|rather\s+than)\b/i, 'internal_conflict'],
+  [/\b(?:expect|suppos|should\s+have|thought\s+(?:i|it)\s+would|assum|imagin(?:ed)?|planned|meant\s+to)\b.*?\b(?:but|instead|however|actually|turns?\s+out)\b/i, 'expectation_vs_reality'],
+  [/\b(?:want|wish|hope|dream|desire|long)\b.*?\b(?:but|can't|couldn't|unable|impossible|hard|difficult)\b/i, 'aspiration_vs_constraint'],
+  [/\b(?:family|parent|mom|dad|mother|father|tradition|culture|heritage)\b.*?\b(?:but|while|whereas|different|my\s+own|want(?:ed)?)\b/i, 'tradition_vs_self'],
+  [/\b(?:everyone|others|they|people|friends|peers)\b.*?\b(?:but\s+i|while\s+i|i\s+(?:felt|thought|knew|wanted|believed))\b/i, 'individual_vs_group'],
+  [/\b(?:success|win|achiev|accomplish|proud)\b.*?\b(?:but|cost|sacrifice|miss|lost|gave\s+up)\b/i, 'success_vs_cost'],
+];
+
+const SHIFT_PATTERNS: [RegExp, string][] = [
+  [/\b(?:realized|understood|saw|recognized|learned|discovered|noticed|dawned\s+on)\b/i, 'realization'],
+  [/\b(?:changed|transformed|shifted|different|new|became|turned\s+into|no\s+longer)\b/i, 'transformation'],
+  [/\b(?:decided|chose|committed|resolved|determined|vowed|promised)\b/i, 'decision'],
+  [/\b(?:first\s+time|never\s+before|for\s+once|finally|at\s+last|breakthrough)\b/i, 'first_experience'],
+  [/\b(?:question|doubt|wonder|uncertain|unsure|rethink|reconsider)\b/i, 'questioning'],
+];
+
+const IMAGERY_PATTERNS: [RegExp, string][] = [
+  [/\b(?:kitchen|stove|oven|pot|pan|cutting\s+board|counter|apron|recipe|ingredient|spice|flour|dough|simmer|boil|chop)\b/i, 'kitchen'],
+  [/\b(?:field|court|track|pool|gym|arena|stadium|bench|locker\s+room|whistle|jersey|cleats|ball|goal|net|hoop|lane)\b/i, 'athletic_space'],
+  [/\b(?:stage|spotlight|curtain|audience|microphone|instrument|piano|guitar|violin|drum|note|chord|melody|rhythm|rehearsal)\b/i, 'performance_space'],
+  [/\b(?:lab|microscope|beaker|test\s+tube|petri|data|graph|equation|formula|whiteboard|notebook|research|specimen)\b/i, 'lab_space'],
+  [/\b(?:classroom|desk|textbook|chalkboard|homework|exam|quiz|lecture|library|study|paper|essay|grade)\b/i, 'academic_space'],
+  [/\b(?:hospital|clinic|waiting\s+room|doctor|nurse|patient|bed|iv|monitor|surgery|diagnosis|treatment|medicine)\b/i, 'medical_space'],
+  [/\b(?:home|bedroom|living\s+room|dinner\s+table|porch|backyard|neighborhood|apartment|house|door|window|roof|wall)\b/i, 'home_space'],
+  [/\b(?:computer|screen|code|keyboard|mouse|app|website|software|program|debug|server|terminal|pixel|interface|algorithm)\b/i, 'digital_space'],
+  [/\b(?:garden|tree|flower|soil|seed|root|leaf|branch|forest|mountain|river|ocean|sky|rain|sun|wind|nature)\b/i, 'natural_space'],
+  [/\b(?:church|temple|mosque|synagogue|prayer|worship|sacred|spiritual|meditation|faith|god|soul|blessing)\b/i, 'sacred_space'],
+  [/\b(?:hands|fingers|eyes|face|heart|voice|breath|sweat|tears|smile|shoulders|arms|feet|stomach|chest)\b/i, 'body'],
+  [/\b(?:light|dark|shadow|bright|glow|shine|dim|flicker|illuminate|color|red|blue|green|gold|white|black)\b/i, 'light_dark'],
+  [/\b(?:loud|quiet|silence|noise|sound|voice|whisper|echo|ring|buzz|crash|hum|music|rhythm|beat)\b/i, 'sound'],
+  [/\b(?:warm|cold|hot|cool|freeze|burn|heat|chill|temperature|sweat|shiver)\b/i, 'temperature'],
+];
+
+const DOMAIN_PATTERNS: Record<string, RegExp> = {
+  sports: /\b(?:sport|team|game|play|field|court|ball|race|swim|run|compet|athlet|train|coach|practice|win|tournament|track|gym|varsity|soccer|basketball|baseball|football|tennis|volleyball|wrestling|lacrosse|hockey|cross\s*country|rowing|fencing|martial\s*arts)\b/i,
+  science: /\b(?:science|lab|experiment|research|biology|chemistry|physics|math|equation|data|hypothesis|molecule|cell|gene|specimen|microscop|calculus|statistics|variable|theory|publish|journal)\b/i,
+  arts: /\b(?:art|music|paint|draw|sing|dance|theater|perform|stage|gallery|exhibit|instrument|piano|guitar|violin|choir|orchestra|film|photograph|sculpt|ceramic|poetry|creative\s*writing|compose|direct|act|rehearse)\b/i,
+  technology: /\b(?:code|program|computer|tech|software|app|website|robot|AI|machine|digital|hack|engineer|algorithm|database|startup|cybersecurity|data\s*science|javascript|python|develop|deploy)\b/i,
+  nature: /\b(?:nature|environment|outdoor|hike|camp|garden|animal|plant|climate|earth|ocean|mountain|forest|wildlife|sustain|ecolog|conservation|biodiversity|pollution|recycle)\b/i,
+  family: /\b(?:family|parent|mother|father|mom|dad|sibling|brother|sister|grandparent|home|household|generation|relative|aunt|uncle|cousin|grandma|grandpa|ancestor|legacy)\b/i,
+  school: /\b(?:school|class|teacher|student|grade|homework|college|university|campus|education|curriculum|exam|tutor|professor|lecture|AP|honors|GPA|valedictorian|club)\b/i,
+  social_justice: /\b(?:justice|equality|rights|protest|advocat|awareness|policy|society|systemic|inequit|poverty|racism|privilege|margin|activis|vote|campaign|reform|nonprofit|organize)\b/i,
+  health: /\b(?:health|hospital|doctor|nurse|patient|medic|illness|diagnos|mental\s+health|therapy|disabilit|surgery|clinic|wellness|anxiety|depression|recovery|chronic|care)\b/i,
+  food: /\b(?:cook|food|kitchen|recipe|bake|meal|restaurant|culinary|spice|flavor|dish|eat|taste|nourish|ingredient|chef|cuisine|ferment|roast|saut[eé])\b/i,
+  business: /\b(?:business|entrepreneur|startup|company|market|sell|profit|revenue|customer|client|investor|pitch|brand|launch|product|e-?commerce|retail)\b/i,
+  language: /\b(?:language|bilingual|translat|interpret|spanish|french|mandarin|chinese|arabic|hindi|korean|japanese|tongue|accent|fluent|speak|word|phrase|grammar|vocabulary)\b/i,
+  travel: /\b(?:travel|abroad|country|culture|trip|journey|visit|foreign|international|passport|airport|flight|explore|backpack|exchange\s*student)\b/i,
+};
+
+const THEME_PATTERNS: Record<string, RegExp> = {
+  translation: /\b(?:translat|interpret|bridge|between\s+(?:two|worlds|cultures|languages)|mediat|navigat\s+between|code[\s-]switch|lost\s+in\s+translation|middl(?:e\s+ground|eman)|go[\s-]between|bilingual|bicultural)\b/i,
+  calibration: /\b(?:calibrat|adjust|fine[\s-]tun|balanc|recalibrat|measur|precision|accuracy|dial\s+in|tweak|optimiz|refin|perfect(?:ing)?|tinker)\b/i,
+  repair: /\b(?:repair|fix|mend|heal|restor|rebuild|reconstruct|patch|broken|damage|stitch|sutur|glue|tape|salvage|reclaim|put\s+(?:back\s+)?together)\b/i,
+  threshold: /\b(?:threshold|doorway|gateway|crossroad|turning\s+point|watershed|breaking\s+point|edge|brink|cusp|precipice|verge|boundary|liminal|transition|passage|between)\b/i,
+  mapping: /\b(?:map|chart|navigat|compass|direction|path|route|trail|wayfind|orient|guide|explore|discover|terrain|landscape|blueprint|diagram|plan|layout)\b/i,
+  signal_noise: /\b(?:signal|noise|filter|focus|distract|attention|clarity|confusion|overwhelm|prioritiz|cut\s+through|static|interference|discern|distinguish|sort\s+through|meaningful)\b/i,
+  attention: /\b(?:notic|observ|attenti|detail|careful|closely|watch|see|look|spot|catch|mindful|present|aware|focus|concentrate|pay\s+attention)\b/i,
+  building_systems: /\b(?:system|structure|framework|organiz|process|workflow|method|protocol|routine|habit|ritual|foundation|architect|design|engineer|build|construct|assembl)\b/i,
+  navigating_uncertainty: /\b(?:uncertain|unknown|ambiguou|unclear|confus|lost|wander|search|seek|grope|fumbl|trial|error|experiment|guess|risk|leap|fog|dark|blind)\b/i,
+  balancing_contradictions: /\b(?:contradict|paradox|tension|both|and|dual|two\s+(?:sides|worlds|parts)|torn|pull|push|conflict|reconcil|harmoniz|integrat|embrace|accept|coexist)\b/i,
+  resilience: /\b(?:overcame?|struggle|challeng|difficult|tough|hardship|failure|setback|persever|persist|endur|bounce|recover|adapt|obstacle|fight|survive|broke|heal|kept\s+going|didn't\s+(?:give\s+up|quit|stop))\b/i,
+  leadership: /\b(?:led|lead|leader|captain|president|found|organiz|manag|direct|coordinat|mentor|inspir|initiative|responsib|delegate|guide|mobiliz|rally|unit|empower)\b/i,
+  creativity: /\b(?:creat|design|invent|imagin|innovat|built|original|unique|artistic|compose|paint|draw|code|program|craft|experiment|improv|reimagin|rethink|prototype)\b/i,
+  growth: /\b(?:learn|grew|grow|change|transform|develop|improve|progress|evolve|mature|discover|realiz|understand|adapt|expand|open|became|shift|different\s+person)\b/i,
+  community: /\b(?:communit|volunteer|serve|help|impact|together|team|neighbor|family|friend|connect|belong|support|uplift|fundrais|donat|collective|mutual|solidarity)\b/i,
+  identity: /\b(?:cultur|heritage|identity|tradition|value|belief|who\s*i\s*am|roots|background|immigra|religion|language|bilingual|diaspora|home|belong|define|represent)\b/i,
+  passion: /\b(?:passion|love|fascin|obsess|dedicate|commit|drive|motivate|excit|inspir|eager|curious|wonder|thrill|devot|alive|light\s+up|can't\s+stop)\b/i,
+  intellectual: /\b(?:research|study|read|think|analyz|question|hypothesis|theory|philosophy|debate|academic|scholar|puzzle|logic|invest|inquiry|critical|intellectual)\b/i,
+  empathy: /\b(?:empathy|compassion|understand|listen|care|emotion|perspective|relate|human|kind|gentle|comfort|witness|feel\s+for|walk\s+in|shoes|heart)\b/i,
+  ambition: /\b(?:goal|dream|aspir|ambition|future|career|achiev|success|strive|pursu|determin|driven|envision|someday|one\s+day|plan|vision|mission)\b/i,
+};
+
+/* ─── Step 1: Deep Bullet Analysis ─── */
+
+function analyzeBulletDeeply(text: string): BulletAnalysis {
+  const lower = text.toLowerCase();
+
+  // Detect scene (what happened)
+  let scene = text.length > 60 ? text.slice(0, 57) + '...' : text;
+
+  // Detect stakes (why it mattered)
+  const stakesPatterns: [RegExp, string][] = [
+    [/\b(?:because|since|meant|matter|important|significant|crucial|everything|nothing|life[\s-]changing)\b/i, 'high personal stakes'],
+    [/\b(?:family|parent|mom|dad|community|team|school|everyone)\b/i, 'stakes beyond self'],
+    [/\b(?:dream|goal|future|career|college|life|path|direction)\b/i, 'future-defining moment'],
+    [/\b(?:first|only|last|never|ever|once)\b/i, 'singular moment'],
+  ];
+  const stakes = stakesPatterns.filter(([rx]) => rx.test(lower)).map(([, s]) => s).join('; ') || 'personal significance';
+
+  // Detect shift/realization
+  const shifts: string[] = [];
+  for (const [rx, label] of SHIFT_PATTERNS) {
+    if (rx.test(lower)) shifts.push(label);
+  }
+
+  // Detect imagery
+  const imagery: string[] = [];
+  for (const [rx, label] of IMAGERY_PATTERNS) {
+    if (rx.test(lower)) imagery.push(label);
+  }
+
+  // Detect values
+  const values: string[] = [];
+  for (const [key, rx] of Object.entries(VALUE_PATTERNS)) {
+    if (rx.test(lower)) values.push(key);
+  }
+
+  // Detect tensions
+  const tensions: string[] = [];
+  for (const [rx, label] of TENSION_PATTERNS) {
+    if (rx.test(lower)) tensions.push(label);
+  }
+
+  return {
+    scene,
+    stakes,
+    shift: shifts.join(', ') || 'implicit growth',
+    imagery,
+    values,
+    tensions,
+  };
+}
+
 function detectThemes(text: string): string[] {
-  return Object.entries(MOTIF_THEMES)
+  return Object.entries(THEME_PATTERNS)
     .filter(([, rx]) => rx.test(text))
     .map(([k]) => k);
 }
 
 function detectDomains(text: string): string[] {
-  return Object.entries(MOTIF_DOMAINS)
+  return Object.entries(DOMAIN_PATTERNS)
     .filter(([, rx]) => rx.test(text))
     .map(([k]) => k);
 }
 
-/* ─── Complementary theme pairs that form narrative arcs ─── */
+/* ─── Step 2-4: Deep Connection Finding with Bridge Mechanisms ─── */
 
-const COMPLEMENTARY_PAIRS: [string, string, string][] = [
-  ['resilience', 'growth', 'Struggle led to transformation'],
-  ['identity', 'community', 'Cultural roots shape how you serve others'],
-  ['passion', 'ambition', 'Deep interest driving purposeful pursuit'],
-  ['empathy', 'leadership', 'Understanding others makes you a stronger leader'],
-  ['creativity', 'intellectual', 'Where imagination meets analytical rigor'],
-  ['resilience', 'leadership', 'Adversity forged leadership capacity'],
-  ['identity', 'growth', 'Exploring identity as a journey of becoming'],
-  ['community', 'empathy', 'Service deepened understanding of others'],
-  ['passion', 'creativity', 'Passion fueling creative expression'],
-  ['intellectual', 'ambition', 'Curiosity driving ambitious goals'],
-  ['resilience', 'identity', 'Challenges clarified who you really are'],
-  ['growth', 'leadership', 'Personal evolution enabling you to lead others'],
-  ['creativity', 'community', 'Creative skills applied to community impact'],
-  ['empathy', 'growth', 'Seeing through others\' eyes changed your worldview'],
-  ['passion', 'community', 'Your passion becoming a vehicle for collective good'],
+const BRIDGE_MECHANISMS: { type: BridgeMechanism['type']; detect: (a: MotifBullet, b: MotifBullet) => { match: boolean; label: string; strength: number } }[] = [
+  {
+    type: 'contrast_resolution',
+    detect: (a, b) => {
+      // Two different sides that eventually reconcile
+      const aVals = new Set(a.analysis.values);
+      const bVals = new Set(b.analysis.values);
+      const contrasts: [string, string, string][] = [
+        ['autonomy', 'connection', 'Independence vs. belonging — two needs that shape the same person'],
+        ['excellence', 'empathy_val', 'The perfectionist who learned to be gentle — with others or with themselves'],
+        ['justice', 'resilience_val', 'Witnessing unfairness and finding the strength to push back'],
+        ['authenticity', 'responsibility', 'Being true to yourself while carrying obligations to others'],
+        ['curiosity', 'responsibility', 'The explorer pulled between wonder and duty'],
+        ['creativity_val', 'excellence', 'The tension between creative freedom and the pursuit of mastery'],
+      ];
+      for (const [v1, v2, desc] of contrasts) {
+        if ((aVals.has(v1) && bVals.has(v2)) || (aVals.has(v2) && bVals.has(v1))) {
+          return { match: true, label: desc, strength: 0.85 };
+        }
+      }
+      // Generic value contrast
+      const aTensions = a.analysis.tensions;
+      const bTensions = b.analysis.tensions;
+      if (aTensions.length > 0 && bTensions.length > 0) {
+        return { match: true, label: 'Both experiences contain internal tensions that mirror each other', strength: 0.7 };
+      }
+      if (aVals.size > 0 && bVals.size > 0) {
+        const diff = [...aVals].filter(v => !bVals.has(v));
+        const shared = [...aVals].filter(v => bVals.has(v));
+        if (diff.length > 0 && shared.length > 0) {
+          return { match: true, label: `Different expressions of shared values (${shared.slice(0, 2).join(', ')})`, strength: 0.65 };
+        }
+      }
+      return { match: false, label: '', strength: 0 };
+    },
+  },
+  {
+    type: 'cause_effect',
+    detect: (a, b) => {
+      // One experience changed how the student approached another
+      const aHasShift = a.analysis.shift !== 'implicit growth';
+      const bHasShift = b.analysis.shift !== 'implicit growth';
+      if (aHasShift || bHasShift) {
+        const source = aHasShift ? a : b;
+        const target = aHasShift ? b : a;
+        // Check if the shift in one could inform the other
+        const sourceValues = new Set(source.analysis.values);
+        const targetValues = new Set(target.analysis.values);
+        const overlap = [...sourceValues].filter(v => targetValues.has(v));
+        if (overlap.length > 0) {
+          return { match: true, label: `The shift in one experience directly shaped the approach to the other`, strength: 0.8 };
+        }
+        // Check domain crossover
+        const sDomains = new Set(source.domains);
+        const tDomains = new Set(target.domains);
+        if ([...sDomains].some(d => tDomains.has(d))) {
+          return { match: true, label: 'A realization from one context carried over into the other', strength: 0.7 };
+        }
+      }
+      return { match: false, label: '', strength: 0 };
+    },
+  },
+  {
+    type: 'shared_craft',
+    detect: (a, b) => {
+      // Same skill or mindset used in different domains
+      const aD = new Set(a.domains);
+      const bD = new Set(b.domains);
+      const differentDomains = ![...aD].some(d => bD.has(d)) && aD.size > 0 && bD.size > 0;
+
+      if (differentDomains) {
+        const aT = new Set(a.themes);
+        const bT = new Set(b.themes);
+        const sharedThemes = [...aT].filter(t => bT.has(t));
+        if (sharedThemes.length > 0) {
+          const craft = sharedThemes[0].replace(/_/g, ' ');
+          return { match: true, label: `The same ${craft} mindset applied across completely different worlds`, strength: 0.85 };
+        }
+        // Check shared values across different domains
+        const aV = new Set(a.analysis.values);
+        const bV = new Set(b.analysis.values);
+        const sharedVals = [...aV].filter(v => bV.has(v));
+        if (sharedVals.length > 0) {
+          return { match: true, label: `Different arenas, same underlying approach — ${sharedVals[0].replace(/_val/, '')}`, strength: 0.75 };
+        }
+      }
+      return { match: false, label: '', strength: 0 };
+    },
+  },
+  {
+    type: 'recurring_constraint',
+    detect: (a, b) => {
+      // Same obstacle appears in different contexts
+      const aTensions = new Set(a.analysis.tensions);
+      const bTensions = new Set(b.analysis.tensions);
+      const shared = [...aTensions].filter(t => bTensions.has(t));
+      if (shared.length > 0) {
+        const tensionLabels: Record<string, string> = {
+          internal_conflict: 'inner conflict that keeps surfacing in different forms',
+          expectation_vs_reality: 'gap between expectations and reality',
+          aspiration_vs_constraint: 'tension between what you want and what holds you back',
+          tradition_vs_self: 'push and pull between heritage and personal identity',
+          individual_vs_group: 'struggle between standing out and fitting in',
+          success_vs_cost: 'recurring question of what success really costs',
+        };
+        return { match: true, label: `A ${tensionLabels[shared[0]] || 'recurring challenge'} that appears across these experiences`, strength: 0.8 };
+      }
+      return { match: false, label: '', strength: 0 };
+    },
+  },
+  {
+    type: 'concrete_metaphor',
+    detect: (a, b) => {
+      // Shared physical objects, places, or imagery
+      const aImg = new Set(a.analysis.imagery);
+      const bImg = new Set(b.analysis.imagery);
+      const shared = [...aImg].filter(i => bImg.has(i));
+      if (shared.length > 0) {
+        const imgLabels: Record<string, string> = {
+          kitchen: 'the kitchen as a recurring space of transformation',
+          athletic_space: 'the athletic arena as a crucible for growth',
+          performance_space: 'the stage/spotlight as a space where you become yourself',
+          lab_space: 'the lab as a place of discovery and uncertainty',
+          home_space: 'home as both anchor and launchpad',
+          body: 'physical, embodied experience connecting these moments',
+          light_dark: 'imagery of light and dark threading through both',
+          sound: 'sound and silence as a connecting thread',
+          natural_space: 'nature as a recurring backdrop for change',
+          digital_space: 'the digital world as a space of creation',
+        };
+        return { match: true, label: imgLabels[shared[0]] || `Shared imagery (${shared[0].replace('_', ' ')}) that could become a powerful motif`, strength: 0.9 };
+      }
+      // Check keyword-level imagery overlap
+      const aKw = a.keywords;
+      const bKw = b.keywords;
+      const concreteWords = aKw.filter(k => bKw.includes(k) && /^[a-z]+$/.test(k));
+      if (concreteWords.length >= 1) {
+        const isConcreteNoun = concreteWords.some(w => /(?:hand|door|light|table|window|room|road|water|fire|book|phone|mirror|clock|letter|wall|bridge|path|tree|stone|key|glass)s?/.test(w));
+        if (isConcreteNoun) {
+          return { match: true, label: `"${concreteWords[0]}" appears in both — it could become the essay's central image`, strength: 0.85 };
+        }
+      }
+      return { match: false, label: '', strength: 0 };
+    },
+  },
+  {
+    type: 'evolving_question',
+    detect: (a, b) => {
+      // Same fundamental question evolving across experiences
+      const questionPairs: [string[], string[], string][] = [
+        [['identity', 'authenticity'], ['growth', 'community'], 'Who am I? — a question that evolves as your world expands'],
+        [['curiosity', 'intellectual'], ['ambition', 'passion'], 'What matters to me? — a question deepened by each experience'],
+        [['justice', 'empathy_val'], ['leadership', 'community'], 'What should I do about it? — from witnessing to acting'],
+        [['autonomy', 'resilience_val'], ['connection', 'responsibility'], 'Can I do this alone? — learning when to lean in and when to let go'],
+        [['excellence', 'ambition'], ['empathy_val', 'connection'], 'What does success mean? — a definition that keeps changing'],
+      ];
+
+      const aAll = new Set([...a.themes, ...a.analysis.values]);
+      const bAll = new Set([...b.themes, ...b.analysis.values]);
+
+      for (const [set1, set2, question] of questionPairs) {
+        const aHas1 = set1.some(s => aAll.has(s));
+        const bHas2 = set2.some(s => bAll.has(s));
+        const aHas2 = set2.some(s => aAll.has(s));
+        const bHas1 = set1.some(s => bAll.has(s));
+        if ((aHas1 && bHas2) || (aHas2 && bHas1)) {
+          return { match: true, label: question, strength: 0.85 };
+        }
+      }
+      return { match: false, label: '', strength: 0 };
+    },
+  },
 ];
 
-/* ─── Evocative motif names ─── */
+function findMotifConnections(bullets: MotifBullet[]): MotifConnection[] {
+  const connections: MotifConnection[] = [];
 
-const MOTIF_NAMES: Record<string, string[]> = {
+  for (let i = 0; i < bullets.length; i++) {
+    for (let j = i + 1; j < bullets.length; j++) {
+      const a = bullets[i], b = bullets[j];
+      const allConnections: { strength: number; label: string; type: MotifConnection['type']; bridge?: BridgeMechanism }[] = [];
+
+      // Layer 1: Theme-level connections
+      const sharedThemes = a.themes.filter(t => b.themes.includes(t));
+      if (sharedThemes.length > 0) {
+        const s = Math.min(1, sharedThemes.length * 0.25 + 0.35);
+        const names = sharedThemes.slice(0, 2).map(t => t.replace(/_/g, ' '));
+        allConnections.push({ strength: s, label: `Both reflect ${names.join(' and ')}`, type: 'shared_theme' });
+      }
+
+      // Layer 2: Domain connections
+      const sharedDomains = a.domains.filter(d => b.domains.includes(d));
+      if (sharedDomains.length > 0) {
+        const s = 0.4 + sharedDomains.length * 0.15;
+        allConnections.push({ strength: s, label: `Connected through ${sharedDomains[0].replace('_', ' ')}`, type: 'shared_domain' });
+      }
+
+      // Layer 3: Deep bridge mechanisms (the most powerful connections)
+      for (const mechanism of BRIDGE_MECHANISMS) {
+        const result = mechanism.detect(a, b);
+        if (result.match) {
+          allConnections.push({
+            strength: result.strength,
+            label: result.label,
+            type: 'deep_bridge',
+            bridge: { type: mechanism.type, label: result.label },
+          });
+        }
+      }
+
+      // Layer 4: Keyword/semantic overlap (fallback)
+      const sharedKw = a.keywords.filter(k => b.keywords.includes(k));
+      if (sharedKw.length >= 2) {
+        const s = 0.25 + Math.min(sharedKw.length * 0.08, 0.35);
+        allConnections.push({ strength: s, label: `Shared language: ${sharedKw.slice(0, 3).join(', ')}`, type: 'keyword' });
+      }
+
+      // Layer 5: Value-based connections (catch "unrelated" experiences with shared underlying values)
+      const aVals = new Set(a.analysis.values);
+      const bVals = new Set(b.analysis.values);
+      const sharedValues = [...aVals].filter(v => bVals.has(v));
+      if (sharedValues.length > 0 && allConnections.length === 0) {
+        // This is the key fallback — even "unrelated" topics share values
+        const valName = sharedValues[0].replace(/_val$/, '');
+        allConnections.push({
+          strength: 0.55 + sharedValues.length * 0.1,
+          label: `Both driven by ${valName} — different contexts, same core value`,
+          type: 'deep_bridge',
+          bridge: { type: 'shared_craft', label: `Shared value: ${valName}` },
+        });
+      }
+
+      // Layer 6: Imagery overlap as metaphor bridge
+      if (allConnections.length === 0) {
+        const aImg = new Set(a.analysis.imagery);
+        const bImg = new Set(b.analysis.imagery);
+        const sharedImg = [...aImg].filter(i => bImg.has(i));
+        if (sharedImg.length > 0) {
+          allConnections.push({
+            strength: 0.6,
+            label: `Shared sensory world (${sharedImg[0].replace('_', ' ')}) could become a unifying image`,
+            type: 'deep_bridge',
+            bridge: { type: 'concrete_metaphor', label: `Imagery: ${sharedImg[0]}` },
+          });
+        }
+      }
+
+      // Pick the strongest connection
+      if (allConnections.length > 0) {
+        allConnections.sort((a, b) => b.strength - a.strength);
+        const best = allConnections[0];
+        connections.push({
+          fromId: a.id,
+          toId: b.id,
+          strength: best.strength,
+          label: best.label,
+          type: best.type,
+          bridge: best.bridge,
+        });
+      }
+    }
+  }
+
+  return connections.sort((a, b) => b.strength - a.strength);
+}
+
+/* ─── Step 3: Generate Candidate Motifs ─── */
+
+const MOTIF_NAME_BANK: Record<string, string[]> = {
+  translation: ['The Translator', 'Between Two Worlds', 'Lost & Found in Translation', 'The Interpreter'],
+  calibration: ['The Calibrator', 'Finding the Frequency', 'Tuning the Instrument', 'Precision & Grace'],
+  repair: ['The Restorer', 'Mending What\'s Broken', 'Kintsugi', 'The Art of Repair'],
+  threshold: ['At the Threshold', 'The In-Between', 'Crossing Over', 'Standing at the Door'],
+  mapping: ['The Cartographer', 'Uncharted Territory', 'Drawing the Map', 'Finding the Way'],
+  signal_noise: ['Signal Through Noise', 'Cutting Through', 'The Filter', 'Finding Clarity'],
+  attention: ['The Observer', 'Paying Attention', 'Seeing What Others Miss', 'The Quiet Eye'],
+  building_systems: ['The Architect', 'Building From Scratch', 'The Blueprint', 'Systems & Structures'],
+  navigating_uncertainty: ['Into the Fog', 'Navigating Blind', 'The Uncertain Path', 'Embracing the Unknown'],
+  balancing_contradictions: ['Both/And', 'The Paradox', 'Holding Contradictions', 'Two Truths'],
   resilience: ['Rising Phoenix', 'Against the Tide', 'Unbroken', 'Through the Storm'],
   leadership: ['The Catalyst', 'Quiet Authority', 'The Architect', 'Ripple Maker'],
   creativity: ['The Maker', 'Blank Canvas', 'Uncharted', 'Spark & Wire'],
@@ -559,7 +961,7 @@ const MOTIF_NAMES: Record<string, string[]> = {
   ambition: ['The Summit', 'Charting the Course', 'Beyond the Horizon', 'The Vision'],
 };
 
-const COMBO_NAMES: Record<string, string> = {
+const COMBO_MOTIF_NAMES: Record<string, string> = {
   'resilience+growth': 'The Phoenix Arc',
   'identity+community': 'Roots & Branches',
   'passion+creativity': 'The Maker\'s Fire',
@@ -575,110 +977,50 @@ const COMBO_NAMES: Record<string, string> = {
   'creativity+community': 'Art as Impact',
   'empathy+growth': 'The Widening Lens',
   'passion+community': 'Passion in Service',
+  'translation+identity': 'The Bridge Builder',
+  'calibration+excellence': 'The Precision Artist',
+  'repair+resilience': 'Kintsugi — Beauty in Breaking',
+  'threshold+growth': 'Standing at the Door',
+  'mapping+intellectual': 'The Explorer\'s Mind',
+  'attention+empathy': 'The Quiet Witness',
+  'navigating_uncertainty+resilience': 'Sailing Without a Map',
+  'balancing_contradictions+identity': 'The Both/And Self',
 };
 
-/* ─── Connection Finding ─── */
-
-function findMotifConnections(bullets: MotifBullet[]): MotifConnection[] {
-  const connections: MotifConnection[] = [];
-
-  for (let i = 0; i < bullets.length; i++) {
-    for (let j = i + 1; j < bullets.length; j++) {
-      const a = bullets[i], b = bullets[j];
-      let bestStrength = 0;
-      let bestLabel = '';
-      let bestType: MotifConnection['type'] = 'keyword';
-
-      // Shared themes
-      const sharedThemes = a.themes.filter(t => b.themes.includes(t));
-      if (sharedThemes.length > 0) {
-        const s = Math.min(1, sharedThemes.length * 0.4 + 0.3);
-        if (s > bestStrength) {
-          bestStrength = s;
-          const themeName = sharedThemes[0].charAt(0).toUpperCase() + sharedThemes[0].slice(1);
-          bestLabel = `Both reflect ${themeName.toLowerCase()}`;
-          bestType = 'shared_theme';
-        }
-      }
-
-      // Complementary themes
-      for (const [t1, t2, desc] of COMPLEMENTARY_PAIRS) {
-        const hasArc = (a.themes.includes(t1) && b.themes.includes(t2)) ||
-                       (a.themes.includes(t2) && b.themes.includes(t1));
-        if (hasArc) {
-          const s = 0.8;
-          if (s > bestStrength) {
-            bestStrength = s;
-            bestLabel = desc;
-            bestType = 'complementary';
-          }
-        }
-      }
-
-      // Shared domains
-      const sharedDomains = a.domains.filter(d => b.domains.includes(d));
-      if (sharedDomains.length > 0) {
-        const s = 0.5 + sharedDomains.length * 0.15;
-        if (s > bestStrength) {
-          bestStrength = s;
-          const domainName = sharedDomains[0].replace('_', ' ');
-          bestLabel = `Connected through ${domainName}`;
-          bestType = 'shared_domain';
-        }
-      }
-
-      // Keyword overlap
-      const sharedKw = a.keywords.filter(k => b.keywords.includes(k));
-      if (sharedKw.length >= 2 && bestStrength < 0.3) {
-        bestStrength = 0.3 + Math.min(sharedKw.length * 0.1, 0.3);
-        bestLabel = `Shared: ${sharedKw.slice(0, 3).join(', ')}`;
-        bestType = 'keyword';
-      }
-
-      if (bestStrength >= 0.25) {
-        connections.push({
-          fromId: a.id,
-          toId: b.id,
-          strength: bestStrength,
-          label: bestLabel,
-          type: bestType,
-        });
-      }
-    }
-  }
-
-  return connections.sort((a, b) => b.strength - a.strength);
-}
-
-/* ─── Motif Grouping (greedy clustering, no overlap) ─── */
+/* ─── Motif Grouping with deeper clustering ─── */
 
 function groupMotifs(bullets: MotifBullet[], connections: MotifConnection[]): { motifs: MotifGroup[]; orphanIds: string[] } {
   const assigned = new Set<string>();
   const motifs: MotifGroup[] = [];
 
-  // Build adjacency with strong connections only
-  const adj: Record<string, { id: string; strength: number }[]> = {};
+  // Build weighted adjacency
+  const adj: Record<string, { id: string; strength: number; label: string }[]> = {};
   for (const b of bullets) adj[b.id] = [];
 
+  // Use lower threshold to catch more connections
   for (const c of connections) {
-    if (c.strength >= 0.4) {
-      adj[c.fromId]?.push({ id: c.toId, strength: c.strength });
-      adj[c.toId]?.push({ id: c.fromId, strength: c.strength });
+    if (c.strength >= 0.3) {
+      adj[c.fromId]?.push({ id: c.toId, strength: c.strength, label: c.label });
+      adj[c.toId]?.push({ id: c.fromId, strength: c.strength, label: c.label });
     }
   }
 
-  // Greedy: pick the most-connected unassigned bullet, flood-fill
-  const bulletsByConnections = bullets
-    .map(b => ({ bullet: b, conns: adj[b.id]?.length || 0 }))
-    .sort((a, b) => b.conns - a.conns);
+  // Sort bullets by total connection weight (not just count)
+  const bulletsByWeight = bullets
+    .map(b => ({
+      bullet: b,
+      totalWeight: (adj[b.id] || []).reduce((sum, n) => sum + n.strength, 0),
+      connCount: (adj[b.id] || []).length,
+    }))
+    .sort((a, b) => b.totalWeight - a.totalWeight);
 
   let motifIdx = 0;
 
-  for (const { bullet } of bulletsByConnections) {
+  for (const { bullet } of bulletsByWeight) {
     if (assigned.has(bullet.id)) continue;
     if ((adj[bullet.id]?.length || 0) === 0) continue;
 
-    // BFS to find cluster
+    // BFS with lower threshold
     const cluster: string[] = [bullet.id];
     assigned.add(bullet.id);
     const queue = [bullet.id];
@@ -686,7 +1028,7 @@ function groupMotifs(bullets: MotifBullet[], connections: MotifConnection[]): { 
     while (queue.length > 0) {
       const curr = queue.shift()!;
       for (const neighbor of adj[curr] || []) {
-        if (!assigned.has(neighbor.id) && neighbor.strength >= 0.35) {
+        if (!assigned.has(neighbor.id) && neighbor.strength >= 0.3) {
           assigned.add(neighbor.id);
           cluster.push(neighbor.id);
           queue.push(neighbor.id);
@@ -699,27 +1041,49 @@ function groupMotifs(bullets: MotifBullet[], connections: MotifConnection[]): { 
       continue;
     }
 
-    // Determine dominant themes
+    const clusterBullets = cluster.map(cid => bullets.find(x => x.id === cid)!).filter(Boolean);
+    const clusterConns = connections.filter(c => cluster.includes(c.fromId) && cluster.includes(c.toId));
+
+    // Determine dominant themes + values
     const themeCount: Record<string, number> = {};
-    for (const bid of cluster) {
-      const b = bullets.find(x => x.id === bid);
-      if (b) for (const t of b.themes) themeCount[t] = (themeCount[t] || 0) + 1;
+    const valueCount: Record<string, number> = {};
+    for (const b of clusterBullets) {
+      for (const t of b.themes) themeCount[t] = (themeCount[t] || 0) + 1;
+      for (const v of b.analysis.values) valueCount[v] = (valueCount[v] || 0) + 1;
     }
     const sortedThemes = Object.entries(themeCount).sort((a, b) => b[1] - a[1]).map(([t]) => t);
     const top2 = sortedThemes.slice(0, 2);
 
-    // Name the motif
+    // Name the motif (prefer specific names over generic)
     let name = 'Thread ' + (motifIdx + 1);
     if (top2.length >= 2) {
       const key = [top2[0], top2[1]].sort().join('+');
-      name = COMBO_NAMES[key] || MOTIF_NAMES[top2[0]]?.[motifIdx % 4] || name;
+      name = COMBO_MOTIF_NAMES[key] || MOTIF_NAME_BANK[top2[0]]?.[motifIdx % 4] || name;
     } else if (top2.length === 1) {
-      name = MOTIF_NAMES[top2[0]]?.[motifIdx % 4] || name;
+      name = MOTIF_NAME_BANK[top2[0]]?.[motifIdx % 4] || name;
     }
 
-    // Generate narrative suggestion
-    const clusterBullets = cluster.map(cid => bullets.find(x => x.id === cid)!).filter(Boolean);
-    const narrative = generateMotifNarrative(clusterBullets, top2, connections.filter(c => cluster.includes(c.fromId) && cluster.includes(c.toId)));
+    // Find the best bridge mechanism in this cluster
+    const bestBridge = clusterConns.find(c => c.bridge)?.bridge;
+
+    // Generate narrative
+    const narrative = generateMotifNarrative(clusterBullets, top2, clusterConns);
+
+    // Identify central tension
+    const tensions = clusterBullets.flatMap(b => b.analysis.tensions);
+    const tensionCount: Record<string, number> = {};
+    for (const t of tensions) tensionCount[t] = (tensionCount[t] || 0) + 1;
+    const topTension = Object.entries(tensionCount).sort((a, b) => b[1] - a[1])[0]?.[0];
+
+    // Suggested structure
+    const structure = generateEssayStructure(clusterBullets, clusterConns, top2);
+
+    // Flag weak/cliché connections
+    const weakConnections: string[] = [];
+    const clicheThemes = ['leadership', 'growth', 'passion', 'resilience', 'ambition'];
+    if (top2.length > 0 && clicheThemes.includes(top2[0]) && !bestBridge) {
+      weakConnections.push(`"${top2[0]}" is a common theme — make it specific. Instead of saying you showed ${top2[0]}, show a concrete moment that embodies it without naming it.`);
+    }
 
     motifs.push({
       id: `motif_${motifIdx}`,
@@ -728,6 +1092,9 @@ function groupMotifs(bullets: MotifBullet[], connections: MotifConnection[]): { 
       bulletIds: cluster,
       dominantThemes: top2,
       colorIdx: motifIdx,
+      centralTension: topTension,
+      suggestedStructure: structure,
+      weakConnections,
     });
     motifIdx++;
   }
@@ -736,250 +1103,297 @@ function groupMotifs(bullets: MotifBullet[], connections: MotifConnection[]): { 
   return { motifs, orphanIds };
 }
 
-/* ─── Narrative Generation ─── */
+/* ─── Step 5: Narrative Direction & Structure ─── */
+
+function generateEssayStructure(bullets: MotifBullet[], connections: MotifConnection[], themes: string[]): string {
+  const n = bullets.length;
+  if (n === 0) return '';
+
+  const hasBridge = connections.some(c => c.bridge);
+  const hasContrast = connections.some(c => c.bridge?.type === 'contrast_resolution');
+  const hasCauseEffect = connections.some(c => c.bridge?.type === 'cause_effect');
+  const hasMetaphor = connections.some(c => c.bridge?.type === 'concrete_metaphor');
+
+  if (hasMetaphor) {
+    const metaphorConn = connections.find(c => c.bridge?.type === 'concrete_metaphor')!;
+    return `Open with the concrete image — describe it in sensory detail. Return to this image throughout the essay, but each time it appears, it carries new meaning because of what you've revealed. End by showing how this image has transformed, just as you have.`;
+  }
+
+  if (hasContrast) {
+    return `Act 1: Introduce one side of the tension — the experience that set up a particular worldview or expectation. Act 2: Show the contrasting experience that complicated or challenged that view. Don't rush the resolution. Act 3: Don't resolve the tension neatly — show how you hold both truths. The sophistication IS the essay.`;
+  }
+
+  if (hasCauseEffect) {
+    return `Open in the middle of the second experience — the one that was shaped by the first. Let the reader wonder why you approach things this way. Then flash back to the formative experience. The "aha" moment isn't when you learned the lesson — it's when the reader connects the dots between the two experiences.`;
+  }
+
+  if (hasBridge) {
+    const bestBridge = connections.find(c => c.bridge)!;
+    return `Structure around the bridge: "${bestBridge.label}". Open with the most vivid scene. Each paragraph should deepen the reader's understanding of this connection. End with a forward-looking moment that shows how these experiences will continue to shape you.`;
+  }
+
+  return `Open with your most specific, visual moment. Each subsequent experience should build on the previous one like layers of paint on a canvas. End by stepping back to reveal the full picture — what these moments, taken together, reveal about who you are.`;
+}
+
+/* ─── Narrative Generation (much deeper) ─── */
 
 function generateMotifNarrative(bullets: MotifBullet[], themes: string[], connections: MotifConnection[]): string {
   const n = bullets.length;
-  const texts = bullets.map(b => `"${b.text.length > 50 ? b.text.slice(0, 47) + '...' : b.text}"`);
-
+  const texts = bullets.map(b => `"${b.text.length > 60 ? b.text.slice(0, 57) + '...' : b.text}"`);
   if (n === 0) return '';
 
-  const arcConnection = connections.find(c => c.type === 'complementary');
+  // Find the strongest bridge mechanism
+  const bridgeConn = connections.filter(c => c.bridge).sort((a, b) => b.strength - a.strength)[0];
 
-  if (themes.includes('resilience') && themes.includes('growth')) {
-    return `Start by placing the reader inside the struggle from ${texts[0]}. Use sensory details — what did the room look like, what were you thinking? Then shift to ${texts[n > 1 ? 1 : 0]}, showing how you emerged different. The gap between who you were and who you became IS the essay.`;
-  }
-  if (themes.includes('identity') && themes.includes('community')) {
-    return `Open with a specific scene rooted in your cultural experience from ${texts[0]}. Let the reader feel what it's like to walk in your shoes. Then bridge to ${texts[n > 1 ? 1 : 0]} to show how those roots shape how you show up for others. The throughline: your background isn't just context, it's a compass.`;
-  }
-  if (themes.includes('passion') && themes.includes('creativity')) {
-    return `Begin with the moment of creative obsession — ${texts[0]}. What does it feel like when you're in the zone? Then weave in ${texts[n > 1 ? 1 : 0]} to show that this isn't a hobby, it's how your mind works. AOs love seeing the internal creative process, not just the output.`;
-  }
-  if (themes.includes('empathy') && themes.includes('leadership')) {
-    return `Start with a quiet moment of listening or observing from ${texts[0]}. Then show how that understanding informed a leadership decision in ${texts[n > 1 ? 1 : 0]}. The most compelling leaders in admissions essays don't command — they understand first, then act.`;
+  if (bridgeConn?.bridge) {
+    const bridgeType = bridgeConn.bridge.type;
+
+    if (bridgeType === 'contrast_resolution') {
+      return `These experiences create a powerful contrast. Start inside ${texts[0]} — immerse the reader in that world. Then pivot to ${texts[n > 1 ? 1 : 0]}, which reveals a completely different side of you. The essay's power comes from showing how these seemingly contradictory experiences coexist in one person. Don't explain the connection — let the reader feel it.`;
+    }
+    if (bridgeType === 'cause_effect') {
+      return `One experience directly shaped the other. Open mid-action in the later experience (${texts[n > 1 ? 1 : 0]}), showing the reader how you operate. Then rewind to ${texts[0]} to reveal what forged this approach. The "before" and "after" versions of you ARE the narrative arc.`;
+    }
+    if (bridgeType === 'shared_craft') {
+      return `You bring the same mindset to completely different worlds — that's your superpower. Open with ${texts[0]}, showing your approach in action. Then jump to ${texts[n > 1 ? 1 : 0]}, and let the reader discover that the same instinct, the same way of thinking, drives you in a totally different context. This reveals depth of character that a single-topic essay can't match.`;
+    }
+    if (bridgeType === 'recurring_constraint') {
+      return `The same challenge keeps finding you in different forms. Start with ${texts[0]} where you first encountered it. Then show it again in ${texts[n > 1 ? 1 : 0]}, but this time you recognize it. The essay isn't about overcoming the obstacle — it's about your evolving relationship with it.`;
+    }
+    if (bridgeType === 'concrete_metaphor') {
+      return `You have a powerful recurring image connecting these experiences. Open with a vivid, sensory description of it in the context of ${texts[0]}. When it reappears in ${texts[n > 1 ? 1 : 0]}, it should carry new weight. This image IS your motif — let it do the narrative work so you don't have to state the theme directly.`;
+    }
+    if (bridgeType === 'evolving_question') {
+      return `There's a fundamental question running through these experiences. In ${texts[0]}, the question first emerges. By ${texts[n > 1 ? 1 : 0]}, it has evolved but not resolved. The best essays don't answer their central question — they show how the student's relationship with the question has deepened.`;
+    }
   }
 
-  if (arcConnection) {
-    return `These experiences create a natural narrative arc: ${arcConnection.label}. Start with ${texts[0]}, which sets up the tension or context. Then transition to ${texts[n > 1 ? 1 : 0]}, which reveals the resolution or growth. ${n > 2 ? `The other ideas (${texts.slice(2).join(', ')}) can serve as supporting details that enrich the central arc.` : ''} The connection between these moments is what makes your essay feel cohesive rather than a list of accomplishments.`;
-  }
-
+  // Fallback: theme-based narrative (still good, just less specific)
   if (themes.length > 0) {
-    const themeName = themes[0].charAt(0).toUpperCase() + themes[0].slice(1);
-    return `The thread connecting these ideas is ${themeName.toLowerCase()}. Open with the most vivid, specific moment from ${texts[0]}. Each subsequent idea (${texts.slice(1).join(', ')}) becomes a new facet of the same core theme. The key: don't announce the theme — let the reader discover it through the accumulated weight of your details.`;
+    const themeName = themes[0].replace(/_/g, ' ');
+    return `The thread connecting these ideas is ${themeName}. Open with the most vivid, specific moment from ${texts[0]}. Each subsequent idea (${texts.slice(1).join(', ')}) becomes a new facet of the same core theme. The key: don't announce the theme — let the reader discover it through the accumulated weight of your details. Show, never tell.`;
   }
 
-  return `These experiences share underlying connections. Open with the most specific, visual moment. Let each idea build on the previous one, creating a layered narrative that reveals different dimensions of who you are. The reader should finish thinking: "I know this person."`;
+  return `These experiences connect in ways that aren't obvious at first — and that's what makes them powerful. Open with the most specific, visual moment. Let each idea build on the previous one, creating a layered narrative. The reader should finish thinking: "I know this person." The unexpected connections between your experiences are what make your essay uniquely yours.`;
 }
 
 /* ─── Full Analysis Pipeline ─── */
 
 function analyzeMotifs(rawBullets: string[]): MotifAnalysis {
+  // Step 1: Deep analysis of each bullet
   const bullets: MotifBullet[] = rawBullets
     .filter(t => t.trim().length > 0)
-    .map((text, i) => ({
-      id: `b_${i}`,
-      text: text.trim(),
-      themes: detectThemes(text),
-      domains: detectDomains(text),
-      keywords: extractMotifKeywords(text),
-    }));
+    .map((text, i) => {
+      const trimmed = text.trim();
+      return {
+        id: `b_${i}`,
+        text: trimmed,
+        themes: detectThemes(trimmed),
+        domains: detectDomains(trimmed),
+        keywords: extractMotifKeywords(trimmed),
+        analysis: analyzeBulletDeeply(trimmed),
+      };
+    });
 
+  // Step 2-4: Find connections using deep bridge mechanisms
   const connections = findMotifConnections(bullets);
+
+  // Step 3 & 5: Group into motifs with narrative direction
   const { motifs, orphanIds } = groupMotifs(bullets, connections);
 
-  return { bullets, connections, motifs, orphanIds };
+  return { bullets, connections, motifs, orphanIds, bridges: connections.filter(c => c.bridge) };
 }
 
 /* ─── Visual Board: Color palette ─── */
 
 const MOTIF_PALETTE = [
-  { bg: '#EEF2FF', border: '#6366F1', text: '#3730A3', accent: '#818CF8', light: '#C7D2FE' },
-  { bg: '#FEF3C7', border: '#D97706', text: '#78350F', accent: '#FBBF24', light: '#FDE68A' },
-  { bg: '#D1FAE5', border: '#059669', text: '#064E3B', accent: '#34D399', light: '#A7F3D0' },
-  { bg: '#FFE4E6', border: '#E11D48', text: '#881337', accent: '#FB7185', light: '#FECDD3' },
-  { bg: '#E0F2FE', border: '#0284C7', text: '#0C4A6E', accent: '#38BDF8', light: '#BAE6FD' },
-  { bg: '#F3E8FF', border: '#9333EA', text: '#581C87', accent: '#C084FC', light: '#DDD6FE' },
+  { bg: '#EEF2FF', border: '#6366F1', text: '#3730A3', accent: '#818CF8', light: '#C7D2FE', gradient: 'from-indigo-500 to-violet-500' },
+  { bg: '#FEF3C7', border: '#D97706', text: '#78350F', accent: '#FBBF24', light: '#FDE68A', gradient: 'from-amber-500 to-orange-500' },
+  { bg: '#D1FAE5', border: '#059669', text: '#064E3B', accent: '#34D399', light: '#A7F3D0', gradient: 'from-emerald-500 to-teal-500' },
+  { bg: '#FFE4E6', border: '#E11D48', text: '#881337', accent: '#FB7185', light: '#FECDD3', gradient: 'from-rose-500 to-pink-500' },
+  { bg: '#E0F2FE', border: '#0284C7', text: '#0C4A6E', accent: '#38BDF8', light: '#BAE6FD', gradient: 'from-sky-500 to-blue-500' },
+  { bg: '#F3E8FF', border: '#9333EA', text: '#581C87', accent: '#C084FC', light: '#DDD6FE', gradient: 'from-purple-500 to-fuchsia-500' },
 ];
 
-/* ─── SVG Storyboard Component ─── */
+/* ─── Interactive Storyboard Component (HTML-based, draggable) ─── */
 
-function MotifStoryboard({ analysis }: { analysis: MotifAnalysis }) {
+function MotifStoryboard({ analysis, expandedCard, setExpandedCard }: {
+  analysis: MotifAnalysis;
+  expandedCard: string | null;
+  setExpandedCard: (id: string | null) => void;
+}) {
   const { bullets, connections, motifs, orphanIds } = analysis;
   if (bullets.length === 0) return null;
 
-  const ISLAND_W = 240;
-  const ISLAND_GAP = 100;
-  const NODE_H = 70;
-  const NODE_GAP = 14;
-  const PAD = 24;
-  const HEADER_H = 44;
-
-  // Build layout
-  const groups = [...motifs];
   const orphanBullets = orphanIds.map(id => bullets.find(b => b.id === id)!).filter(Boolean);
-  const hasOrphans = orphanBullets.length > 0;
 
-  type NodePos = { id: string; x: number; y: number; w: number; h: number; groupIdx: number };
-  const nodePositions: Record<string, NodePos> = {};
-
-  let totalX = PAD;
-  const islandRects: { x: number; y: number; w: number; h: number; idx: number; name: string }[] = [];
-
-  groups.forEach((motif, gi) => {
-    const mBullets = motif.bulletIds.map(id => bullets.find(b => b.id === id)!).filter(Boolean);
-    const islandH = HEADER_H + mBullets.length * (NODE_H + NODE_GAP) + PAD;
-
-    islandRects.push({ x: totalX, y: PAD, w: ISLAND_W, h: islandH, idx: gi, name: motif.name });
-
-    mBullets.forEach((b, bi) => {
-      nodePositions[b.id] = {
-        id: b.id,
-        x: totalX + PAD,
-        y: PAD + HEADER_H + bi * (NODE_H + NODE_GAP),
-        w: ISLAND_W - PAD * 2,
-        h: NODE_H,
-        groupIdx: gi,
-      };
-    });
-
-    totalX += ISLAND_W + ISLAND_GAP;
-  });
-
-  // Orphan island
-  if (hasOrphans) {
-    const islandH = HEADER_H + orphanBullets.length * (NODE_H + NODE_GAP) + PAD;
-    islandRects.push({ x: totalX, y: PAD, w: ISLAND_W, h: islandH, idx: -1, name: 'Unconnected Ideas' });
-
-    orphanBullets.forEach((b, bi) => {
-      nodePositions[b.id] = {
-        id: b.id,
-        x: totalX + PAD,
-        y: PAD + HEADER_H + bi * (NODE_H + NODE_GAP),
-        w: ISLAND_W - PAD * 2,
-        h: NODE_H,
-        groupIdx: -1,
-      };
-    });
-    totalX += ISLAND_W + PAD;
-  } else {
-    totalX += PAD - ISLAND_GAP; // Remove last gap
+  // Build connection lookup for highlighting
+  const connectionMap: Record<string, { targetId: string; label: string; strength: number }[]> = {};
+  for (const c of connections) {
+    if (c.strength >= 0.3) {
+      if (!connectionMap[c.fromId]) connectionMap[c.fromId] = [];
+      if (!connectionMap[c.toId]) connectionMap[c.toId] = [];
+      connectionMap[c.fromId].push({ targetId: c.toId, label: c.label, strength: c.strength });
+      connectionMap[c.toId].push({ targetId: c.fromId, label: c.label, strength: c.strength });
+    }
   }
 
-  const maxIslandH = Math.max(...islandRects.map(r => r.h + PAD * 2), 300);
-  const totalW = Math.max(totalX, 400);
-  const totalH = maxIslandH + 60; // room for bottom narrative
-
-  // Wrap text helper
-  const wrapText = (text: string, maxChars: number): string[] => {
-    const words = text.split(' ');
-    const lines: string[] = [];
-    let current = '';
-    for (const w of words) {
-      if ((current + ' ' + w).trim().length > maxChars) {
-        if (current) lines.push(current.trim());
-        current = w;
-      } else {
-        current = current ? current + ' ' + w : w;
-      }
-    }
-    if (current) lines.push(current.trim());
-    return lines.slice(0, 3); // Max 3 lines
-  };
+  const connectedTo = expandedCard ? new Set((connectionMap[expandedCard] || []).map(c => c.targetId)) : new Set<string>();
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-slate-50/50">
-      <svg viewBox={`0 0 ${totalW} ${totalH}`} style={{ minWidth: totalW, minHeight: totalH }} className="w-full">
-        <defs>
-          <filter id="node-shadow" x="-10%" y="-10%" width="120%" height="130%">
-            <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000" floodOpacity="0.06" />
-          </filter>
-          <filter id="island-shadow" x="-2%" y="-2%" width="104%" height="104%">
-            <feDropShadow dx="0" dy="3" stdDeviation="6" floodColor="#000" floodOpacity="0.04" />
-          </filter>
-          <marker id="arrowhead" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
-            <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8" />
-          </marker>
-        </defs>
+    <div className="space-y-6">
+      {/* Motif Groups */}
+      <div className="grid gap-6" style={{ gridTemplateColumns: `repeat(${Math.min(motifs.length + (orphanBullets.length > 0 ? 1 : 0), 3)}, 1fr)` }}>
+        {motifs.map((motif, gi) => {
+          const pal = MOTIF_PALETTE[gi % MOTIF_PALETTE.length];
+          const mBullets = motif.bulletIds.map(id => bullets.find(b => b.id === id)!).filter(Boolean);
 
-        {/* Island backgrounds */}
-        {islandRects.map((rect, i) => {
-          const pal = rect.idx >= 0 ? MOTIF_PALETTE[rect.idx % MOTIF_PALETTE.length] : { bg: '#F8FAFC', border: '#CBD5E1', text: '#475569', accent: '#94A3B8', light: '#E2E8F0' };
           return (
-            <g key={`island-${i}`}>
-              <rect x={rect.x} y={rect.y} width={rect.w} height={rect.h} rx={16} fill={pal.bg} stroke={pal.border} strokeWidth={1.5} filter="url(#island-shadow)" />
-              <text x={rect.x + PAD} y={rect.y + 28} fill={pal.text} fontWeight="800" fontSize="13" fontFamily="system-ui, sans-serif">{rect.name}</text>
-              <line x1={rect.x + PAD} y1={rect.y + HEADER_H - 4} x2={rect.x + rect.w - PAD} y2={rect.y + HEADER_H - 4} stroke={pal.border} strokeWidth={1} strokeOpacity={0.3} />
-            </g>
+            <div key={motif.id} className="rounded-2xl border-2 overflow-hidden transition-all" style={{ borderColor: pal.border + '40', backgroundColor: pal.bg + 'cc' }}>
+              {/* Motif header */}
+              <div className="px-5 py-4 border-b" style={{ borderColor: pal.border + '20', background: `linear-gradient(135deg, ${pal.bg}, white)` }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: pal.border }}>
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold" style={{ color: pal.text }}>{motif.name}</h4>
+                    <p className="text-[10px] font-medium" style={{ color: pal.accent }}>
+                      {motif.dominantThemes.map(t => t.replace(/_/g, ' ')).map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(' + ')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bullet cards */}
+              <div className="p-3 space-y-2">
+                {mBullets.map(b => {
+                  const isExpanded = expandedCard === b.id;
+                  const isConnected = connectedTo.has(b.id);
+                  const conns = connectionMap[b.id] || [];
+
+                  return (
+                    <div
+                      key={b.id}
+                      onClick={() => setExpandedCard(isExpanded ? null : b.id)}
+                      className={`rounded-xl border-2 bg-white p-4 cursor-pointer transition-all duration-200 hover:shadow-lg ${
+                        isExpanded ? 'shadow-lg ring-2 scale-[1.02]' : isConnected && expandedCard ? 'ring-2 shadow-md scale-[1.01]' : 'hover:scale-[1.01]'
+                      }`}
+                      style={{
+                        borderColor: isExpanded ? pal.border : isConnected && expandedCard ? pal.accent + '80' : pal.border + '30',
+                        ringColor: isExpanded ? pal.border + '40' : pal.accent + '30',
+                      }}
+                    >
+                      <p className="text-sm font-medium text-slate-800 leading-relaxed">{b.text}</p>
+
+                      {/* Theme + value pills */}
+                      <div className="flex flex-wrap gap-1.5 mt-3">
+                        {b.themes.slice(0, 3).map(theme => (
+                          <span key={theme} className="px-2 py-0.5 rounded-full text-[10px] font-semibold" style={{ backgroundColor: pal.light, color: pal.text }}>
+                            {theme.replace(/_/g, ' ')}
+                          </span>
+                        ))}
+                        {b.analysis.values.slice(0, 2).map(val => (
+                          <span key={val} className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-500">
+                            {val.replace(/_val$/, '')}
+                          </span>
+                        ))}
+                      </div>
+
+                      {/* Expanded detail */}
+                      {isExpanded && (
+                        <div className="mt-4 pt-3 border-t space-y-3" style={{ borderColor: pal.border + '20' }}>
+                          {/* Deep analysis */}
+                          <div className="grid grid-cols-2 gap-2">
+                            {b.analysis.stakes && (
+                              <div className="p-2 rounded-lg bg-slate-50">
+                                <p className="text-[9px] font-bold text-slate-400 uppercase">Stakes</p>
+                                <p className="text-[11px] text-slate-600 mt-0.5">{b.analysis.stakes}</p>
+                              </div>
+                            )}
+                            {b.analysis.shift && (
+                              <div className="p-2 rounded-lg bg-slate-50">
+                                <p className="text-[9px] font-bold text-slate-400 uppercase">Shift</p>
+                                <p className="text-[11px] text-slate-600 mt-0.5">{b.analysis.shift}</p>
+                              </div>
+                            )}
+                          </div>
+                          {b.analysis.imagery.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              <span className="text-[9px] font-bold text-slate-400 uppercase mr-1">Imagery:</span>
+                              {b.analysis.imagery.map(img => (
+                                <span key={img} className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-amber-50 text-amber-700">{img.replace('_', ' ')}</span>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Connections from this bullet */}
+                          {conns.length > 0 && (
+                            <div className="space-y-1.5">
+                              <p className="text-[9px] font-bold uppercase tracking-wider" style={{ color: pal.border }}>Connections</p>
+                              {conns.slice(0, 4).map((conn, ci) => {
+                                const target = bullets.find(x => x.id === conn.targetId);
+                                if (!target) return null;
+                                return (
+                                  <div key={ci} className="flex items-start gap-2 p-2 rounded-lg" style={{ backgroundColor: pal.bg }}>
+                                    <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ backgroundColor: pal.border }} />
+                                    <div className="min-w-0">
+                                      <p className="text-[10px] font-semibold text-slate-700 truncate">{target.text.slice(0, 50)}{target.text.length > 50 ? '...' : ''}</p>
+                                      <p className="text-[10px] mt-0.5" style={{ color: pal.accent }}>{conn.label}</p>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           );
         })}
 
-        {/* Connection lines (draw before nodes so they're behind) */}
-        {connections.filter(c => c.strength >= 0.25).map((conn, i) => {
-          const from = nodePositions[conn.fromId];
-          const to = nodePositions[conn.toId];
-          if (!from || !to) return null;
-
-          const sameGroup = from.groupIdx === to.groupIdx && from.groupIdx >= 0;
-          const x1 = from.x + from.w;
-          const y1 = from.y + from.h / 2;
-          const x2 = to.x;
-          const y2 = to.y + to.h / 2;
-
-          let path: string;
-          if (sameGroup) {
-            // Within-group: small arc to the right
-            const midX = Math.max(x1, x2) + 30;
-            path = `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2 + from.w} ${y2}`;
-          } else {
-            // Cross-group: bezier curve
-            const midX = (x1 + x2) / 2;
-            path = `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`;
-          }
-
-          const opacity = 0.15 + conn.strength * 0.5;
-          const strokeWidth = 1 + conn.strength * 2;
-
-          // Label position at midpoint
-          const labelX = (x1 + x2) / 2;
-          const labelY = (y1 + y2) / 2 - 8;
-
-          return (
-            <g key={`conn-${i}`}>
-              <path d={path} fill="none" stroke="#94a3b8" strokeWidth={strokeWidth} strokeOpacity={opacity} strokeDasharray={conn.type === 'keyword' ? '4 4' : 'none'} />
-              {conn.strength >= 0.4 && !sameGroup && (
-                <>
-                  <rect x={labelX - conn.label.length * 3} y={labelY - 8} width={Math.min(conn.label.length * 6, 160)} height={16} rx={8} fill="white" stroke="#e2e8f0" strokeWidth={1} />
-                  <text x={labelX} y={labelY + 3} textAnchor="middle" fill="#64748b" fontSize="8" fontFamily="system-ui, sans-serif" fontWeight="600">{conn.label.length > 28 ? conn.label.slice(0, 25) + '...' : conn.label}</text>
-                </>
-              )}
-            </g>
-          );
-        })}
-
-        {/* Bullet nodes */}
-        {bullets.map(b => {
-          const pos = nodePositions[b.id];
-          if (!pos) return null;
-          const pal = pos.groupIdx >= 0 ? MOTIF_PALETTE[pos.groupIdx % MOTIF_PALETTE.length] : { bg: '#FFFFFF', border: '#CBD5E1', text: '#334155', accent: '#94A3B8', light: '#F1F5F9' };
-          const lines = wrapText(b.text, 28);
-
-          return (
-            <g key={b.id}>
-              <rect x={pos.x} y={pos.y} width={pos.w} height={pos.h} rx={10} fill="white" stroke={pal.border} strokeWidth={1} filter="url(#node-shadow)" />
-              {lines.map((line, li) => (
-                <text key={li} x={pos.x + 10} y={pos.y + 18 + li * 14} fill={pal.text} fontSize="10.5" fontFamily="system-ui, sans-serif" fontWeight={li === 0 ? '600' : '400'}>{line}</text>
+        {/* Orphan island */}
+        {orphanBullets.length > 0 && (
+          <div className="rounded-2xl border-2 border-slate-200 bg-slate-50/80 overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-slate-300 flex items-center justify-center">
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-500">Standalone Ideas</h4>
+                  <p className="text-[10px] text-slate-400">Add more detail to find connections</p>
+                </div>
+              </div>
+            </div>
+            <div className="p-3 space-y-2">
+              {orphanBullets.map(b => (
+                <div key={b.id} className="rounded-xl border border-slate-200 bg-white p-4 cursor-pointer hover:shadow-md transition-all hover:scale-[1.01]" onClick={() => setExpandedCard(expandedCard === b.id ? null : b.id)}>
+                  <p className="text-sm font-medium text-slate-600 leading-relaxed">{b.text}</p>
+                  {b.themes.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {b.themes.slice(0, 2).map(t => (
+                        <span key={t} className="px-2 py-0.5 rounded-full text-[9px] font-medium bg-slate-100 text-slate-500">{t.replace(/_/g, ' ')}</span>
+                      ))}
+                    </div>
+                  )}
+                  {expandedCard === b.id && b.analysis.values.length > 0 && (
+                    <div className="mt-3 pt-2 border-t border-slate-100">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">Underlying values</p>
+                      <p className="text-[10px] text-slate-500">{b.analysis.values.map(v => v.replace(/_val$/, '')).join(', ')}</p>
+                      <p className="text-[10px] text-slate-400 mt-1 italic">Try adding more experiences related to {b.analysis.values[0]?.replace(/_val$/, '') || 'this theme'} to find connections.</p>
+                    </div>
+                  )}
+                </div>
               ))}
-              {/* Theme pills */}
-              {b.themes.slice(0, 2).map((theme, ti) => (
-                <g key={ti}>
-                  <rect x={pos.x + 10 + ti * 65} y={pos.y + pos.h - 20} width={58} height={14} rx={7} fill={pal.light} />
-                  <text x={pos.x + 10 + ti * 65 + 29} y={pos.y + pos.h - 11} textAnchor="middle" fill={pal.text} fontSize="7.5" fontWeight="700" fontFamily="system-ui, sans-serif">{theme}</text>
-                </g>
-              ))}
-            </g>
-          );
-        })}
-      </svg>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -1049,6 +1463,8 @@ export default function Essays() {
   const [activeBoardId, setActiveBoardId] = useState<string | null>(null);
   const [boardTitle, setBoardTitle] = useState('');
   const [savingBoard, setSavingBoard] = useState(false);
+  const [expandedCard, setExpandedCard] = useState<string | null>(null);
+  const [motifView, setMotifView] = useState<'board' | 'narrative'>('board');
 
   // Load essays + ECs
   useEffect(() => {
@@ -1187,231 +1603,290 @@ export default function Essays() {
 
       <div className="flex flex-col" style={{ height: 'calc(100vh - 7rem)' }}>
         {/* Header with mode tabs */}
-        <div className="flex items-center justify-between mb-4 flex-shrink-0">
-          <div className="flex items-center gap-6">
+        <div className="flex items-center justify-between mb-5 flex-shrink-0">
+          <div className="flex items-center gap-5">
             <div>
-              <h1 className="text-2xl font-bold font-display text-primary">Essay Workspace</h1>
-              <p className="mt-0.5 text-sm text-slate-500">{mode === 'essays' ? 'Write, analyze, and get real-time admissions-grade feedback.' : 'Discover hidden connections between your ideas and stitch them into compelling stories.'}</p>
+              <h1 className="text-2xl font-bold font-display text-primary tracking-tight">Essay Workspace</h1>
+              <p className="mt-0.5 text-sm text-slate-400">{mode === 'essays' ? 'Write, analyze, and get real-time admissions-grade feedback.' : 'Discover hidden connections between your ideas and stitch them into compelling stories.'}</p>
             </div>
-            <div className="flex bg-slate-100 rounded-xl p-1 gap-0.5">
+            <div className="flex bg-slate-100/80 rounded-xl p-1 gap-0.5 backdrop-blur-sm border border-slate-200/50">
               <button
                 onClick={() => setMode('essays')}
-                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${mode === 'essays' ? 'bg-white text-accent shadow-sm' : 'text-slate-500 hover:text-primary'}`}
+                className={`px-5 py-2 rounded-lg text-xs font-semibold transition-all ${mode === 'essays' ? 'bg-white text-accent shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-primary'}`}
               >
                 My Essays
               </button>
               <button
                 onClick={() => setMode('motifs')}
-                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${mode === 'motifs' ? 'bg-white text-accent shadow-sm' : 'text-slate-500 hover:text-primary'}`}
+                className={`px-5 py-2 rounded-lg text-xs font-semibold transition-all ${mode === 'motifs' ? 'bg-white text-accent shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-primary'}`}
               >
                 Motifs
               </button>
             </div>
           </div>
-          {mode === 'essays' && <button onClick={() => setShowNewForm(true)} className="btn-primary text-sm">+ New Essay</button>}
+          {mode === 'essays' && <button onClick={() => setShowNewForm(true)} className="px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-accent to-purple-600 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-accent/20 hover:shadow-xl hover:shadow-accent/30 hover:-translate-y-0.5">+ New Essay</button>}
         </div>
 
         {/* ═══════════════ MOTIFS MODE ═══════════════ */}
         {mode === 'motifs' && (
-          <div className="flex-1 min-h-0 grid lg:grid-cols-[280px_1fr] gap-4">
+          <div className="flex-1 min-h-0 flex flex-col gap-5 overflow-y-auto">
 
-            {/* ─── Left: Input + Saved Boards ─── */}
-            <div className="flex flex-col gap-3 overflow-y-auto pr-1">
-              {/* Description card */}
-              <div className="bg-gradient-to-br from-accent/5 to-purple-50 rounded-xl border border-accent/10 p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-accent to-purple-600 flex items-center justify-center">
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-primary">Motifs</h3>
-                    <p className="text-[10px] text-slate-400">Story Stitching Engine</p>
-                  </div>
-                </div>
-                <p className="text-[11px] text-slate-500 leading-relaxed">
-                  Type your ideas, experiences, and moments as bullet points. Motifs finds the hidden threads between them and shows you how to weave them into a multi-dimensional essay.
-                </p>
-              </div>
-
-              {/* Input area */}
-              <div className="bg-white rounded-xl border border-slate-100 p-4 flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Your Ideas</label>
-                  {activeBoardId && <button onClick={newBoard} className="text-[10px] text-accent font-semibold hover:text-accent/80">+ New Board</button>}
-                </div>
-                <textarea
-                  value={motifInput}
-                  onChange={e => setMotifInput(e.target.value)}
-                  placeholder={"Drop your ideas here, one per line:\n\n- The summer I spent cooking with my grandmother\n- Leading the debate team to nationals\n- When I failed my first AP exam\n- Teaching coding to kids at the library\n- My family's immigration story"}
-                  rows={8}
-                  className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-accent/30 resize-none font-sans"
-                />
-                <button
-                  onClick={runMotifAnalysis}
-                  disabled={motifInput.split('\n').filter(l => l.trim().length > 0).length < 2}
-                  className="w-full py-2.5 text-xs font-bold text-white bg-gradient-to-r from-accent to-purple-600 rounded-lg hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  Find Motifs
-                </button>
-              </div>
-
-              {/* Save controls */}
-              {motifAnalysis && motifAnalysis.bullets.length > 0 && (
-                <div className="bg-white rounded-xl border border-slate-100 p-4 space-y-2">
-                  <input
-                    type="text"
-                    value={boardTitle}
-                    onChange={e => setBoardTitle(e.target.value)}
-                    placeholder="Board title (e.g. Personal Statement Ideas)"
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-accent/30"
-                  />
-                  <button
-                    onClick={saveMotifBoard}
-                    disabled={savingBoard}
-                    className="w-full py-2 text-xs font-semibold text-accent border border-accent/30 rounded-lg hover:bg-accent/5 transition-colors disabled:opacity-40"
-                  >
-                    {savingBoard ? 'Saving...' : activeBoardId ? 'Update Board' : 'Save Board'}
-                  </button>
-                </div>
-              )}
-
-              {/* Saved boards list */}
-              {savedBoards.length > 0 && (
-                <div className="bg-white rounded-xl border border-slate-100 p-4">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Saved Boards ({savedBoards.length})</p>
-                  <div className="space-y-1.5">
-                    {savedBoards.map(board => (
-                      <div
-                        key={board.id}
-                        className={`flex items-center justify-between p-2.5 rounded-lg cursor-pointer group transition-all ${
-                          activeBoardId === board.id ? 'bg-accent/5 border border-accent/20' : 'hover:bg-slate-50 border border-transparent'
-                        }`}
-                      >
-                        <button onClick={() => loadBoard(board)} className="text-left flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-primary truncate">{board.title}</p>
-                          <p className="text-[10px] text-slate-400">
-                            {Array.isArray(board.bullets) ? (board.bullets as string[]).length : 0} ideas &middot; {new Date(board.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                          </p>
-                        </button>
-                        <button
-                          onClick={() => deleteBoard(board.id)}
-                          className="text-slate-300 hover:text-red-400 opacity-0 group-hover:opacity-100 flex-shrink-0 ml-2"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* ─── Right: Visual Storyboard ─── */}
-            <div className="flex flex-col gap-4 overflow-y-auto min-h-0">
-              {motifAnalysis ? (
-                <>
-                  {/* Stats bar */}
-                  <div className="flex items-center gap-3 flex-shrink-0">
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-slate-100">
-                      <span className="text-[10px] text-slate-400">Ideas:</span>
-                      <span className="text-xs font-bold text-primary">{motifAnalysis.bullets.length}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-slate-100">
-                      <span className="text-[10px] text-slate-400">Motifs found:</span>
-                      <span className="text-xs font-bold text-accent">{motifAnalysis.motifs.length}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-slate-100">
-                      <span className="text-[10px] text-slate-400">Connections:</span>
-                      <span className="text-xs font-bold text-purple-600">{motifAnalysis.connections.filter(c => c.strength >= 0.4).length}</span>
-                    </div>
-                    {motifAnalysis.orphanIds.length > 0 && (
-                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 rounded-lg border border-amber-200">
-                        <span className="text-[10px] text-amber-600">Unconnected:</span>
-                        <span className="text-xs font-bold text-amber-700">{motifAnalysis.orphanIds.length}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Visual Board */}
-                  <MotifStoryboard analysis={motifAnalysis} />
-
-                  {/* Motif narratives */}
-                  {motifAnalysis.motifs.length > 0 && (
-                    <div className="space-y-3">
-                      <h3 className="text-sm font-bold font-display text-primary">Narrative Threads</h3>
-                      <p className="text-[11px] text-slate-400 -mt-1">Each motif is a potential essay narrative. Here&apos;s how to weave your ideas together.</p>
-                      {motifAnalysis.motifs.map((motif, mi) => {
-                        const pal = MOTIF_PALETTE[motif.colorIdx % MOTIF_PALETTE.length];
-                        const mBullets = motif.bulletIds.map(id => motifAnalysis.bullets.find(b => b.id === id)).filter(Boolean);
-                        return (
-                          <div key={motif.id} className="rounded-xl border p-4" style={{ borderColor: pal.border + '40', backgroundColor: pal.bg + '80' }}>
-                            <div className="flex items-center gap-2 mb-2">
-                              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: pal.border }} />
-                              <h4 className="text-xs font-bold" style={{ color: pal.text }}>{motif.name}</h4>
-                              <span className="text-[10px] font-medium" style={{ color: pal.accent }}>
-                                {motif.dominantThemes.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(' + ')}
-                              </span>
-                            </div>
-                            <div className="flex flex-wrap gap-1.5 mb-3">
-                              {mBullets.map(b => b && (
-                                <span key={b.id} className="px-2 py-0.5 rounded-full text-[9px] font-medium" style={{ backgroundColor: pal.light, color: pal.text }}>
-                                  {b.text.length > 40 ? b.text.slice(0, 37) + '...' : b.text}
-                                </span>
-                              ))}
-                            </div>
-                            <div className="p-3 rounded-lg bg-white/70 border" style={{ borderColor: pal.border + '20' }}>
-                              <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: pal.border }}>How to write this</p>
-                              <p className="text-[11px] text-slate-600 leading-relaxed">{motif.narrative}</p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* Orphan ideas */}
-                  {motifAnalysis.orphanIds.length > 0 && (
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <h4 className="text-xs font-bold text-slate-500 mb-2">Standalone Ideas</h4>
-                      <p className="text-[10px] text-slate-400 mb-3">These ideas didn&apos;t connect strongly to others. They might work as standalone essay topics, or try adding more related experiences to find connections.</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {motifAnalysis.orphanIds.map(id => {
-                          const b = motifAnalysis.bullets.find(x => x.id === id);
-                          return b ? (
-                            <span key={id} className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-[10px] text-slate-600">{b.text}</span>
-                          ) : null;
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </>
-              ) : (
-                /* Empty state */
-                <div className="flex-1 flex items-center justify-center">
-                  <div className="text-center max-w-md px-6">
-                    <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-accent/10 to-purple-100 flex items-center justify-center mb-5">
+            {/* ─── Top: Input Bar (full-width, compact) ─── */}
+            <div className="flex-shrink-0">
+              {!motifAnalysis ? (
+                /* ── Full empty state ── */
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-center max-w-2xl px-8">
+                    <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-accent/10 to-purple-100 flex items-center justify-center mb-6">
                       <svg className="w-10 h-10 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                       </svg>
                     </div>
-                    <h3 className="text-xl font-bold font-display text-primary mb-2">Motifs — Story Stitching</h3>
-                    <p className="text-sm text-slate-500 mb-4">
-                      Drop in your ideas, experiences, and moments as bullet points. Motifs discovers the hidden threads between them and maps out how to weave them into a compelling, multi-dimensional essay.
+                    <h3 className="text-2xl font-bold font-display text-primary mb-2">Motifs — Story Stitching</h3>
+                    <p className="text-sm text-slate-500 mb-6 leading-relaxed">
+                      Your college essay doesn&apos;t have to be about one thing. Drop in your experiences, ideas, and moments below — and watch as Motifs discovers the hidden narrative threads that connect them into a multi-dimensional story.
                     </p>
-                    <div className="text-left bg-slate-50 rounded-xl p-4 border border-slate-100">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">How it works</p>
-                      <ol className="space-y-1.5 text-[11px] text-slate-500">
-                        <li className="flex gap-2"><span className="text-accent font-bold">1.</span> Type your experiences, memories, and ideas as bullet points</li>
-                        <li className="flex gap-2"><span className="text-accent font-bold">2.</span> Click &ldquo;Find Motifs&rdquo; to discover hidden connections</li>
-                        <li className="flex gap-2"><span className="text-accent font-bold">3.</span> See how your ideas cluster into essay-worthy narrative threads</li>
-                        <li className="flex gap-2"><span className="text-accent font-bold">4.</span> Get specific advice on how to structure each motif into an essay</li>
-                        <li className="flex gap-2"><span className="text-accent font-bold">5.</span> Save boards to reference while writing</li>
-                      </ol>
+
+                    <div className="bg-white rounded-2xl border border-slate-200 p-6 text-left shadow-sm">
+                      <div className="flex items-center justify-between mb-3">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Your experiences & ideas</label>
+                        {savedBoards.length > 0 && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-slate-400">{savedBoards.length} saved board{savedBoards.length !== 1 ? 's' : ''}</span>
+                            <select
+                              onChange={e => { const board = savedBoards.find(b => b.id === e.target.value); if (board) loadBoard(board); }}
+                              className="text-xs border border-slate-200 rounded-lg px-2 py-1 text-slate-600 focus:outline-none focus:ring-2 focus:ring-accent/30"
+                              value=""
+                            >
+                              <option value="" disabled>Load board...</option>
+                              {savedBoards.map(b => <option key={b.id} value={b.id}>{b.title}</option>)}
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                      <textarea
+                        value={motifInput}
+                        onChange={e => setMotifInput(e.target.value)}
+                        placeholder={"Write one idea per line. Be specific — the more detail, the better connections we can find:\n\n- The summer I spent cooking with my grandmother, learning her recipes from memory\n- Leading the debate team to nationals after we nearly lost our funding\n- When I failed my first AP Calculus exam and had to rethink how I study\n- Teaching coding workshops to kids at the public library every Saturday\n- My family's immigration story and how it shaped my relationship with language"}
+                        rows={7}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-accent/30 resize-none font-sans placeholder:text-slate-300"
+                      />
+                      <div className="flex items-center justify-between mt-3">
+                        <p className="text-[11px] text-slate-400">
+                          {motifInput.split('\n').filter(l => l.trim().length > 0).length} ideas entered
+                          {motifInput.split('\n').filter(l => l.trim().length > 0).length < 2 && ' — need at least 2'}
+                        </p>
+                        <button
+                          onClick={runMotifAnalysis}
+                          disabled={motifInput.split('\n').filter(l => l.trim().length > 0).length < 2}
+                          className="px-8 py-3 text-sm font-bold text-white bg-gradient-to-r from-accent to-purple-600 rounded-xl hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-accent/20 hover:shadow-xl hover:shadow-accent/30 hover:-translate-y-0.5"
+                        >
+                          Find Motifs
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4 mt-6 text-left">
+                      <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                        <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center mb-2">
+                          <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                        </div>
+                        <h4 className="text-xs font-bold text-primary mb-1">Deep Analysis</h4>
+                        <p className="text-[11px] text-slate-500 leading-relaxed">Analyzes each idea for hidden values, tensions, imagery, and shifts — not just surface keywords.</p>
+                      </div>
+                      <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                        <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center mb-2">
+                          <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                        </div>
+                        <h4 className="text-xs font-bold text-primary mb-1">Creative Bridges</h4>
+                        <p className="text-[11px] text-slate-500 leading-relaxed">Discovers narrative bridges between seemingly unrelated experiences using contrast, metaphor, and craft.</p>
+                      </div>
+                      <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center mb-2">
+                          <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        </div>
+                        <h4 className="text-xs font-bold text-primary mb-1">Essay Architecture</h4>
+                        <p className="text-[11px] text-slate-500 leading-relaxed">Suggests essay structures with central tensions, narrative arcs, and specific writing advice.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* ── Compact input bar when results showing ── */
+                <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-1 min-w-0">
+                      <textarea
+                        value={motifInput}
+                        onChange={e => setMotifInput(e.target.value)}
+                        placeholder="Add or edit your ideas here, one per line..."
+                        rows={3}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-accent/30 resize-none"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2 flex-shrink-0">
+                      <button
+                        onClick={runMotifAnalysis}
+                        disabled={motifInput.split('\n').filter(l => l.trim().length > 0).length < 2}
+                        className="px-5 py-2 text-xs font-bold text-white bg-gradient-to-r from-accent to-purple-600 rounded-xl hover:opacity-90 transition-all disabled:opacity-40"
+                      >
+                        Re-analyze
+                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          value={boardTitle}
+                          onChange={e => setBoardTitle(e.target.value)}
+                          placeholder="Board name..."
+                          className="flex-1 px-2 py-1.5 rounded-lg border border-slate-200 text-[11px] focus:outline-none focus:ring-1 focus:ring-accent/30 min-w-0"
+                        />
+                        <button onClick={saveMotifBoard} disabled={savingBoard} className="px-3 py-1.5 text-[11px] font-semibold text-accent border border-accent/30 rounded-lg hover:bg-accent/5 transition-colors disabled:opacity-40 whitespace-nowrap">
+                          {savingBoard ? '...' : activeBoardId ? 'Update' : 'Save'}
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {activeBoardId && <button onClick={newBoard} className="text-[10px] text-slate-400 hover:text-accent font-medium">+ New</button>}
+                        {savedBoards.length > 0 && (
+                          <select
+                            onChange={e => { const board = savedBoards.find(b => b.id === e.target.value); if (board) loadBoard(board); }}
+                            className="text-[10px] border border-slate-200 rounded px-1.5 py-0.5 text-slate-500 focus:outline-none min-w-0"
+                            value={activeBoardId || ''}
+                          >
+                            <option value="" disabled>Load...</option>
+                            {savedBoards.map(b => <option key={b.id} value={b.id}>{b.title}</option>)}
+                          </select>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Stats + View toggle */}
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 rounded-lg">
+                        <span className="text-[10px] text-slate-400">Ideas</span>
+                        <span className="text-xs font-bold text-primary">{motifAnalysis.bullets.length}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-accent/5 rounded-lg">
+                        <span className="text-[10px] text-accent/70">Motifs</span>
+                        <span className="text-xs font-bold text-accent">{motifAnalysis.motifs.length}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 rounded-lg">
+                        <span className="text-[10px] text-purple-400">Bridges</span>
+                        <span className="text-xs font-bold text-purple-600">{motifAnalysis.connections.filter(c => c.strength >= 0.3).length}</span>
+                      </div>
+                      {motifAnalysis.orphanIds.length > 0 && (
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 rounded-lg">
+                          <span className="text-[10px] text-amber-500">Unconnected</span>
+                          <span className="text-xs font-bold text-amber-600">{motifAnalysis.orphanIds.length}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex bg-slate-100 rounded-lg p-0.5">
+                      <button onClick={() => setMotifView('board')} className={`px-3 py-1 rounded-md text-[11px] font-semibold transition-all ${motifView === 'board' ? 'bg-white text-accent shadow-sm' : 'text-slate-500 hover:text-primary'}`}>
+                        Board
+                      </button>
+                      <button onClick={() => setMotifView('narrative')} className={`px-3 py-1 rounded-md text-[11px] font-semibold transition-all ${motifView === 'narrative' ? 'bg-white text-accent shadow-sm' : 'text-slate-500 hover:text-primary'}`}>
+                        Narrative
+                      </button>
                     </div>
                   </div>
                 </div>
               )}
             </div>
+
+            {/* ─── Results Area (full-width) ─── */}
+            {motifAnalysis && (
+              <>
+                {motifView === 'board' ? (
+                  <MotifStoryboard analysis={motifAnalysis} expandedCard={expandedCard} setExpandedCard={setExpandedCard} />
+                ) : (
+                  /* ── Narrative view ── */
+                  <div className="space-y-5">
+                    {motifAnalysis.motifs.map((motif, mi) => {
+                      const pal = MOTIF_PALETTE[motif.colorIdx % MOTIF_PALETTE.length];
+                      const mBullets = motif.bulletIds.map(id => motifAnalysis.bullets.find(b => b.id === id)).filter(Boolean);
+                      return (
+                        <div key={motif.id} className="bg-white rounded-2xl border-2 overflow-hidden shadow-sm" style={{ borderColor: pal.border + '30' }}>
+                          {/* Header */}
+                          <div className="px-6 py-5 border-b" style={{ borderColor: pal.border + '15', background: `linear-gradient(135deg, ${pal.bg}80, white)` }}>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: pal.border }}>
+                                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                                </div>
+                                <div>
+                                  <h3 className="text-base font-bold" style={{ color: pal.text }}>{motif.name}</h3>
+                                  <p className="text-xs font-medium" style={{ color: pal.accent }}>
+                                    {motif.dominantThemes.map(t => t.replace(/_/g, ' ')).map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(' + ')}
+                                  </p>
+                                </div>
+                              </div>
+                              <span className="text-xs font-medium px-3 py-1 rounded-full" style={{ backgroundColor: pal.light, color: pal.text }}>
+                                {mBullets.length} idea{mBullets.length !== 1 ? 's' : ''}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="p-6 space-y-5">
+                            {/* Ideas in this motif */}
+                            <div className="flex flex-wrap gap-2">
+                              {mBullets.map(b => b && (
+                                <div key={b.id} className="px-3 py-2 rounded-xl border text-sm" style={{ backgroundColor: pal.bg + '60', borderColor: pal.border + '25', color: pal.text }}>
+                                  {b.text}
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Narrative advice */}
+                            <div className="p-5 rounded-xl border" style={{ backgroundColor: pal.bg + '40', borderColor: pal.border + '20' }}>
+                              <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: pal.border }}>How to write this essay</p>
+                              <p className="text-sm text-slate-700 leading-relaxed">{motif.narrative}</p>
+                            </div>
+
+                            {/* Structure suggestion */}
+                            {motif.suggestedStructure && (
+                              <div className="p-5 rounded-xl bg-slate-50 border border-slate-100">
+                                <p className="text-[10px] font-bold uppercase tracking-wider mb-2 text-slate-500">Suggested structure</p>
+                                <p className="text-sm text-slate-600 leading-relaxed">{motif.suggestedStructure}</p>
+                              </div>
+                            )}
+
+                            {/* Weak connection warnings */}
+                            {motif.weakConnections && motif.weakConnections.length > 0 && (
+                              <div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
+                                <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5 text-amber-600">Watch out</p>
+                                {motif.weakConnections.map((w, i) => (
+                                  <p key={i} className="text-xs text-amber-700 leading-relaxed">{w}</p>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Orphan ideas in narrative view */}
+                    {motifAnalysis.orphanIds.length > 0 && (
+                      <div className="bg-white rounded-2xl border-2 border-slate-200 overflow-hidden">
+                        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
+                          <h3 className="text-sm font-bold text-slate-500">Standalone Ideas</h3>
+                          <p className="text-xs text-slate-400 mt-0.5">These didn&apos;t connect strongly yet. Try adding more detail or related experiences.</p>
+                        </div>
+                        <div className="p-5 flex flex-wrap gap-2">
+                          {motifAnalysis.orphanIds.map(id => {
+                            const b = motifAnalysis.bullets.find(x => x.id === id);
+                            return b ? (
+                              <div key={id} className="px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-600">{b.text}</div>
+                            ) : null;
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
 
@@ -1433,61 +1908,75 @@ export default function Essays() {
         )}
 
         {/* ═══ 3-COLUMN LAYOUT ═══ */}
-        {mode === 'essays' && <div className="flex-1 min-h-0 grid lg:grid-cols-[220px_1fr_320px] gap-4">
+        {mode === 'essays' && <div className="flex-1 min-h-0 grid lg:grid-cols-[240px_1fr_340px] gap-5">
 
           {/* ─── LEFT: Essay List ─── */}
           <div className="overflow-y-auto space-y-2 pr-1">
             {loading ? (
-              <div className="text-center py-8"><div className="animate-pulse text-sm text-slate-400">Loading...</div></div>
+              <div className="text-center py-12"><div className="animate-pulse text-sm text-slate-400">Loading...</div></div>
             ) : essays.length === 0 ? (
-              <div className="text-center py-8">
-                <svg className="w-8 h-8 text-slate-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                <p className="text-xs text-slate-400">No essays yet</p>
+              <div className="text-center py-12">
+                <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center mx-auto mb-3">
+                  <svg className="w-7 h-7 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                </div>
+                <p className="text-sm font-medium text-slate-400">No essays yet</p>
+                <p className="text-xs text-slate-300 mt-1">Create your first essay to begin</p>
               </div>
             ) : (
-              essays.map(essay => (
-                <div
-                  key={essay.id}
-                  onClick={() => openEssay(essay)}
-                  className={`p-3 rounded-xl border cursor-pointer group transition-all ${
-                    activeEssay?.id === essay.id ? 'bg-accent/5 border-accent/30 shadow-sm' : 'bg-white border-slate-100 hover:border-slate-200'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-1">
-                    <h3 className="text-xs font-bold text-primary truncate flex-1">{essay.title}</h3>
-                    <button onClick={e => { e.stopPropagation(); deleteEssay(essay.id); }} className="text-slate-300 hover:text-red-400 opacity-0 group-hover:opacity-100 flex-shrink-0">
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
+              essays.map(essay => {
+                const essayWords = essay.content ? essay.content.trim().split(/\s+/).length : 0;
+                return (
+                  <div
+                    key={essay.id}
+                    onClick={() => openEssay(essay)}
+                    className={`p-4 rounded-xl border-2 cursor-pointer group transition-all duration-200 ${
+                      activeEssay?.id === essay.id ? 'bg-accent/5 border-accent/30 shadow-md' : 'bg-white border-transparent hover:border-slate-200 hover:shadow-sm'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="text-sm font-bold text-primary truncate flex-1">{essay.title}</h3>
+                      <button onClick={e => { e.stopPropagation(); deleteEssay(essay.id); }} className="text-slate-300 hover:text-red-400 opacity-0 group-hover:opacity-100 flex-shrink-0 p-0.5">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                    </div>
+                    {essay.prompt && <p className="text-[10px] text-slate-400 italic mt-1 truncate">{essay.prompt}</p>}
+                    <div className="flex items-center gap-2 mt-2.5">
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-semibold ${statusColors[essay.status] || statusColors['Draft']}`}>{essay.status}</span>
+                      {essay.overallScore != null && (
+                        <span className={`text-[10px] font-bold ${essay.overallScore >= 70 ? 'text-emerald-600' : essay.overallScore >= 45 ? 'text-amber-600' : 'text-slate-400'}`}>
+                          {essay.overallScore}%
+                        </span>
+                      )}
+                      <span className="text-[10px] text-slate-300">{essayWords}w</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold ${statusColors[essay.status] || statusColors['Draft']}`}>{essay.status}</span>
-                    {essay.overallScore != null && <span className="text-[9px] font-bold text-accent">{essay.overallScore}%</span>}
-                    <span className="text-[9px] text-slate-400">{essay.content ? `${essay.content.trim().split(/\s+/).length}w` : '0w'}</span>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
 
           {/* ─── CENTER: Editor ─── */}
           <div className="flex flex-col min-h-0">
             {activeEssay ? (
-              <div className="bg-white rounded-2xl border border-slate-100 p-5 flex flex-col flex-1 min-h-0">
+              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden">
                 {/* Editor header */}
-                <div className="flex items-center justify-between mb-3 flex-shrink-0">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 flex-shrink-0 bg-slate-50/50">
                   <div className="min-w-0 flex-1">
                     <h3 className="text-base font-bold font-display text-primary truncate">{activeEssay.title}</h3>
-                    {activeEssay.prompt && <p className="text-[11px] text-slate-400 italic truncate mt-0.5">&ldquo;{activeEssay.prompt}&rdquo;</p>}
+                    {activeEssay.prompt && <p className="text-xs text-slate-400 italic truncate mt-0.5">&ldquo;{activeEssay.prompt}&rdquo;</p>}
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                    {saving && <span className="text-[10px] text-slate-400 animate-pulse">Saving...</span>}
-                    <span className="text-[10px] text-slate-400">{wordCount}w</span>
-                    <div className="flex gap-0.5">
+                  <div className="flex items-center gap-3 flex-shrink-0 ml-4">
+                    {saving && <span className="text-[10px] text-accent animate-pulse font-medium">Saving...</span>}
+                    <div className="flex items-center gap-1 bg-slate-100 rounded-lg px-2.5 py-1">
+                      <span className="text-xs font-bold text-primary">{wordCount}</span>
+                      <span className="text-[10px] text-slate-400">words</span>
+                    </div>
+                    <div className="flex gap-1">
                       {[500, 650, 700].map(t => (
-                        <span key={t} className={`text-[8px] px-1 py-0.5 rounded ${wordCount >= t ? 'bg-green-100 text-green-700' : 'bg-slate-50 text-slate-400'}`}>{t}</span>
+                        <span key={t} className={`text-[9px] px-1.5 py-0.5 rounded-md font-medium ${wordCount >= t ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>{t}</span>
                       ))}
                     </div>
-                    <button onClick={markComplete} disabled={wordCount < 50} className="px-2.5 py-1 text-[10px] font-semibold text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed">Done</button>
+                    <button onClick={markComplete} disabled={wordCount < 50} className="px-3 py-1.5 text-xs font-semibold text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all">Mark Complete</button>
                   </div>
                 </div>
 
@@ -1495,15 +1984,17 @@ export default function Essays() {
                 <textarea
                   value={editContent}
                   onChange={e => handleContentChange(e.target.value)}
-                  placeholder="Start writing your essay here... Your writing will be analyzed in real-time as you type."
-                  className="flex-1 min-h-0 w-full px-4 py-3 rounded-xl border border-slate-200 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent resize-none font-sans"
+                  placeholder="Start writing your essay here...&#10;&#10;Your writing will be analyzed in real-time as you type. The sidebar will show live scores, tips, and suggestions based on your content."
+                  className="flex-1 min-h-0 w-full px-6 py-5 text-[15px] leading-[1.8] focus:outline-none resize-none font-sans text-slate-800 placeholder:text-slate-300"
                 />
               </div>
             ) : (
-              <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center flex-1 flex flex-col items-center justify-center">
-                <svg className="w-10 h-10 text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                <h3 className="text-base font-bold text-primary">Select an Essay</h3>
-                <p className="text-xs text-slate-400 mt-1">Choose an essay or create a new one to start writing.</p>
+              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-10 text-center flex-1 flex flex-col items-center justify-center">
+                <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                </div>
+                <h3 className="text-lg font-bold text-primary">Select an Essay</h3>
+                <p className="text-sm text-slate-400 mt-1.5 max-w-xs">Choose an essay from the left panel or create a new one to start writing with real-time feedback.</p>
               </div>
             )}
           </div>
