@@ -5,12 +5,6 @@ import Head from 'next/head';
 import Link from 'next/link';
 import DashboardLayout from '../../components/DashboardLayout';
 
-const upcomingSessions = [
-  { title: 'SAT Math Review', coach: 'Dr. Patel', date: 'Tomorrow, 4:00 PM', type: '1:1 Coaching' },
-  { title: 'Common App Essay Draft 2', coach: 'Sarah M.', date: 'Wed, 3:30 PM', type: 'Essay Review' },
-  { title: 'STEM Research Check-in', coach: 'Prof. Liu', date: 'Fri, 5:00 PM', type: 'Cohort' },
-];
-
 interface DashboardStats {
   satScore: string;
   essayCount: string;
@@ -151,29 +145,48 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Upcoming sessions */}
+          {/* Quick Actions */}
           <div className="bg-white rounded-2xl border border-slate-100 p-6">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold font-display text-primary">Upcoming Sessions</h3>
-              <Link href="/dashboard/sessions" className="text-sm font-semibold text-accent hover:underline">
-                View all
-              </Link>
+              <h3 className="text-lg font-bold font-display text-primary">Quick Actions</h3>
             </div>
-            <div className="space-y-4">
-              {upcomingSessions.map((s) => (
-                <div key={s.title} className="flex items-start gap-4 p-4 rounded-xl bg-surface border border-slate-100">
-                  <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-primary">{s.title}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">{s.coach} &middot; {s.type}</p>
-                  </div>
-                  <span className="text-xs font-medium text-accent whitespace-nowrap">{s.date}</span>
+            <div className="space-y-3">
+              <Link href="/dashboard/essays" className="flex items-center gap-4 p-4 rounded-xl bg-surface border border-slate-100 hover:border-slate-200 hover:shadow-sm transition-all">
+                <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
                 </div>
-              ))}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-primary">Write an Essay</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Start or continue your college essays</p>
+                </div>
+                <svg className="w-5 h-5 text-slate-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              </Link>
+              <Link href="/dashboard/progress" className="flex items-center gap-4 p-4 rounded-xl bg-surface border border-slate-100 hover:border-slate-200 hover:shadow-sm transition-all">
+                <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-primary">Track Applications</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Manage deadlines & checklists</p>
+                </div>
+                <svg className="w-5 h-5 text-slate-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              </Link>
+              <Link href="/dashboard/pods" className="flex items-center gap-4 p-4 rounded-xl bg-surface border border-slate-100 hover:border-slate-200 hover:shadow-sm transition-all">
+                <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-primary">Study Pods</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Collaborate with peers</p>
+                </div>
+                <svg className="w-5 h-5 text-slate-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              </Link>
             </div>
           </div>
         </div>
@@ -198,14 +211,14 @@ export default function Dashboard() {
             <p className="text-sm font-bold text-primary group-hover:text-purple-600 transition-colors">Essay Workspace</p>
             <p className="text-xs text-slate-400 mt-0.5">Write & analyze essays</p>
           </Link>
-          <Link href="/dashboard/sessions" className="bg-white rounded-2xl border border-slate-100 p-5 hover:shadow-md hover:border-slate-200 transition-all group">
+          <Link href="/dashboard/progress" className="bg-white rounded-2xl border border-slate-100 p-5 hover:shadow-md hover:border-slate-200 transition-all group">
             <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center mb-3">
               <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
               </svg>
             </div>
-            <p className="text-sm font-bold text-primary group-hover:text-emerald-600 transition-colors">Sessions</p>
-            <p className="text-xs text-slate-400 mt-0.5">View upcoming coaching</p>
+            <p className="text-sm font-bold text-primary group-hover:text-emerald-600 transition-colors">Applications</p>
+            <p className="text-xs text-slate-400 mt-0.5">Track deadlines & tasks</p>
           </Link>
         </div>
       </div>

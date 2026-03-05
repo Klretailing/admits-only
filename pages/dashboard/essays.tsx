@@ -1741,6 +1741,7 @@ export default function Essays() {
   const [creating, setCreating] = useState(false);
 
   const [activeEssay, setActiveEssay] = useState<Essay | null>(null);
+  const [mobileEssayView, setMobileEssayView] = useState<'list' | 'editor'>('list');
   const [editContent, setEditContent] = useState('');
   const [saving, setSaving] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1812,7 +1813,7 @@ export default function Essays() {
     }, 1200);
   }, [activeEssay]);
 
-  const openEssay = (essay: Essay) => { setActiveEssay(essay); setEditContent(essay.content || ''); };
+  const openEssay = (essay: Essay) => { setActiveEssay(essay); setEditContent(essay.content || ''); setMobileEssayView('editor'); };
 
   const deleteEssay = async (id: string) => {
     try { await fetch('/api/essays', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) }); setEssays(prev => prev.filter(e => e.id !== id)); if (activeEssay?.id === id) { setActiveEssay(null); setEditContent(''); } } catch (e) {}
@@ -1894,30 +1895,39 @@ export default function Essays() {
     <DashboardLayout>
       <Head><title>Essays | AdmitsOnly Dashboard</title></Head>
 
-      <div className="flex flex-col" style={{ height: 'calc(100vh - 7rem)' }}>
+      <div className="flex flex-col" style={{ height: 'calc(100vh - 8rem)' }}>
         {/* Header with mode tabs */}
-        <div className="flex items-center justify-between mb-5 flex-shrink-0">
-          <div className="flex items-center gap-5">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 lg:mb-5 flex-shrink-0 gap-3">
+          <div className="flex items-center gap-3 lg:gap-5">
+            {/* Mobile back to list button */}
+            {mode === 'essays' && mobileEssayView === 'editor' && activeEssay && (
+              <button
+                onClick={() => setMobileEssayView('list')}
+                className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-primary hover:bg-slate-50 transition-all flex-shrink-0"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+              </button>
+            )}
             <div>
-              <h1 className="text-2xl font-bold font-display text-primary tracking-tight">Essay Workspace</h1>
-              <p className="mt-0.5 text-sm text-slate-400">{mode === 'essays' ? 'Write, analyze, and get real-time admissions-grade feedback.' : 'Discover hidden connections between your ideas and stitch them into compelling stories.'}</p>
+              <h1 className="text-xl lg:text-2xl font-bold font-display text-primary tracking-tight">Essay Workspace</h1>
+              <p className="mt-0.5 text-xs lg:text-sm text-slate-400 hidden sm:block">{mode === 'essays' ? 'Write, analyze, and get real-time admissions-grade feedback.' : 'Discover hidden connections between your ideas and stitch them into compelling stories.'}</p>
             </div>
             <div className="flex bg-slate-100/80 rounded-xl p-1 gap-0.5 backdrop-blur-sm border border-slate-200/50">
               <button
                 onClick={() => setMode('essays')}
-                className={`px-5 py-2 rounded-lg text-xs font-semibold transition-all ${mode === 'essays' ? 'bg-white text-accent shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-primary'}`}
+                className={`px-3 lg:px-5 py-2 rounded-lg text-xs font-semibold transition-all ${mode === 'essays' ? 'bg-white text-accent shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-primary'}`}
               >
                 My Essays
               </button>
               <button
                 onClick={() => setMode('motifs')}
-                className={`px-5 py-2 rounded-lg text-xs font-semibold transition-all ${mode === 'motifs' ? 'bg-white text-accent shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-primary'}`}
+                className={`px-3 lg:px-5 py-2 rounded-lg text-xs font-semibold transition-all ${mode === 'motifs' ? 'bg-white text-accent shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-primary'}`}
               >
                 Motifs
               </button>
             </div>
           </div>
-          {mode === 'essays' && <button onClick={() => setShowNewForm(true)} className="px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-accent to-purple-600 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-accent/20 hover:shadow-xl hover:shadow-accent/30 hover:-translate-y-0.5">+ New Essay</button>}
+          {mode === 'essays' && <button onClick={() => setShowNewForm(true)} className="px-4 lg:px-5 py-2 lg:py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-accent to-purple-600 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-accent/20 hover:shadow-xl hover:shadow-accent/30 hover:-translate-y-0.5 flex-shrink-0">+ New Essay</button>}
         </div>
 
         {/* ═══════════════ MOTIFS MODE ═══════════════ */}
@@ -2275,10 +2285,10 @@ export default function Essays() {
         )}
 
         {/* ═══ 3-COLUMN LAYOUT ═══ */}
-        {mode === 'essays' && <div className="flex-1 min-h-0 grid lg:grid-cols-[240px_1fr_340px] gap-5">
+        {mode === 'essays' && <div className="flex-1 min-h-0 grid lg:grid-cols-[240px_1fr_340px] gap-4 lg:gap-5">
 
           {/* ─── LEFT: Essay List ─── */}
-          <div className="overflow-y-auto space-y-2 pr-1">
+          <div className={`overflow-y-auto space-y-2 pr-1 ${mobileEssayView === 'editor' && activeEssay ? 'hidden lg:block' : ''}`}>
             {loading ? (
               <div className="text-center py-12"><div className="animate-pulse text-sm text-slate-400">Loading...</div></div>
             ) : essays.length === 0 ? (
@@ -2323,7 +2333,7 @@ export default function Essays() {
           </div>
 
           {/* ─── CENTER: Editor ─── */}
-          <div className="flex flex-col min-h-0">
+          <div className={`flex flex-col min-h-0 ${mobileEssayView === 'list' ? 'hidden lg:flex' : ''}`}>
             {activeEssay ? (
               <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden">
                 {/* Editor header */}
@@ -2367,7 +2377,7 @@ export default function Essays() {
           </div>
 
           {/* ─── RIGHT: Live Sidebar ─── */}
-          <div className="overflow-y-auto space-y-3 pl-1">
+          <div className="hidden lg:block overflow-y-auto space-y-3 pl-1">
             {activeEssay && (
               <>
                 {/* Prompt type indicator */}

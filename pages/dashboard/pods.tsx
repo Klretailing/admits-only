@@ -193,6 +193,18 @@ export default function StudyPods() {
     }
   };
 
+  // Mobile: show chat view when a pod is selected
+  const [mobileShowChat, setMobileShowChat] = useState(false);
+
+  const selectPod = (pod: PodSummary) => {
+    setSelectedPod(pod);
+    setMobileShowChat(true);
+  };
+
+  const mobileBackToList = () => {
+    setMobileShowChat(false);
+  };
+
   if (status !== 'authenticated') return null;
 
   const formatTime = (dateStr: string) => {
@@ -209,11 +221,11 @@ export default function StudyPods() {
     <DashboardLayout>
       <Head><title>Study Pods | AdmitsOnly Dashboard</title></Head>
 
-      <div className="h-[calc(100vh-7rem)]">
+      <div className="h-[calc(100vh-8rem)] lg:h-[calc(100vh-7rem)]">
         <div className="grid h-full lg:grid-cols-[280px_1fr] gap-0 bg-white rounded-2xl border border-slate-100 overflow-hidden">
 
           {/* ─── POD LIST SIDEBAR ─── */}
-          <div className="border-r border-slate-100 flex flex-col">
+          <div className={`border-r border-slate-100 flex flex-col ${mobileShowChat ? 'hidden lg:flex' : 'flex'}`}>
             <div className="p-4 border-b border-slate-100">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-lg font-bold font-display text-primary">Study Pods</h2>
@@ -299,7 +311,7 @@ export default function StudyPods() {
                 pods.map(pod => (
                   <button
                     key={pod.id}
-                    onClick={() => setSelectedPod(pod)}
+                    onClick={() => selectPod(pod)}
                     className={`w-full text-left p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors ${
                       selectedPod?.id === pod.id ? 'bg-accent/5 border-l-2 border-l-accent' : ''
                     }`}
@@ -329,16 +341,25 @@ export default function StudyPods() {
 
           {/* ─── CHAT / POD VIEW ─── */}
           {selectedPod ? (
-            <div className="flex flex-col h-full">
+            <div className={`flex flex-col h-full ${mobileShowChat ? 'flex' : 'hidden lg:flex'}`}>
               {/* Pod header */}
-              <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-                <div>
-                  <h3 className="text-base font-bold text-primary">{selectedPod.name}</h3>
-                  {selectedPod.description && (
-                    <p className="text-xs text-slate-400 mt-0.5">{selectedPod.description}</p>
-                  )}
+              <div className="p-3 lg:p-4 border-b border-slate-100 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  {/* Mobile back button */}
+                  <button
+                    onClick={mobileBackToList}
+                    className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-primary hover:bg-slate-50 transition-all flex-shrink-0"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                  </button>
+                  <div className="min-w-0">
+                    <h3 className="text-sm lg:text-base font-bold text-primary truncate">{selectedPod.name}</h3>
+                    {selectedPod.description && (
+                      <p className="text-xs text-slate-400 mt-0.5 truncate">{selectedPod.description}</p>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 lg:gap-2 flex-shrink-0">
                   {/* Invite code button */}
                   <button
                     onClick={copyInviteCode}
@@ -437,7 +458,7 @@ export default function StudyPods() {
               </div>
 
               {/* Message input */}
-              <div className="p-4 border-t border-slate-100">
+              <div className="p-3 lg:p-4 border-t border-slate-100">
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -461,7 +482,7 @@ export default function StudyPods() {
             </div>
           ) : (
             /* Empty state — no pod selected */
-            <div className="flex items-center justify-center h-full">
+            <div className="hidden lg:flex items-center justify-center h-full">
               <div className="text-center max-w-sm px-6">
                 <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-accent/10 to-purple-100 flex items-center justify-center mb-5">
                   <svg className="w-10 h-10 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
