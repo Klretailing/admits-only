@@ -2305,6 +2305,204 @@ export default function Essays() {
         {mode === 'supplementals' && (
           <div className="flex-1 min-h-0 flex flex-col gap-5 overflow-y-auto">
 
+            {/* Prompt Detail Modal */}
+            {suppExpandedPrompt && (() => {
+              let modalSchool: SchoolData | undefined;
+              let modalPrompt: SupplementalPrompt | undefined;
+              for (const s of SCHOOLS) {
+                const p = s.prompts.find(pr => pr.id === suppExpandedPrompt);
+                if (p) { modalSchool = s; modalPrompt = p; break; }
+              }
+              if (!modalSchool || !modalPrompt) return null;
+              const typeInfo = getPromptTypeInfo(modalPrompt.type);
+              const matchesForThis = reuseMatches.filter(m => m.targetPrompt.id === modalPrompt!.id);
+              const getWritingGuide = (type: string, schoolName: string) => {
+                switch (type) {
+                  case 'why_us': return `Research ${schoolName}'s specific programs, courses, professors, and traditions. Name at least 2-3 concrete details only found at this school. Avoid generic praise — admissions officers can tell when you haven't done your homework.`;
+                  case 'community': return 'Focus on a specific community, not a generic one. Show what you gave, not just what you got. The best community essays show both belonging and contribution.';
+                  case 'intellectual': return 'Go deep on one idea rather than listing many. Show how your thinking evolved. Admissions wants to see genuine curiosity and the ability to sit with complex questions.';
+                  case 'activity': return 'Don\'t just describe the activity — show your unique approach and what it revealed about you. Focus on specific moments of learning or growth, not just accomplishments.';
+                  case 'identity': return 'Be specific about moments and details. Avoid broad generalizations about your background. The best identity essays zoom into a single scene and expand outward.';
+                  case 'challenge': return 'Focus more on growth than on the challenge itself. Admissions wants to see maturity, self-awareness, and the ability to learn from difficulty.';
+                  case 'creative': return 'This is where you can take risks. Show personality and intellectual play. Don\'t try to be conventional — the prompt is giving you permission to be creative.';
+                  case 'future': return 'Connect your past experiences to future goals. Show the throughline, not just the destination. Why this field? What specific experiences led you here?';
+                  case 'diversity': return 'Be authentic. Don\'t perform diversity — show genuine perspective. The best diversity essays are specific and personal, not political or abstract.';
+                  case 'roommate': return 'Be fun and genuine. This is about personality, not accomplishments. Show the human side that doesn\'t come through in transcripts.';
+                  default: return 'Approach this prompt authentically and with specificity. Use concrete details and personal stories.';
+                }
+              };
+
+              return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                  <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSuppExpandedPrompt(null)} />
+                  <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto">
+                    {/* Modal header */}
+                    <div className="sticky top-0 bg-white border-b border-slate-100 p-5 rounded-t-2xl z-10">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border ${typeInfo.color}`}>
+                            {typeInfo.icon} {typeInfo.label}
+                          </span>
+                          <span className="text-sm font-bold text-primary">{modalSchool.name}</span>
+                        </div>
+                        <button onClick={() => setSuppExpandedPrompt(null)} className="p-2 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 transition-all">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="p-5 space-y-5">
+                      {/* The prompt itself */}
+                      <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                        <p className="text-sm text-primary leading-relaxed font-medium">&ldquo;{modalPrompt.text}&rdquo;</p>
+                        <div className="flex items-center gap-3 mt-3">
+                          {modalPrompt.wordLimit > 0 && (
+                            <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-[11px] font-semibold text-slate-500">{modalPrompt.wordLimit} word limit</span>
+                          )}
+                          {modalPrompt.required && (
+                            <span className="px-2.5 py-1 rounded-lg bg-red-50 border border-red-100 text-[11px] font-semibold text-red-500">Required</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* School context */}
+                      <div className="flex items-center gap-4 text-xs text-slate-400">
+                        <span>{modalSchool.location}</span>
+                        <span>{modalSchool.acceptanceRate} acceptance</span>
+                        <span>SAT {modalSchool.avgSAT}</span>
+                        <span>GPA {modalSchool.avgGPA}</span>
+                      </div>
+
+                      {/* Essay tip */}
+                      {modalSchool.essayTip && (
+                        <div className="px-4 py-3 bg-amber-50 rounded-xl border border-amber-100">
+                          <p className="text-xs text-amber-700"><span className="font-bold">Insider Tip:</span> {modalSchool.essayTip}</p>
+                        </div>
+                      )}
+
+                      {/* Writing guide */}
+                      <div className="bg-accent/5 rounded-xl p-4 border border-accent/10">
+                        <p className="text-xs font-bold text-accent uppercase tracking-wider mb-2">Writing Guide: {typeInfo.label} Essays</p>
+                        <p className="text-xs text-slate-600 leading-relaxed">{getWritingGuide(modalPrompt.type, modalSchool.name)}</p>
+                      </div>
+
+                      {/* Reuse matches */}
+                      {matchesForThis.length > 0 && (
+                        <div>
+                          <p className="text-xs font-bold text-primary mb-3">Your Essays That Could Be Adapted ({matchesForThis.length})</p>
+                          <div className="space-y-2">
+                            {matchesForThis.map((match, mi) => (
+                              <div key={mi} className="bg-white rounded-xl p-4 border border-slate-200 hover:border-accent/30 hover:shadow-sm transition-all">
+                                <div className="flex items-center justify-between gap-2 mb-2">
+                                  <p className="text-sm font-bold text-primary">&ldquo;{match.sourceEssayTitle}&rdquo;</p>
+                                  <div className={`px-3 py-1 rounded-lg text-xs font-bold ${
+                                    match.matchScore >= 70 ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' :
+                                    match.matchScore >= 50 ? 'bg-amber-50 text-amber-600 border border-amber-200' :
+                                    'bg-slate-50 text-slate-500 border border-slate-200'
+                                  }`}>{match.matchScore}% match</div>
+                                </div>
+                                <div className="space-y-1 mb-3">
+                                  {match.matchReasons.map((r, ri) => (
+                                    <p key={ri} className="text-[11px] text-slate-500 flex items-start gap-1.5"><span className="text-accent mt-0.5">•</span> {r}</p>
+                                  ))}
+                                </div>
+                                {match.adaptationNotes.length > 0 && (
+                                  <div className="bg-amber-50/50 rounded-lg p-3 border border-amber-100">
+                                    <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">What To Change</p>
+                                    {match.adaptationNotes.map((n, ni) => (
+                                      <p key={ni} className="text-[11px] text-amber-700 flex items-start gap-1.5"><span>→</span> {n}</p>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Useful school details for "Why Us" prompts */}
+                      {modalPrompt.type === 'why_us' && (
+                        <div>
+                          <p className="text-xs font-bold text-primary mb-3">Research for Your Essay</p>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                              <p className="text-[10px] font-bold text-accent uppercase tracking-wider mb-1.5">Unique Programs</p>
+                              {modalSchool.research.uniquePrograms.slice(0, 5).map((p, i) => (
+                                <p key={i} className="text-[11px] text-slate-600 mb-0.5">• {p}</p>
+                              ))}
+                            </div>
+                            <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                              <p className="text-[10px] font-bold text-purple-600 uppercase tracking-wider mb-1.5">Notable Features</p>
+                              {modalSchool.research.notableFeatures.slice(0, 5).map((f, i) => (
+                                <p key={i} className="text-[11px] text-slate-600 mb-0.5">• {f}</p>
+                              ))}
+                            </div>
+                            <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                              <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-1.5">Campus Culture</p>
+                              {modalSchool.research.campusCulture.slice(0, 4).map((c, i) => (
+                                <p key={i} className="text-[11px] text-slate-600 mb-0.5">• {c}</p>
+                              ))}
+                            </div>
+                            <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                              <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1.5">Student Life</p>
+                              {modalSchool.research.studentLife.slice(0, 4).map((sl, i) => (
+                                <p key={i} className="text-[11px] text-slate-600 mb-0.5">• {sl}</p>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Action buttons */}
+                      <div className="flex gap-3 pt-2">
+                        <button
+                          onClick={() => {
+                            setNewTitle(`${modalSchool!.name} — ${typeInfo.label}`);
+                            setNewPrompt(modalPrompt!.text.slice(0, 200));
+                            setShowNewForm(true);
+                            setMode('essays');
+                            setSuppExpandedPrompt(null);
+                          }}
+                          className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-accent to-purple-600 text-white rounded-xl text-sm font-semibold hover:opacity-90 transition-all shadow-lg shadow-accent/20"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                          Start Writing This Essay
+                        </button>
+                        <button
+                          onClick={() => setSuppExpandedPrompt(null)}
+                          className="px-5 py-3 border border-slate-200 text-slate-500 rounded-xl text-sm font-medium hover:bg-slate-50 transition-all"
+                        >
+                          Close
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Summary stats bar */}
+            <div className="bg-white rounded-2xl p-4 border border-slate-100 flex-shrink-0">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-center">
+                <div>
+                  <p className="text-2xl font-bold font-display text-primary">{SCHOOLS.length}</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Schools</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold font-display text-accent">{SCHOOLS.reduce((s, sch) => s + sch.prompts.length, 0)}</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Prompts</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold font-display text-purple-600">{SUPP_PROMPT_TYPES.length - 1}</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Categories</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold font-display text-emerald-600">{reuseMatches.length}</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Reuse Matches</p>
+                </div>
+              </div>
+            </div>
+
             {/* Filters */}
             <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0">
               <div className="flex-1">
@@ -2313,7 +2511,7 @@ export default function Essays() {
                   onChange={e => setSuppSchoolFilter(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-accent/30"
                 >
-                  <option value="all">All Schools ({SCHOOLS.length} in database)</option>
+                  <option value="all">All Schools ({SCHOOLS.length})</option>
                   {trackerSchools.length > 0 && <option disabled>── Your Schools ──</option>}
                   {trackerSchools.map(name => {
                     const school = findSchoolByName(name);
@@ -2348,30 +2546,34 @@ export default function Essays() {
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-primary">Essay Reuse Opportunities</h3>
-                    <p className="text-xs text-slate-400">We found {reuseMatches.length} ways to adapt your existing essays for other school prompts</p>
+                    <p className="text-xs text-slate-400">Click any card to see the full prompt and adaptation details</p>
                   </div>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {reuseMatches.slice(0, 6).map((match, i) => (
-                    <div key={i} className="bg-white rounded-xl p-3 border border-slate-100">
+                  {reuseMatches.slice(0, 9).map((match, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setSuppExpandedPrompt(match.targetPrompt.id)}
+                      className="bg-white rounded-xl p-3 border border-slate-100 hover:border-accent/30 hover:shadow-md transition-all text-left group"
+                    >
                       <div className="flex items-center gap-2 mb-1.5">
                         <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${getPromptTypeInfo(match.targetPrompt.type).color}`}>
                           {getPromptTypeInfo(match.targetPrompt.type).icon} {getPromptTypeInfo(match.targetPrompt.type).label}
                         </span>
-                        <span className="text-[10px] font-bold text-accent">{match.matchScore}% match</span>
+                        <span className={`text-[10px] font-bold ${
+                          match.matchScore >= 70 ? 'text-emerald-600' : match.matchScore >= 50 ? 'text-amber-600' : 'text-slate-400'
+                        }`}>{match.matchScore}%</span>
                       </div>
-                      <p className="text-xs font-semibold text-primary truncate">&ldquo;{match.sourceEssayTitle}&rdquo;</p>
-                      <p className="text-[10px] text-slate-400 mt-0.5">→ {match.targetSchool.name}</p>
-                      {match.adaptationNotes.length > 0 && (
-                        <p className="text-[10px] text-amber-600 mt-1 truncate">Tip: {match.adaptationNotes[0]}</p>
-                      )}
-                    </div>
+                      <p className="text-xs font-semibold text-primary truncate group-hover:text-accent transition-colors">&ldquo;{match.sourceEssayTitle}&rdquo;</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5 truncate">→ {match.targetSchool.name}</p>
+                      <p className="text-[10px] text-slate-300 mt-1 truncate italic">{match.targetPrompt.text.slice(0, 60)}...</p>
+                    </button>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* School Prompt Cards */}
+            {/* School Prompt Cards — Interactive Grid */}
             {(() => {
               const filteredSchools = suppSchoolFilter === 'all'
                 ? SCHOOLS
@@ -2384,13 +2586,12 @@ export default function Essays() {
 
                 if (filteredPrompts.length === 0) return null;
 
-                // Check if student has this school in tracker
                 const inTracker = trackerSchools.some(name =>
                   findSchoolByName(name)?.id === school.id
                 );
 
                 return (
-                  <div key={school.id} className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+                  <div key={school.id} className="bg-white rounded-2xl border border-slate-100 overflow-hidden hover:border-slate-200 transition-all">
                     {/* School header */}
                     <div className="p-4 lg:p-5 border-b border-slate-100 bg-slate-50/50">
                       <div className="flex items-center justify-between gap-3">
@@ -2398,162 +2599,75 @@ export default function Essays() {
                           <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="text-base font-bold font-display text-primary">{school.name}</h3>
                             {inTracker && (
-                              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-accent/10 text-accent">On Your List</span>
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-accent/10 text-accent border border-accent/20">On Your List</span>
                             )}
+                            <span className="text-[10px] text-slate-400">{school.prompts.length} prompt{school.prompts.length > 1 ? 's' : ''}</span>
                           </div>
                           <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
                             <span>{school.location}</span>
-                            <span>{school.acceptanceRate} acceptance</span>
+                            <span>{school.acceptanceRate}</span>
                             <span>SAT {school.avgSAT}</span>
                           </div>
                         </div>
-                        <div className="text-right flex-shrink-0">
+                        <div className="text-right flex-shrink-0 hidden sm:block">
                           <div className="flex gap-1.5 flex-wrap justify-end">
-                            {school.deadlines.ea && <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-600">EA: {school.deadlines.ea}</span>}
-                            {school.deadlines.ed && <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-purple-50 text-purple-600">ED: {school.deadlines.ed}</span>}
-                            {school.deadlines.rd && <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600">RD: {school.deadlines.rd}</span>}
+                            {school.deadlines.ea && <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-600">EA {school.deadlines.ea}</span>}
+                            {school.deadlines.ed && <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-purple-50 text-purple-600">ED {school.deadlines.ed}</span>}
+                            {school.deadlines.rd && <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600">RD {school.deadlines.rd}</span>}
                           </div>
                         </div>
                       </div>
-                      {school.essayTip && (
-                        <div className="mt-3 px-3 py-2 bg-amber-50 rounded-lg border border-amber-100">
-                          <p className="text-[11px] text-amber-700"><span className="font-bold">Pro Tip:</span> {school.essayTip}</p>
-                        </div>
-                      )}
                     </div>
 
-                    {/* Prompts */}
-                    <div className="divide-y divide-slate-50">
+                    {/* Prompt cards as clickable tiles */}
+                    <div className="p-3 lg:p-4 grid gap-2 sm:grid-cols-2">
                       {filteredPrompts.map(prompt => {
                         const typeInfo = getPromptTypeInfo(prompt.type);
-                        const isExpanded = suppExpandedPrompt === prompt.id;
                         const matchesForThis = reuseMatches.filter(m => m.targetPrompt.id === prompt.id);
 
                         return (
-                          <div key={prompt.id} className="p-4 lg:p-5">
-                            <div
-                              className="flex items-start gap-3 cursor-pointer"
-                              onClick={() => setSuppExpandedPrompt(isExpanded ? null : prompt.id)}
-                            >
-                              <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold flex-shrink-0 mt-0.5 border ${typeInfo.color}`}>
+                          <button
+                            key={prompt.id}
+                            onClick={() => setSuppExpandedPrompt(prompt.id)}
+                            className="text-left p-4 rounded-xl border border-slate-100 hover:border-accent/30 hover:shadow-md hover:bg-accent/[0.02] transition-all group"
+                          >
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${typeInfo.color}`}>
                                 {typeInfo.icon} {typeInfo.label}
                               </span>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm text-primary leading-relaxed">{prompt.text}</p>
-                                <div className="flex items-center gap-3 mt-2">
-                                  {prompt.wordLimit > 0 && (
-                                    <span className="text-[10px] font-semibold text-slate-400">{prompt.wordLimit} words</span>
-                                  )}
-                                  {prompt.required && (
-                                    <span className="text-[10px] font-semibold text-red-400">Required</span>
-                                  )}
-                                  {matchesForThis.length > 0 && (
-                                    <span className="text-[10px] font-bold text-accent">
-                                      {matchesForThis.length} essay{matchesForThis.length > 1 ? 's' : ''} can be adapted
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              <svg className={`w-4 h-4 text-slate-300 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              {prompt.wordLimit > 0 && (
+                                <span className="text-[10px] text-slate-400">{prompt.wordLimit}w</span>
+                              )}
+                              {prompt.required && (
+                                <span className="text-[9px] font-bold text-red-400">REQ</span>
+                              )}
+                            </div>
+                            <p className="text-xs text-slate-600 leading-relaxed line-clamp-3 group-hover:text-primary transition-colors">{prompt.text}</p>
+                            <div className="flex items-center justify-between mt-3">
+                              {matchesForThis.length > 0 ? (
+                                <span className="text-[10px] font-bold text-accent">{matchesForThis.length} reuse match{matchesForThis.length > 1 ? 'es' : ''}</span>
+                              ) : (
+                                <span className="text-[10px] text-slate-300">Click to explore</span>
+                              )}
+                              <svg className="w-4 h-4 text-slate-300 group-hover:text-accent transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                               </svg>
                             </div>
-
-                            {isExpanded && (
-                              <div className="mt-4 ml-0 lg:ml-16 space-y-3">
-                                {/* Reuse matches */}
-                                {matchesForThis.length > 0 && (
-                                  <div className="space-y-2">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Reuse Opportunities</p>
-                                    {matchesForThis.map((match, mi) => (
-                                      <div key={mi} className="bg-accent/5 rounded-xl p-3 border border-accent/10">
-                                        <div className="flex items-center justify-between gap-2 mb-1">
-                                          <p className="text-xs font-bold text-primary">&ldquo;{match.sourceEssayTitle}&rdquo;</p>
-                                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                            match.matchScore >= 70 ? 'bg-emerald-50 text-emerald-600' :
-                                            match.matchScore >= 50 ? 'bg-amber-50 text-amber-600' :
-                                            'bg-slate-100 text-slate-500'
-                                          }`}>{match.matchScore}% match</span>
-                                        </div>
-                                        {match.matchReasons.map((r, ri) => (
-                                          <p key={ri} className="text-[11px] text-slate-500">• {r}</p>
-                                        ))}
-                                        {match.adaptationNotes.length > 0 && (
-                                          <div className="mt-2 pt-2 border-t border-accent/10">
-                                            <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">To Adapt:</p>
-                                            {match.adaptationNotes.map((n, ni) => (
-                                              <p key={ni} className="text-[11px] text-amber-700">→ {n}</p>
-                                            ))}
-                                          </div>
-                                        )}
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-
-                                {/* Writing tips based on prompt type */}
-                                <div className="bg-slate-50 rounded-xl p-3">
-                                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Writing Guide for {typeInfo.label} Essays</p>
-                                  <p className="text-[11px] text-slate-500 leading-relaxed">{typeInfo.description}. {
-                                    prompt.type === 'why_us' ? `Research ${school.name}'s specific programs, courses, professors, and traditions. Name at least 2-3 concrete details only found at this school.` :
-                                    prompt.type === 'community' ? 'Focus on a specific community, not a generic one. Show what you gave, not just what you got.' :
-                                    prompt.type === 'intellectual' ? 'Go deep on one idea rather than listing many. Show how your thinking evolved.' :
-                                    prompt.type === 'activity' ? 'Don\'t just describe the activity — show your unique approach and what it revealed about you.' :
-                                    prompt.type === 'identity' ? 'Be specific about moments and details. Avoid broad generalizations about your background.' :
-                                    prompt.type === 'challenge' ? 'Focus more on growth than on the challenge itself. Admissions wants to see maturity.' :
-                                    prompt.type === 'creative' ? 'This is where you can take risks. Show personality and intellectual play.' :
-                                    prompt.type === 'future' ? 'Connect your past experiences to future goals. Show the throughline, not just the destination.' :
-                                    prompt.type === 'diversity' ? 'Be authentic. Don\'t perform diversity — show genuine perspective.' :
-                                    prompt.type === 'roommate' ? 'Be fun and genuine. This is about personality, not accomplishments.' :
-                                    'Approach this prompt authentically and with specificity.'
-                                  }</p>
-                                </div>
-
-                                {/* Quick start button */}
-                                <button
-                                  onClick={() => {
-                                    setNewTitle(`${school.name} — ${typeInfo.label}`);
-                                    setNewPrompt(prompt.text.slice(0, 200));
-                                    setShowNewForm(true);
-                                    setMode('essays');
-                                  }}
-                                  className="flex items-center gap-2 px-4 py-2.5 bg-accent text-white rounded-xl text-xs font-semibold hover:bg-accent/90 transition-colors"
-                                >
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                                  Start Writing This Essay
-                                </button>
-                              </div>
-                            )}
-                          </div>
+                          </button>
                         );
                       })}
                     </div>
+
+                    {/* Essay tip footer */}
+                    {school.essayTip && (
+                      <div className="mx-3 lg:mx-4 mb-3 lg:mb-4 px-3 py-2 bg-amber-50 rounded-lg border border-amber-100">
+                        <p className="text-[11px] text-amber-700"><span className="font-bold">Tip:</span> {school.essayTip}</p>
+                      </div>
+                    )}
                   </div>
                 );
               });
             })()}
-
-            {/* Summary stats */}
-            <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 flex-shrink-0">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-center">
-                <div>
-                  <p className="text-2xl font-bold font-display text-primary">{SCHOOLS.length}</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Schools in Database</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold font-display text-accent">{SCHOOLS.reduce((s, sch) => s + sch.prompts.length, 0)}</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Supplemental Prompts</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold font-display text-purple-600">{SUPP_PROMPT_TYPES.length - 1}</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Prompt Categories</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold font-display text-emerald-600">{reuseMatches.length}</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Reuse Opportunities</p>
-                </div>
-              </div>
-            </div>
           </div>
         )}
 
