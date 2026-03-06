@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import Head from 'next/head';
 import DashboardLayout from '../../components/DashboardLayout';
+import { SCHOOLS, PROMPT_TYPES as SUPP_PROMPT_TYPES, getPromptTypeInfo, findSchoolByName, findReuseOpportunities, type SchoolData, type SupplementalPrompt, type ReuseMatch, type PromptType as SuppPromptType } from '../../lib/schoolData';
 
 /* ══════════════════════════════════════════════════════════════════════
    TYPES
@@ -1750,7 +1751,7 @@ export default function Essays() {
   const [ecsLoading, setEcsLoading] = useState(true);
 
   // ─── Motifs state ───
-  const [mode, setMode] = useState<'essays' | 'motifs'>('essays');
+  const [mode, setMode] = useState<'essays' | 'motifs' | 'supplementals'>('essays');
   const [motifInput, setMotifInput] = useState('');
   const [motifAnalysis, setMotifAnalysis] = useState<MotifAnalysis | null>(null);
   const [savedBoards, setSavedBoards] = useState<SavedBoard[]>([]);
@@ -1759,6 +1760,33 @@ export default function Essays() {
   const [savingBoard, setSavingBoard] = useState(false);
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
   const [motifView, setMotifView] = useState<'board' | 'narrative'>('board');
+
+  // ─── Supplementals state ───
+  const [suppSchoolFilter, setSuppSchoolFilter] = useState<string>('all');
+  const [suppTypeFilter, setSuppTypeFilter] = useState<SuppPromptType | 'all'>('all');
+  const [suppExpandedPrompt, setSuppExpandedPrompt] = useState<string | null>(null);
+
+  const trackerSchools = useMemo(() => {
+    try {
+      const stored = typeof window !== 'undefined' ? localStorage.getItem('admitsonly_applications') : null;
+      if (stored) {
+        const apps = JSON.parse(stored) as { name: string }[];
+        return apps.map(a => a.name);
+      }
+    } catch {}
+    return [];
+  }, [mode]); // re-check when switching to supplementals mode
+
+  const reuseMatches = useMemo(() => {
+    if (mode !== 'supplementals' || essays.length === 0) return [];
+    const schoolNames = trackerSchools.length > 0
+      ? trackerSchools
+      : SCHOOLS.map(s => s.name);
+    return findReuseOpportunities(
+      essays.map(e => ({ id: e.id, title: e.title, prompt: e.prompt, content: e.content })),
+      schoolNames
+    );
+  }, [mode, essays, trackerSchools]);
 
   // Load essays + ECs
   useEffect(() => {
@@ -1910,7 +1938,7 @@ export default function Essays() {
             )}
             <div>
               <h1 className="text-xl lg:text-2xl font-bold font-display text-primary tracking-tight">Essay Workspace</h1>
-              <p className="mt-0.5 text-xs lg:text-sm text-slate-400 hidden sm:block">{mode === 'essays' ? 'Write, analyze, and get real-time admissions-grade feedback.' : 'Discover hidden connections between your ideas and stitch them into compelling stories.'}</p>
+              <p className="mt-0.5 text-xs lg:text-sm text-slate-400 hidden sm:block">{mode === 'essays' ? 'Write, analyze, and get real-time admissions-grade feedback.' : mode === 'motifs' ? 'Discover hidden connections between your ideas and stitch them into compelling stories.' : 'Browse school-specific prompts and find reuse opportunities across your essays.'}</p>
             </div>
             <div className="flex bg-slate-100/80 rounded-xl p-1 gap-0.5 backdrop-blur-sm border border-slate-200/50">
               <button
@@ -1924,6 +1952,12 @@ export default function Essays() {
                 className={`px-3 lg:px-5 py-2 rounded-lg text-xs font-semibold transition-all ${mode === 'motifs' ? 'bg-white text-accent shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-primary'}`}
               >
                 Motifs
+              </button>
+              <button
+                onClick={() => setMode('supplementals')}
+                className={`px-3 lg:px-5 py-2 rounded-lg text-xs font-semibold transition-all ${mode === 'supplementals' ? 'bg-white text-accent shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-primary'}`}
+              >
+                Prompts
               </button>
             </div>
           </div>
@@ -2264,6 +2298,262 @@ export default function Essays() {
                 )}
               </>
             )}
+          </div>
+        )}
+
+        {/* ═══════════════ SUPPLEMENTALS MODE ═══════════════ */}
+        {mode === 'supplementals' && (
+          <div className="flex-1 min-h-0 flex flex-col gap-5 overflow-y-auto">
+
+            {/* Filters */}
+            <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0">
+              <div className="flex-1">
+                <select
+                  value={suppSchoolFilter}
+                  onChange={e => setSuppSchoolFilter(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-accent/30"
+                >
+                  <option value="all">All Schools ({SCHOOLS.length} in database)</option>
+                  {trackerSchools.length > 0 && <option disabled>── Your Schools ──</option>}
+                  {trackerSchools.map(name => {
+                    const school = findSchoolByName(name);
+                    return school ? <option key={school.id} value={school.id}>{school.name}</option> : null;
+                  })}
+                  {trackerSchools.length > 0 && <option disabled>── All Schools ──</option>}
+                  {SCHOOLS.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <select
+                  value={suppTypeFilter}
+                  onChange={e => setSuppTypeFilter(e.target.value as SuppPromptType | 'all')}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-accent/30"
+                >
+                  <option value="all">All Prompt Types</option>
+                  {SUPP_PROMPT_TYPES.filter(pt => pt.type !== 'other').map(pt => (
+                    <option key={pt.type} value={pt.type}>{pt.icon} {pt.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Reuse Opportunities Banner */}
+            {reuseMatches.length > 0 && (
+              <div className="bg-gradient-to-r from-accent/5 to-purple-50 rounded-2xl border border-accent/20 p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-primary">Essay Reuse Opportunities</h3>
+                    <p className="text-xs text-slate-400">We found {reuseMatches.length} ways to adapt your existing essays for other school prompts</p>
+                  </div>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {reuseMatches.slice(0, 6).map((match, i) => (
+                    <div key={i} className="bg-white rounded-xl p-3 border border-slate-100">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${getPromptTypeInfo(match.targetPrompt.type).color}`}>
+                          {getPromptTypeInfo(match.targetPrompt.type).icon} {getPromptTypeInfo(match.targetPrompt.type).label}
+                        </span>
+                        <span className="text-[10px] font-bold text-accent">{match.matchScore}% match</span>
+                      </div>
+                      <p className="text-xs font-semibold text-primary truncate">&ldquo;{match.sourceEssayTitle}&rdquo;</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">→ {match.targetSchool.name}</p>
+                      {match.adaptationNotes.length > 0 && (
+                        <p className="text-[10px] text-amber-600 mt-1 truncate">Tip: {match.adaptationNotes[0]}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* School Prompt Cards */}
+            {(() => {
+              const filteredSchools = suppSchoolFilter === 'all'
+                ? SCHOOLS
+                : SCHOOLS.filter(s => s.id === suppSchoolFilter);
+
+              return filteredSchools.map(school => {
+                const filteredPrompts = suppTypeFilter === 'all'
+                  ? school.prompts
+                  : school.prompts.filter(p => p.type === suppTypeFilter);
+
+                if (filteredPrompts.length === 0) return null;
+
+                // Check if student has this school in tracker
+                const inTracker = trackerSchools.some(name =>
+                  findSchoolByName(name)?.id === school.id
+                );
+
+                return (
+                  <div key={school.id} className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+                    {/* School header */}
+                    <div className="p-4 lg:p-5 border-b border-slate-100 bg-slate-50/50">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="text-base font-bold font-display text-primary">{school.name}</h3>
+                            {inTracker && (
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-accent/10 text-accent">On Your List</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
+                            <span>{school.location}</span>
+                            <span>{school.acceptanceRate} acceptance</span>
+                            <span>SAT {school.avgSAT}</span>
+                          </div>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <div className="flex gap-1.5 flex-wrap justify-end">
+                            {school.deadlines.ea && <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-600">EA: {school.deadlines.ea}</span>}
+                            {school.deadlines.ed && <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-purple-50 text-purple-600">ED: {school.deadlines.ed}</span>}
+                            {school.deadlines.rd && <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600">RD: {school.deadlines.rd}</span>}
+                          </div>
+                        </div>
+                      </div>
+                      {school.essayTip && (
+                        <div className="mt-3 px-3 py-2 bg-amber-50 rounded-lg border border-amber-100">
+                          <p className="text-[11px] text-amber-700"><span className="font-bold">Pro Tip:</span> {school.essayTip}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Prompts */}
+                    <div className="divide-y divide-slate-50">
+                      {filteredPrompts.map(prompt => {
+                        const typeInfo = getPromptTypeInfo(prompt.type);
+                        const isExpanded = suppExpandedPrompt === prompt.id;
+                        const matchesForThis = reuseMatches.filter(m => m.targetPrompt.id === prompt.id);
+
+                        return (
+                          <div key={prompt.id} className="p-4 lg:p-5">
+                            <div
+                              className="flex items-start gap-3 cursor-pointer"
+                              onClick={() => setSuppExpandedPrompt(isExpanded ? null : prompt.id)}
+                            >
+                              <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold flex-shrink-0 mt-0.5 border ${typeInfo.color}`}>
+                                {typeInfo.icon} {typeInfo.label}
+                              </span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-primary leading-relaxed">{prompt.text}</p>
+                                <div className="flex items-center gap-3 mt-2">
+                                  {prompt.wordLimit > 0 && (
+                                    <span className="text-[10px] font-semibold text-slate-400">{prompt.wordLimit} words</span>
+                                  )}
+                                  {prompt.required && (
+                                    <span className="text-[10px] font-semibold text-red-400">Required</span>
+                                  )}
+                                  {matchesForThis.length > 0 && (
+                                    <span className="text-[10px] font-bold text-accent">
+                                      {matchesForThis.length} essay{matchesForThis.length > 1 ? 's' : ''} can be adapted
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <svg className={`w-4 h-4 text-slate-300 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </div>
+
+                            {isExpanded && (
+                              <div className="mt-4 ml-0 lg:ml-16 space-y-3">
+                                {/* Reuse matches */}
+                                {matchesForThis.length > 0 && (
+                                  <div className="space-y-2">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Reuse Opportunities</p>
+                                    {matchesForThis.map((match, mi) => (
+                                      <div key={mi} className="bg-accent/5 rounded-xl p-3 border border-accent/10">
+                                        <div className="flex items-center justify-between gap-2 mb-1">
+                                          <p className="text-xs font-bold text-primary">&ldquo;{match.sourceEssayTitle}&rdquo;</p>
+                                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                            match.matchScore >= 70 ? 'bg-emerald-50 text-emerald-600' :
+                                            match.matchScore >= 50 ? 'bg-amber-50 text-amber-600' :
+                                            'bg-slate-100 text-slate-500'
+                                          }`}>{match.matchScore}% match</span>
+                                        </div>
+                                        {match.matchReasons.map((r, ri) => (
+                                          <p key={ri} className="text-[11px] text-slate-500">• {r}</p>
+                                        ))}
+                                        {match.adaptationNotes.length > 0 && (
+                                          <div className="mt-2 pt-2 border-t border-accent/10">
+                                            <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">To Adapt:</p>
+                                            {match.adaptationNotes.map((n, ni) => (
+                                              <p key={ni} className="text-[11px] text-amber-700">→ {n}</p>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {/* Writing tips based on prompt type */}
+                                <div className="bg-slate-50 rounded-xl p-3">
+                                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Writing Guide for {typeInfo.label} Essays</p>
+                                  <p className="text-[11px] text-slate-500 leading-relaxed">{typeInfo.description}. {
+                                    prompt.type === 'why_us' ? `Research ${school.name}'s specific programs, courses, professors, and traditions. Name at least 2-3 concrete details only found at this school.` :
+                                    prompt.type === 'community' ? 'Focus on a specific community, not a generic one. Show what you gave, not just what you got.' :
+                                    prompt.type === 'intellectual' ? 'Go deep on one idea rather than listing many. Show how your thinking evolved.' :
+                                    prompt.type === 'activity' ? 'Don\'t just describe the activity — show your unique approach and what it revealed about you.' :
+                                    prompt.type === 'identity' ? 'Be specific about moments and details. Avoid broad generalizations about your background.' :
+                                    prompt.type === 'challenge' ? 'Focus more on growth than on the challenge itself. Admissions wants to see maturity.' :
+                                    prompt.type === 'creative' ? 'This is where you can take risks. Show personality and intellectual play.' :
+                                    prompt.type === 'future' ? 'Connect your past experiences to future goals. Show the throughline, not just the destination.' :
+                                    prompt.type === 'diversity' ? 'Be authentic. Don\'t perform diversity — show genuine perspective.' :
+                                    prompt.type === 'roommate' ? 'Be fun and genuine. This is about personality, not accomplishments.' :
+                                    'Approach this prompt authentically and with specificity.'
+                                  }</p>
+                                </div>
+
+                                {/* Quick start button */}
+                                <button
+                                  onClick={() => {
+                                    setNewTitle(`${school.name} — ${typeInfo.label}`);
+                                    setNewPrompt(prompt.text.slice(0, 200));
+                                    setShowNewForm(true);
+                                    setMode('essays');
+                                  }}
+                                  className="flex items-center gap-2 px-4 py-2.5 bg-accent text-white rounded-xl text-xs font-semibold hover:bg-accent/90 transition-colors"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                                  Start Writing This Essay
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+
+            {/* Summary stats */}
+            <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 flex-shrink-0">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-center">
+                <div>
+                  <p className="text-2xl font-bold font-display text-primary">{SCHOOLS.length}</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Schools in Database</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold font-display text-accent">{SCHOOLS.reduce((s, sch) => s + sch.prompts.length, 0)}</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Supplemental Prompts</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold font-display text-purple-600">{SUPP_PROMPT_TYPES.length - 1}</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Prompt Categories</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold font-display text-emerald-600">{reuseMatches.length}</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Reuse Opportunities</p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

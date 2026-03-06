@@ -1,8 +1,10 @@
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
 import DashboardLayout from '../../components/DashboardLayout';
+import { findSchoolByName, generateSmartTimeline, generateWeeklyDigest, type SchoolData } from '../../lib/schoolData';
 
 /* ══════════════════════════════════════════════════════════════════════
    TYPES
@@ -125,6 +127,11 @@ export default function Applications() {
     save(apps.map(a => a.id === id ? { ...a, notes } : a));
   };
 
+  // Deadline Intelligence
+  const timeline = useMemo(() => generateSmartTimeline(apps), [apps]);
+  const digest = useMemo(() => generateWeeklyDigest(timeline, apps), [timeline, apps]);
+  const [showResearch, setShowResearch] = useState<string | null>(null);
+
   if (status !== 'authenticated' || !loaded) return null;
 
   const getStatusInfo = (s: CollegeApp['status']) => STATUS_OPTIONS.find(o => o.value === s) || STATUS_OPTIONS[0];
@@ -200,6 +207,69 @@ export default function Applications() {
             )}
           </div>
         </div>
+
+        {/* Smart Planner — Deadline Intelligence */}
+        {apps.length > 0 && (digest.critical.length > 0 || digest.thisWeek.length > 0) && (
+          <div className="bg-white rounded-2xl border border-slate-100 p-5">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-primary">Smart Planner</h3>
+                <p className="text-xs text-slate-400">Your most urgent tasks across all applications</p>
+              </div>
+            </div>
+
+            {digest.critical.length > 0 && (
+              <div className="mb-4">
+                <p className="text-[10px] font-bold text-red-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                  Critical — Action Needed Now
+                </p>
+                <div className="space-y-1.5">
+                  {digest.critical.map(task => (
+                    <div key={task.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-red-50 border border-red-100">
+                      <span className="text-xs font-semibold text-red-600 flex-shrink-0">{task.dueDescription}</span>
+                      <span className="text-xs text-red-700 flex-1">{task.label}</span>
+                      <span className="text-[10px] text-red-400 flex-shrink-0">{task.school}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {digest.thisWeek.length > 0 && (
+              <div className="mb-4">
+                <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-2">This Week</p>
+                <div className="space-y-1.5">
+                  {digest.thisWeek.map(task => (
+                    <div key={task.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-amber-50/50 border border-amber-100">
+                      <span className="text-xs font-semibold text-amber-600 flex-shrink-0">{task.dueDescription}</span>
+                      <span className="text-xs text-slate-600 flex-1">{task.label}</span>
+                      <span className="text-[10px] text-slate-400 flex-shrink-0">{task.school}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {digest.upcoming.length > 0 && (
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Coming Up</p>
+                <div className="space-y-1">
+                  {digest.upcoming.slice(0, 5).map(task => (
+                    <div key={task.id} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-50">
+                      <span className="text-[11px] font-medium text-slate-400 flex-shrink-0 w-20">{task.dueDescription}</span>
+                      <span className="text-xs text-slate-500 flex-1">{task.label}</span>
+                      <span className="text-[10px] text-slate-300 flex-shrink-0">{task.school}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Add school form */}
         {showAddForm && (
@@ -403,6 +473,17 @@ export default function Applications() {
                             </div>
                           </div>
 
+                          {/* Quick Links */}
+                          <Link
+                            href="/dashboard/essays"
+                            className="flex items-center gap-2 text-xs text-accent font-semibold hover:underline"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            View Supplemental Prompts →
+                          </Link>
+
                           {/* Delete */}
                           <button
                             onClick={() => removeApp(app.id)}
@@ -415,6 +496,98 @@ export default function Applications() {
                           </button>
                         </div>
                       </div>
+
+                      {/* School Research Card */}
+                      {(() => {
+                        const schoolData = findSchoolByName(app.name);
+                        if (!schoolData) return null;
+                        const isResearchOpen = showResearch === app.id;
+                        return (
+                          <div className="mt-4">
+                            <button
+                              onClick={() => setShowResearch(isResearchOpen ? null : app.id)}
+                              className="flex items-center gap-2 text-xs font-bold text-accent hover:underline mb-3"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                              {isResearchOpen ? 'Hide' : 'Show'} School Research & Insights
+                            </button>
+                            {isResearchOpen && (
+                              <div className="bg-gradient-to-br from-accent/5 to-purple-50 rounded-xl p-4 border border-accent/10 space-y-4">
+                                <div className="flex items-center gap-3 mb-1">
+                                  <h4 className="text-sm font-bold text-primary">{schoolData.name} — Research Card</h4>
+                                  <div className="flex gap-1.5 flex-wrap">
+                                    <span className="text-[10px] font-semibold text-slate-400">{schoolData.acceptanceRate} accept</span>
+                                    <span className="text-[10px] font-semibold text-slate-400">SAT {schoolData.avgSAT}</span>
+                                    <span className="text-[10px] font-semibold text-slate-400">GPA {schoolData.avgGPA}</span>
+                                  </div>
+                                </div>
+
+                                {schoolData.essayTip && (
+                                  <div className="px-3 py-2 bg-amber-50 rounded-lg border border-amber-100">
+                                    <p className="text-[11px] text-amber-700"><span className="font-bold">Essay Tip:</span> {schoolData.essayTip}</p>
+                                  </div>
+                                )}
+
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                  <div>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Unique Programs</p>
+                                    <ul className="space-y-1">
+                                      {schoolData.research.uniquePrograms.slice(0, 4).map((p, i) => (
+                                        <li key={i} className="text-[11px] text-slate-600 flex items-start gap-1.5">
+                                          <span className="text-accent mt-0.5">•</span> {p}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                  <div>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Notable Features</p>
+                                    <ul className="space-y-1">
+                                      {schoolData.research.notableFeatures.slice(0, 4).map((f, i) => (
+                                        <li key={i} className="text-[11px] text-slate-600 flex items-start gap-1.5">
+                                          <span className="text-purple-500 mt-0.5">•</span> {f}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                  <div>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Campus Culture</p>
+                                    <ul className="space-y-1">
+                                      {schoolData.research.campusCulture.slice(0, 4).map((c, i) => (
+                                        <li key={i} className="text-[11px] text-slate-600 flex items-start gap-1.5">
+                                          <span className="text-emerald-500 mt-0.5">•</span> {c}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                  <div>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Student Life</p>
+                                    <ul className="space-y-1">
+                                      {schoolData.research.studentLife.slice(0, 4).map((sl, i) => (
+                                        <li key={i} className="text-[11px] text-slate-600 flex items-start gap-1.5">
+                                          <span className="text-amber-500 mt-0.5">•</span> {sl}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                </div>
+
+                                {schoolData.research.recentNews.length > 0 && (
+                                  <div>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Recent News</p>
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {schoolData.research.recentNews.map((n, i) => (
+                                        <span key={i} className="text-[10px] px-2 py-1 bg-white rounded-lg border border-slate-100 text-slate-500">{n}</span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                <p className="text-[10px] text-slate-400 italic">Use these details in your &ldquo;Why Us&rdquo; and supplemental essays to show genuine research.</p>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>
