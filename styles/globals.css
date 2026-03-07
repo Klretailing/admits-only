@@ -15,10 +15,77 @@
     @apply bg-white text-slate-900 font-sans;
   }
 
+  /* Dark mode base overrides */
+  html.dark body {
+    @apply bg-[#0c0f1a] text-slate-200;
+  }
+
+  html.dark ::selection {
+    @apply bg-accent/30 text-white;
+  }
+
   ::selection {
     @apply bg-accent/20 text-accent;
   }
 }
+
+/* ─── Dark mode surface overrides ─── */
+/* These use specificity to restyle common Tailwind classes in dark mode
+   so individual pages get dark treatment without adding dark: to every element */
+
+html.dark .bg-surface { background-color: #0c0f1a !important; }
+html.dark .bg-white { background-color: #151929 !important; color: #e2e8f0; }
+html.dark .bg-slate-50\/50, html.dark .bg-slate-50 { background-color: #1a1f35 !important; }
+html.dark .bg-slate-100\/80 { background-color: rgba(30, 35, 55, 0.8) !important; }
+html.dark .bg-slate-100 { background-color: #1e2337 !important; }
+
+/* Borders */
+html.dark .border-slate-100 { border-color: #1e2847 !important; }
+html.dark .border-slate-200 { border-color: #293556 !important; }
+html.dark .border-slate-200\/50 { border-color: rgba(41, 53, 86, 0.5) !important; }
+
+/* Text */
+html.dark .text-primary { color: #f1f5f9 !important; }
+html.dark .text-slate-900 { color: #e2e8f0 !important; }
+html.dark .text-slate-800 { color: #e2e8f0 !important; }
+html.dark .text-slate-700 { color: #cbd5e1 !important; }
+html.dark .text-slate-600 { color: #94a3b8 !important; }
+html.dark .text-slate-500 { color: #64748b !important; }
+html.dark .text-slate-400 { color: #64748b !important; }
+html.dark .text-slate-300 { color: #475569 !important; }
+
+/* Hover states */
+html.dark .hover\:bg-slate-50:hover { background-color: #1e2337 !important; }
+html.dark .hover\:text-primary:hover { color: #f1f5f9 !important; }
+html.dark .hover\:border-slate-200:hover { border-color: #293556 !important; }
+html.dark .hover\:border-slate-300:hover { border-color: #334266 !important; }
+
+/* Inputs & selects */
+html.dark select, html.dark input[type="text"], html.dark input[type="email"],
+html.dark input[type="password"], html.dark input[type="number"], html.dark textarea {
+  background-color: #1a1f35 !important;
+  border-color: #293556 !important;
+  color: #e2e8f0 !important;
+}
+
+html.dark select option {
+  background-color: #1a1f35;
+  color: #e2e8f0;
+}
+
+/* Focus rings */
+html.dark .focus\:ring-accent\/30:focus { --tw-ring-color: rgba(99, 102, 241, 0.25); }
+
+/* Shadows — soften in dark mode */
+html.dark .shadow-sm, html.dark .shadow-md, html.dark .shadow-lg, html.dark .shadow-xl {
+  --tw-shadow-color: rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Scrollbar */
+html.dark ::-webkit-scrollbar { width: 6px; }
+html.dark ::-webkit-scrollbar-track { background: #0c0f1a; }
+html.dark ::-webkit-scrollbar-thumb { background: #293556; border-radius: 3px; }
+html.dark ::-webkit-scrollbar-thumb:hover { background: #334266; }
 
 @layer components {
   .section-padding {
