@@ -5,6 +5,7 @@ import { useRouter } from 'next/router'
 import { useEffect } from 'react'
 import Layout from '../components/Layout'
 import { tracker } from '../lib/analytics'
+import { ThemeProvider } from '../lib/themeContext'
 
 // Pages that need auth (SessionProvider) and use their own layout
 const authPrefixes = ['/dashboard', '/admin', '/auth/'];
@@ -27,16 +28,20 @@ export default function MyApp({ Component, pageProps: { session, ...pageProps } 
   // Public pages: no SessionProvider, wrapped in Layout
   if (!needsAuth) {
     return (
-      <Layout>
-        <Component {...pageProps} />
-      </Layout>
+      <ThemeProvider>
+        <Layout>
+          <Component {...pageProps} />
+        </Layout>
+      </ThemeProvider>
     );
   }
 
   // Auth/dashboard/admin pages: SessionProvider, no Layout wrapper
   return (
-    <SessionProvider session={session}>
-      <Component {...pageProps} />
-    </SessionProvider>
+    <ThemeProvider>
+      <SessionProvider session={session}>
+        <Component {...pageProps} />
+      </SessionProvider>
+    </ThemeProvider>
   );
 }

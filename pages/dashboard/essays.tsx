@@ -2481,59 +2481,96 @@ export default function Essays() {
               );
             })()}
 
-            {/* Summary stats bar */}
-            <div className="bg-white rounded-2xl p-4 border border-slate-100 flex-shrink-0">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-center">
-                <div>
-                  <p className="text-2xl font-bold font-display text-primary">{SCHOOLS.length}</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Schools</p>
+            {/* Filters + Live Stats */}
+            <div className="bg-white rounded-2xl border border-slate-100 p-4 flex-shrink-0 space-y-3">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex-1">
+                  <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">School</label>
+                  <select
+                    value={suppSchoolFilter}
+                    onChange={e => { setSuppSchoolFilter(e.target.value); }}
+                    className={`w-full px-4 py-2.5 rounded-xl border text-sm bg-white focus:outline-none focus:ring-2 focus:ring-accent/30 transition-all ${suppSchoolFilter !== 'all' ? 'border-accent/50 ring-1 ring-accent/20 text-accent font-semibold' : 'border-slate-200'}`}
+                  >
+                    <option value="all">All Schools ({SCHOOLS.length})</option>
+                    {trackerSchools.length > 0 && <option disabled>── Your Schools ──</option>}
+                    {trackerSchools.map(name => {
+                      const school = findSchoolByName(name);
+                      return school ? <option key={`tracker-${school.id}`} value={school.id}>{school.name}</option> : null;
+                    })}
+                    {trackerSchools.length > 0 && <option disabled>── All Schools ──</option>}
+                    {SCHOOLS.map(s => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
                 </div>
-                <div>
-                  <p className="text-2xl font-bold font-display text-accent">{SCHOOLS.reduce((s, sch) => s + sch.prompts.length, 0)}</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Prompts</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold font-display text-purple-600">{SUPP_PROMPT_TYPES.length - 1}</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Categories</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold font-display text-emerald-600">{reuseMatches.length}</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Reuse Matches</p>
+                <div className="flex-1 sm:flex-initial sm:min-w-[200px]">
+                  <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Prompt Type</label>
+                  <select
+                    value={suppTypeFilter}
+                    onChange={e => { setSuppTypeFilter(e.target.value as SuppPromptType | 'all'); }}
+                    className={`w-full px-4 py-2.5 rounded-xl border text-sm bg-white focus:outline-none focus:ring-2 focus:ring-accent/30 transition-all ${suppTypeFilter !== 'all' ? 'border-purple-400/50 ring-1 ring-purple-300/20 text-purple-600 font-semibold' : 'border-slate-200'}`}
+                  >
+                    <option value="all">All Prompt Types</option>
+                    {SUPP_PROMPT_TYPES.filter(pt => pt.type !== 'other').map(pt => (
+                      <option key={pt.type} value={pt.type}>{pt.icon} {pt.label}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
-            </div>
 
-            {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0">
-              <div className="flex-1">
-                <select
-                  value={suppSchoolFilter}
-                  onChange={e => setSuppSchoolFilter(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-accent/30"
-                >
-                  <option value="all">All Schools ({SCHOOLS.length})</option>
-                  {trackerSchools.length > 0 && <option disabled>── Your Schools ──</option>}
-                  {trackerSchools.map(name => {
-                    const school = findSchoolByName(name);
-                    return school ? <option key={school.id} value={school.id}>{school.name}</option> : null;
-                  })}
-                  {trackerSchools.length > 0 && <option disabled>── All Schools ──</option>}
-                  {SCHOOLS.map(s => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <select
-                  value={suppTypeFilter}
-                  onChange={e => setSuppTypeFilter(e.target.value as SuppPromptType | 'all')}
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-accent/30"
-                >
-                  <option value="all">All Prompt Types</option>
-                  {SUPP_PROMPT_TYPES.filter(pt => pt.type !== 'other').map(pt => (
-                    <option key={pt.type} value={pt.type}>{pt.icon} {pt.label}</option>
-                  ))}
-                </select>
+              {/* Active filter badges + results count */}
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {suppSchoolFilter !== 'all' && (() => {
+                    const school = SCHOOLS.find(s => s.id === suppSchoolFilter);
+                    return school ? (
+                      <button
+                        onClick={() => setSuppSchoolFilter('all')}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-accent/10 text-accent text-xs font-semibold border border-accent/20 hover:bg-accent/20 transition-all"
+                      >
+                        {school.name}
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                    ) : null;
+                  })()}
+                  {suppTypeFilter !== 'all' && (() => {
+                    const typeInfo = getPromptTypeInfo(suppTypeFilter);
+                    return (
+                      <button
+                        onClick={() => setSuppTypeFilter('all')}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-purple-50 text-purple-600 text-xs font-semibold border border-purple-200 hover:bg-purple-100 transition-all"
+                      >
+                        {typeInfo.icon} {typeInfo.label}
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                    );
+                  })()}
+                  {(suppSchoolFilter !== 'all' || suppTypeFilter !== 'all') && (
+                    <button
+                      onClick={() => { setSuppSchoolFilter('all'); setSuppTypeFilter('all'); }}
+                      className="text-[11px] text-slate-400 hover:text-slate-600 font-medium underline underline-offset-2 transition-colors"
+                    >
+                      Clear all
+                    </button>
+                  )}
+                </div>
+
+                {/* Live results counter */}
+                {(() => {
+                  const fs = suppSchoolFilter === 'all' ? SCHOOLS : SCHOOLS.filter(s => s.id === suppSchoolFilter);
+                  let schoolCount = 0;
+                  let promptCount = 0;
+                  fs.forEach(school => {
+                    const fp = suppTypeFilter === 'all' ? school.prompts : school.prompts.filter(p => p.type === suppTypeFilter);
+                    if (fp.length > 0) { schoolCount++; promptCount += fp.length; }
+                  });
+                  return (
+                    <p className="text-xs text-slate-400">
+                      Showing <span className="font-bold text-primary">{promptCount}</span> prompt{promptCount !== 1 ? 's' : ''} across <span className="font-bold text-primary">{schoolCount}</span> school{schoolCount !== 1 ? 's' : ''}
+                      {reuseMatches.length > 0 && <> &middot; <span className="font-bold text-emerald-600">{reuseMatches.length}</span> reuse matches</>}
+                    </p>
+                  );
+                })()}
               </div>
             </div>
 
@@ -2579,7 +2616,7 @@ export default function Essays() {
                 ? SCHOOLS
                 : SCHOOLS.filter(s => s.id === suppSchoolFilter);
 
-              return filteredSchools.map(school => {
+              const results = filteredSchools.map(school => {
                 const filteredPrompts = suppTypeFilter === 'all'
                   ? school.prompts
                   : school.prompts.filter(p => p.type === suppTypeFilter);
@@ -2601,7 +2638,7 @@ export default function Essays() {
                             {inTracker && (
                               <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-accent/10 text-accent border border-accent/20">On Your List</span>
                             )}
-                            <span className="text-[10px] text-slate-400">{school.prompts.length} prompt{school.prompts.length > 1 ? 's' : ''}</span>
+                            <span className="text-[10px] text-slate-400">{filteredPrompts.length} prompt{filteredPrompts.length > 1 ? 's' : ''}</span>
                           </div>
                           <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
                             <span>{school.location}</span>
@@ -2667,6 +2704,27 @@ export default function Essays() {
                   </div>
                 );
               });
+
+              const hasResults = results.some(r => r !== null);
+              if (!hasResults) {
+                return (
+                  <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center">
+                    <div className="w-14 h-14 mx-auto rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
+                      <svg className="w-7 h-7 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    </div>
+                    <p className="text-sm font-semibold text-slate-500">No prompts match your filters</p>
+                    <p className="text-xs text-slate-400 mt-1">Try adjusting the school or prompt type filter above</p>
+                    <button
+                      onClick={() => { setSuppSchoolFilter('all'); setSuppTypeFilter('all'); }}
+                      className="mt-3 px-4 py-2 text-xs font-semibold text-accent bg-accent/10 rounded-lg hover:bg-accent/20 transition-all"
+                    >
+                      Clear All Filters
+                    </button>
+                  </div>
+                );
+              }
+
+              return results;
             })()}
           </div>
         )}
