@@ -1923,7 +1923,8 @@ export default function Essays() {
     <DashboardLayout>
       <Head><title>Essays | AdmitsOnly Dashboard</title></Head>
 
-      <div className="flex flex-col" style={{ height: 'calc(100vh - 8rem)' }}>
+      {/* height: on mobile subtract extra 4rem for bottom tab bar; lg uses original calc */}
+      <div className="flex flex-col h-[calc(100vh-12rem)] lg:h-[calc(100vh-8rem)]">
         {/* Header with mode tabs */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 lg:mb-5 flex-shrink-0 gap-3">
           <div className="flex items-center gap-3 lg:gap-5">
@@ -2303,7 +2304,7 @@ export default function Essays() {
 
         {/* ═══════════════ SUPPLEMENTALS MODE ═══════════════ */}
         {mode === 'supplementals' && (
-          <div className="flex-1 min-h-0 flex flex-col gap-5 overflow-y-auto">
+          <div className="flex-1 min-h-0 flex flex-col gap-5 overflow-y-auto pb-6 lg:pb-2" style={{ WebkitOverflowScrolling: 'touch' }}>
 
             {/* Prompt Detail Modal */}
             {suppExpandedPrompt && (() => {
@@ -2333,25 +2334,25 @@ export default function Essays() {
               };
 
               return (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-0 sm:p-4">
                   <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSuppExpandedPrompt(null)} />
-                  <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto">
+                  <div className="relative bg-white sm:rounded-2xl shadow-2xl w-full max-w-2xl h-full sm:h-auto sm:max-h-[85vh] overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
                     {/* Modal header */}
-                    <div className="sticky top-0 bg-white border-b border-slate-100 p-5 rounded-t-2xl z-10">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2">
-                          <span className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border ${typeInfo.color}`}>
+                    <div className="sticky top-0 bg-white border-b border-slate-100 p-3 sm:p-5 sm:rounded-t-2xl z-10">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] sm:text-[11px] font-bold border flex-shrink-0 ${typeInfo.color}`}>
                             {typeInfo.icon} {typeInfo.label}
                           </span>
-                          <span className="text-sm font-bold text-primary">{modalSchool.name}</span>
+                          <span className="text-xs sm:text-sm font-bold text-primary truncate">{modalSchool.name}</span>
                         </div>
-                        <button onClick={() => setSuppExpandedPrompt(null)} className="p-2 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 transition-all">
+                        <button onClick={() => setSuppExpandedPrompt(null)} className="p-2 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 transition-all flex-shrink-0">
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                         </button>
                       </div>
                     </div>
 
-                    <div className="p-5 space-y-5">
+                    <div className="p-3 sm:p-5 space-y-4 sm:space-y-5 pb-20 sm:pb-5">
                       {/* The prompt itself */}
                       <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
                         <p className="text-sm text-primary leading-relaxed font-medium">&ldquo;{modalPrompt.text}&rdquo;</p>
@@ -2366,11 +2367,11 @@ export default function Essays() {
                       </div>
 
                       {/* School context */}
-                      <div className="flex items-center gap-4 text-xs text-slate-400">
+                      <div className="flex items-center gap-2 sm:gap-4 text-[11px] sm:text-xs text-slate-400 flex-wrap">
                         <span>{modalSchool.location}</span>
                         <span>{modalSchool.acceptanceRate} acceptance</span>
-                        <span>SAT {modalSchool.avgSAT}</span>
-                        <span>GPA {modalSchool.avgGPA}</span>
+                        <span className="hidden sm:inline">SAT {modalSchool.avgSAT}</span>
+                        <span className="hidden sm:inline">GPA {modalSchool.avgGPA}</span>
                       </div>
 
                       {/* Essay tip */}
@@ -2453,8 +2454,8 @@ export default function Essays() {
                         </div>
                       )}
 
-                      {/* Action buttons */}
-                      <div className="flex gap-3 pt-2">
+                      {/* Action buttons — sticky on mobile */}
+                      <div className="flex gap-2 sm:gap-3 pt-2 sticky bottom-0 bg-white pb-1 sm:relative sm:pb-0">
                         <button
                           onClick={() => {
                             setNewTitle(`${modalSchool!.name} — ${typeInfo.label}`);
@@ -2463,14 +2464,14 @@ export default function Essays() {
                             setMode('essays');
                             setSuppExpandedPrompt(null);
                           }}
-                          className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-accent to-purple-600 text-white rounded-xl text-sm font-semibold hover:opacity-90 transition-all shadow-lg shadow-accent/20"
+                          className="flex-1 flex items-center justify-center gap-2 px-4 sm:px-5 py-3 bg-gradient-to-r from-accent to-purple-600 text-white rounded-xl text-xs sm:text-sm font-semibold hover:opacity-90 transition-all shadow-lg shadow-accent/20"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                          Start Writing This Essay
+                          Start Writing
                         </button>
                         <button
                           onClick={() => setSuppExpandedPrompt(null)}
-                          className="px-5 py-3 border border-slate-200 text-slate-500 rounded-xl text-sm font-medium hover:bg-slate-50 transition-all"
+                          className="px-4 sm:px-5 py-3 border border-slate-200 text-slate-500 rounded-xl text-xs sm:text-sm font-medium hover:bg-slate-50 transition-all"
                         >
                           Close
                         </button>
@@ -2576,25 +2577,29 @@ export default function Essays() {
 
             {/* Reuse Opportunities Banner */}
             {reuseMatches.length > 0 && (
-              <div className="bg-gradient-to-r from-accent/5 to-purple-50 rounded-2xl border border-accent/20 p-5">
+              <div className="bg-gradient-to-r from-accent/5 to-purple-50 rounded-2xl border border-accent/20 p-4 lg:p-5 flex-shrink-0">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0">
                     <svg className="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-primary">Essay Reuse Opportunities</h3>
-                    <p className="text-xs text-slate-400">Click any card to see the full prompt and adaptation details</p>
+                    <p className="text-xs text-slate-400">
+                      {reuseMatches.length} match{reuseMatches.length !== 1 ? 'es' : ''} found
+                      <span className="hidden sm:inline"> — click any card for details</span>
+                    </p>
                   </div>
                 </div>
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {reuseMatches.slice(0, 9).map((match, i) => (
+                {/* Mobile: horizontal scroll strip; Desktop: grid */}
+                <div className="flex gap-2 overflow-x-auto pb-2 snap-x snap-mandatory sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-x-visible sm:pb-0 sm:snap-none" style={{ WebkitOverflowScrolling: 'touch' }}>
+                  {reuseMatches.map((match, i) => (
                     <button
                       key={i}
                       onClick={() => setSuppExpandedPrompt(match.targetPrompt.id)}
-                      className="bg-white rounded-xl p-3 border border-slate-100 hover:border-accent/30 hover:shadow-md transition-all text-left group"
+                      className="bg-white rounded-xl p-3 border border-slate-100 hover:border-accent/30 hover:shadow-md transition-all text-left group min-w-[240px] sm:min-w-0 snap-start flex-shrink-0 sm:flex-shrink"
                     >
                       <div className="flex items-center gap-2 mb-1.5">
-                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${getPromptTypeInfo(match.targetPrompt.type).color}`}>
+                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold whitespace-nowrap ${getPromptTypeInfo(match.targetPrompt.type).color}`}>
                           {getPromptTypeInfo(match.targetPrompt.type).icon} {getPromptTypeInfo(match.targetPrompt.type).label}
                         </span>
                         <span className={`text-[10px] font-bold ${
@@ -2628,22 +2633,22 @@ export default function Essays() {
                 );
 
                 return (
-                  <div key={school.id} className="bg-white rounded-2xl border border-slate-100 overflow-hidden hover:border-slate-200 transition-all">
+                  <div key={school.id} className="bg-white rounded-2xl border border-slate-100 overflow-hidden hover:border-slate-200 transition-all flex-shrink-0">
                     {/* School header */}
-                    <div className="p-4 lg:p-5 border-b border-slate-100 bg-slate-50/50">
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
+                    <div className="p-3 sm:p-4 lg:p-5 border-b border-slate-100 bg-slate-50/50">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="text-base font-bold font-display text-primary">{school.name}</h3>
+                            <h3 className="text-sm sm:text-base font-bold font-display text-primary truncate">{school.name}</h3>
                             {inTracker && (
-                              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-accent/10 text-accent border border-accent/20">On Your List</span>
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-accent/10 text-accent border border-accent/20 flex-shrink-0">On Your List</span>
                             )}
-                            <span className="text-[10px] text-slate-400">{filteredPrompts.length} prompt{filteredPrompts.length > 1 ? 's' : ''}</span>
+                            <span className="text-[10px] text-slate-400 flex-shrink-0">{filteredPrompts.length} prompt{filteredPrompts.length > 1 ? 's' : ''}</span>
                           </div>
-                          <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
+                          <div className="flex items-center gap-2 sm:gap-3 mt-1 text-[11px] sm:text-xs text-slate-400 flex-wrap">
                             <span>{school.location}</span>
                             <span>{school.acceptanceRate}</span>
-                            <span>SAT {school.avgSAT}</span>
+                            <span className="hidden sm:inline">SAT {school.avgSAT}</span>
                           </div>
                         </div>
                         <div className="text-right flex-shrink-0 hidden sm:block">
@@ -2657,7 +2662,7 @@ export default function Essays() {
                     </div>
 
                     {/* Prompt cards as clickable tiles */}
-                    <div className="p-3 lg:p-4 grid gap-2 sm:grid-cols-2">
+                    <div className="p-2 sm:p-3 lg:p-4 grid gap-2 sm:grid-cols-2">
                       {filteredPrompts.map(prompt => {
                         const typeInfo = getPromptTypeInfo(prompt.type);
                         const matchesForThis = reuseMatches.filter(m => m.targetPrompt.id === prompt.id);
@@ -2666,9 +2671,9 @@ export default function Essays() {
                           <button
                             key={prompt.id}
                             onClick={() => setSuppExpandedPrompt(prompt.id)}
-                            className="text-left p-4 rounded-xl border border-slate-100 hover:border-accent/30 hover:shadow-md hover:bg-accent/[0.02] transition-all group"
+                            className="text-left p-3 sm:p-4 rounded-xl border border-slate-100 hover:border-accent/30 hover:shadow-md hover:bg-accent/[0.02] transition-all group"
                           >
-                            <div className="flex items-center gap-2 mb-2">
+                            <div className="flex items-center gap-2 mb-2 flex-wrap">
                               <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${typeInfo.color}`}>
                                 {typeInfo.icon} {typeInfo.label}
                               </span>
@@ -2679,12 +2684,12 @@ export default function Essays() {
                                 <span className="text-[9px] font-bold text-red-400">REQ</span>
                               )}
                             </div>
-                            <p className="text-xs text-slate-600 leading-relaxed line-clamp-3 group-hover:text-primary transition-colors">{prompt.text}</p>
-                            <div className="flex items-center justify-between mt-3">
+                            <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed line-clamp-3 group-hover:text-primary transition-colors">{prompt.text}</p>
+                            <div className="flex items-center justify-between mt-2 sm:mt-3">
                               {matchesForThis.length > 0 ? (
                                 <span className="text-[10px] font-bold text-accent">{matchesForThis.length} reuse match{matchesForThis.length > 1 ? 'es' : ''}</span>
                               ) : (
-                                <span className="text-[10px] text-slate-300">Click to explore</span>
+                                <span className="text-[10px] text-slate-300">Tap to explore</span>
                               )}
                               <svg className="w-4 h-4 text-slate-300 group-hover:text-accent transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -2697,7 +2702,7 @@ export default function Essays() {
 
                     {/* Essay tip footer */}
                     {school.essayTip && (
-                      <div className="mx-3 lg:mx-4 mb-3 lg:mb-4 px-3 py-2 bg-amber-50 rounded-lg border border-amber-100">
+                      <div className="mx-2 sm:mx-3 lg:mx-4 mb-2 sm:mb-3 lg:mb-4 px-3 py-2 bg-amber-50 rounded-lg border border-amber-100">
                         <p className="text-[11px] text-amber-700"><span className="font-bold">Tip:</span> {school.essayTip}</p>
                       </div>
                     )}
