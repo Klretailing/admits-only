@@ -1701,23 +1701,36 @@ function ScoreBar({ label, value, color, sublabel, invert }: {
 }) {
   const pct = value != null ? (invert ? 100 - value : value) : 0;
   let barColor = color;
+  let grade = '';
   if (value != null) {
-    if (invert) barColor = value <= 20 ? '#10b981' : value <= 45 ? '#f59e0b' : '#ef4444';
-    else barColor = value >= 70 ? '#10b981' : value >= 45 ? '#f59e0b' : '#ef4444';
+    if (invert) {
+      barColor = value <= 20 ? '#10b981' : value <= 45 ? '#f59e0b' : '#ef4444';
+      grade = value <= 20 ? 'A' : value <= 35 ? 'B' : value <= 50 ? 'C' : 'D';
+    } else {
+      barColor = value >= 70 ? '#10b981' : value >= 45 ? '#f59e0b' : '#ef4444';
+      grade = value >= 80 ? 'A' : value >= 65 ? 'B' : value >= 45 ? 'C' : 'D';
+    }
   }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
         <span className="text-[11px] font-semibold text-slate-600">{label}</span>
-        <span className="text-[11px] font-bold" style={{ color: barColor }}>
-          {value != null ? (invert ? `${value}%` : `${value}`) : '\u2014'}
-        </span>
+        <div className="flex items-center gap-1.5">
+          {value != null && (
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md" style={{ backgroundColor: `${barColor}15`, color: barColor }}>
+              {grade}
+            </span>
+          )}
+          <span className="text-[11px] font-bold" style={{ color: barColor }}>
+            {value != null ? (invert ? `${value}%` : `${value}`) : '\u2014'}
+          </span>
+        </div>
       </div>
-      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+      <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
         <div
-          className="h-full rounded-full transition-all duration-700"
-          style={{ width: `${pct}%`, backgroundColor: barColor }}
+          className="h-full rounded-full transition-all duration-700 ease-out"
+          style={{ width: `${pct}%`, backgroundColor: barColor, boxShadow: value != null ? `0 0 8px ${barColor}40` : 'none' }}
         />
       </div>
       <p className="text-[9px] text-slate-400 mt-0.5">{value != null ? sublabel : 'Write 50+ words'}</p>
@@ -1743,6 +1756,7 @@ export default function Essays() {
 
   const [activeEssay, setActiveEssay] = useState<Essay | null>(null);
   const [mobileEssayView, setMobileEssayView] = useState<'list' | 'editor'>('list');
+  const [mobileEditorTab, setMobileEditorTab] = useState<'write' | 'scores'>('write');
   const [editContent, setEditContent] = useState('');
   const [saving, setSaving] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1841,7 +1855,7 @@ export default function Essays() {
     }, 1200);
   }, [activeEssay]);
 
-  const openEssay = (essay: Essay) => { setActiveEssay(essay); setEditContent(essay.content || ''); setMobileEssayView('editor'); };
+  const openEssay = (essay: Essay) => { setActiveEssay(essay); setEditContent(essay.content || ''); setMobileEssayView('editor'); setMobileEditorTab('write'); };
 
   const deleteEssay = async (id: string) => {
     try { await fetch('/api/essays', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) }); setEssays(prev => prev.filter(e => e.id !== id)); if (activeEssay?.id === id) { setActiveEssay(null); setEditContent(''); } } catch (e) {}
@@ -2793,6 +2807,25 @@ export default function Essays() {
                       )}
                       <span className="text-[10px] text-slate-300">{essayWords}w</span>
                     </div>
+                    {/* Mini score indicators on essay cards */}
+                    {essay.overallScore != null && (
+                      <div className="flex items-center gap-1.5 mt-2">
+                        {[
+                          { val: essay.aiScore, label: 'V', inv: true },
+                          { val: essay.vocabScore, label: 'L', inv: false },
+                          { val: essay.grammarScore, label: 'S', inv: false },
+                          { val: essay.originalityScore, label: 'T', inv: false },
+                          { val: essay.overallScore, label: 'I', inv: false },
+                        ].map((s, si) => {
+                          const c = s.val != null ? (s.inv ? (s.val <= 20 ? '#10b981' : s.val <= 45 ? '#f59e0b' : '#ef4444') : (s.val >= 70 ? '#10b981' : s.val >= 45 ? '#f59e0b' : '#ef4444')) : '#cbd5e1';
+                          return (
+                            <div key={si} className="flex-1 h-1 rounded-full overflow-hidden bg-slate-100" title={s.label}>
+                              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${s.val != null ? (s.inv ? 100 - s.val : s.val) : 0}%`, backgroundColor: c }} />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 );
               })
@@ -2804,33 +2837,176 @@ export default function Essays() {
             {activeEssay ? (
               <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden">
                 {/* Editor header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 flex-shrink-0 bg-slate-50/50">
+                <div className="flex items-center justify-between px-4 lg:px-6 py-3 lg:py-4 border-b border-slate-100 flex-shrink-0 bg-slate-50/50">
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-base font-bold font-display text-primary truncate">{activeEssay.title}</h3>
-                    {activeEssay.prompt && <p className="text-xs text-slate-400 italic truncate mt-0.5">&ldquo;{activeEssay.prompt}&rdquo;</p>}
+                    <h3 className="text-sm lg:text-base font-bold font-display text-primary truncate">{activeEssay.title}</h3>
+                    {activeEssay.prompt && <p className="text-[10px] lg:text-xs text-slate-400 italic truncate mt-0.5">&ldquo;{activeEssay.prompt}&rdquo;</p>}
                   </div>
-                  <div className="flex items-center gap-3 flex-shrink-0 ml-4">
+                  <div className="flex items-center gap-2 lg:gap-3 flex-shrink-0 ml-3 lg:ml-4">
                     {saving && <span className="text-[10px] text-accent animate-pulse font-medium">Saving...</span>}
-                    <div className="flex items-center gap-1 bg-slate-100 rounded-lg px-2.5 py-1">
-                      <span className="text-xs font-bold text-primary">{wordCount}</span>
-                      <span className="text-[10px] text-slate-400">words</span>
+                    <div className="flex items-center gap-1 bg-slate-100 rounded-lg px-2 lg:px-2.5 py-1">
+                      <span className="text-[11px] lg:text-xs font-bold text-primary">{wordCount}</span>
+                      <span className="text-[10px] text-slate-400">w</span>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="hidden sm:flex gap-1">
                       {[500, 650, 700].map(t => (
                         <span key={t} className={`text-[9px] px-1.5 py-0.5 rounded-md font-medium ${wordCount >= t ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>{t}</span>
                       ))}
                     </div>
-                    <button onClick={markComplete} disabled={wordCount < 50} className="px-3 py-1.5 text-xs font-semibold text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all">Mark Complete</button>
+                    <button onClick={markComplete} disabled={wordCount < 50} className="hidden sm:block px-3 py-1.5 text-xs font-semibold text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all">Mark Complete</button>
                   </div>
                 </div>
 
-                {/* Textarea — fills remaining height */}
+                {/* Mobile tab bar: Write / Scores */}
+                <div className="lg:hidden flex border-b border-slate-100 flex-shrink-0">
+                  <button
+                    onClick={() => setMobileEditorTab('write')}
+                    className={`flex-1 px-4 py-2.5 text-xs font-semibold transition-all ${mobileEditorTab === 'write' ? 'text-accent border-b-2 border-accent bg-accent/5' : 'text-slate-400 hover:text-slate-600'}`}
+                  >
+                    <span className="flex items-center justify-center gap-1.5">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                      Write
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setMobileEditorTab('scores')}
+                    className={`flex-1 px-4 py-2.5 text-xs font-semibold transition-all relative ${mobileEditorTab === 'scores' ? 'text-accent border-b-2 border-accent bg-accent/5' : 'text-slate-400 hover:text-slate-600'}`}
+                  >
+                    <span className="flex items-center justify-center gap-1.5">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                      Live Scores
+                      {activeEssay.overallScore != null && (
+                        <span className={`ml-1 text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeEssay.overallScore >= 70 ? 'bg-emerald-100 text-emerald-700' : activeEssay.overallScore >= 45 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
+                          {activeEssay.overallScore}%
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                </div>
+
+                {/* Textarea — fills remaining height (hidden on mobile when scores tab active) */}
                 <textarea
                   value={editContent}
                   onChange={e => handleContentChange(e.target.value)}
-                  placeholder="Start writing your essay here...&#10;&#10;Your writing will be analyzed in real-time as you type. The sidebar will show live scores, tips, and suggestions based on your content."
-                  className="flex-1 min-h-0 w-full px-6 py-5 text-[15px] leading-[1.8] focus:outline-none resize-none font-sans text-slate-800 placeholder:text-slate-300"
+                  placeholder="Start writing your essay here...&#10;&#10;Your writing will be analyzed in real-time as you type. Tap &quot;Live Scores&quot; above to see your scores, tips, and suggestions."
+                  className={`flex-1 min-h-0 w-full px-4 lg:px-6 py-4 lg:py-5 text-[14px] lg:text-[15px] leading-[1.8] focus:outline-none resize-none font-sans text-slate-800 placeholder:text-slate-300 ${mobileEditorTab === 'scores' ? 'hidden lg:block' : ''}`}
                 />
+
+                {/* Mobile Scores Panel — shown only on mobile when scores tab is active */}
+                <div className={`flex-1 min-h-0 overflow-y-auto ${mobileEditorTab === 'write' ? 'hidden' : 'lg:hidden'}`}>
+                  <div className="p-4 space-y-3">
+                    {/* Mobile Mark Complete button */}
+                    <div className="flex items-center justify-between sm:hidden">
+                      <div className="flex gap-1">
+                        {[500, 650, 700].map(t => (
+                          <span key={t} className={`text-[9px] px-1.5 py-0.5 rounded-md font-medium ${wordCount >= t ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>{t}</span>
+                        ))}
+                      </div>
+                      <button onClick={markComplete} disabled={wordCount < 50} className="px-3 py-1.5 text-xs font-semibold text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all">Mark Complete</button>
+                    </div>
+
+                    {/* Prompt type indicator */}
+                    {promptAnalysis && (
+                      <div className="bg-gradient-to-r from-accent/5 to-purple-50 rounded-xl border border-accent/10 px-4 py-3">
+                        <p className="text-[10px] font-bold text-accent uppercase tracking-wider">Prompt detected</p>
+                        <p className="text-xs font-semibold text-primary mt-0.5">{promptAnalysis.label}</p>
+                        <p className="text-[10px] text-slate-500 mt-1">AOs look for: {promptAnalysis.aoLookingFor}</p>
+                      </div>
+                    )}
+
+                    {/* Score cards */}
+                    <div className="bg-white rounded-xl border border-slate-100 p-4">
+                      <h4 className="text-[11px] font-bold text-primary uppercase tracking-wider mb-3">Live Scores</h4>
+                      <div className="space-y-2.5">
+                        <ScoreBar label="Voice & Authenticity" value={activeEssay.aiScore} color="#3b82f6" invert
+                          sublabel={activeEssay.aiScore != null ? (activeEssay.aiScore <= 15 ? 'Genuine, personal voice' : activeEssay.aiScore <= 35 ? 'Mostly authentic' : 'Sounds formulaic') : ''} />
+                        <ScoreBar label="Language & Precision" value={activeEssay.vocabScore} color="#8b5cf6"
+                          sublabel={activeEssay.vocabScore != null ? (activeEssay.vocabScore >= 70 ? 'Sophisticated word choice' : activeEssay.vocabScore >= 45 ? 'Adequate vocabulary' : 'Too basic') : ''} />
+                        <ScoreBar label="Structure & Coherence" value={activeEssay.grammarScore} color="#6366f1"
+                          sublabel={activeEssay.grammarScore != null ? (activeEssay.grammarScore >= 70 ? 'Well-organized flow' : activeEssay.grammarScore >= 45 ? 'Some drift detected' : 'Topic drift or grammar issues') : ''} />
+                        <ScoreBar label="Storytelling" value={activeEssay.originalityScore} color="#ec4899"
+                          sublabel={activeEssay.originalityScore != null ? (activeEssay.originalityScore >= 70 ? 'Vivid, show-don\'t-tell' : activeEssay.originalityScore >= 45 ? 'More details needed' : 'Too abstract, needs scenes') : ''} />
+                        <ScoreBar label="Admissions Impact" value={activeEssay.overallScore} color="#10b981"
+                          sublabel={activeEssay.overallScore != null ? (activeEssay.overallScore >= 70 ? 'Compelling read' : activeEssay.overallScore >= 45 ? 'Good with room to improve' : 'Needs significant revision') : ''} />
+                      </div>
+                    </div>
+
+                    {/* Live Writing Tips */}
+                    {liveTips.length > 0 && (
+                      <div className="bg-white rounded-xl border border-amber-200 p-4">
+                        <h4 className="text-[11px] font-bold text-amber-700 uppercase tracking-wider mb-2">Writing Coach</h4>
+                        <div className="space-y-2">
+                          {liveTips.map((tip, i) => (
+                            <div key={i} className="flex items-start gap-2">
+                              <div className="w-1 h-1 rounded-full bg-amber-400 mt-1.5 flex-shrink-0" />
+                              <p className="text-[11px] text-slate-600 leading-relaxed">{tip}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* EC Insights */}
+                    {!ecsLoading && ecs.length > 0 && (
+                      <div className="bg-white rounded-xl border border-slate-100 p-4">
+                        <div className="flex items-center gap-1.5 mb-3">
+                          <svg className="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
+                          <h4 className="text-[11px] font-bold text-primary uppercase tracking-wider">Activity Insights</h4>
+                        </div>
+
+                        {/* Referenced ECs */}
+                        {mentionedECs.length > 0 && (
+                          <div className="mb-3">
+                            <p className="text-[9px] font-semibold text-green-600 uppercase tracking-wider mb-1.5">Referenced</p>
+                            {mentionedECs.map(ins => (
+                              <div key={ins.ec.id} className="mb-2">
+                                <div className="flex items-center gap-1.5 mb-0.5">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                                  <span className="text-[10px] font-bold text-green-800">{ins.ec.name}</span>
+                                </div>
+                                <p className="text-[10px] text-slate-500 leading-relaxed ml-3">{ins.suggestion}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Suggested ECs */}
+                        {suggestedECs.length > 0 && (
+                          <div>
+                            <p className="text-[9px] font-semibold text-indigo-600 uppercase tracking-wider mb-1.5">
+                              {promptAnalysis ? `Best for "${promptAnalysis.label}"` : 'Recommended'}
+                            </p>
+                            {suggestedECs.map(ins => (
+                              <div key={ins.ec.id} className="mb-3 p-2.5 rounded-lg bg-indigo-50/50 border border-indigo-100">
+                                <div className="flex items-center gap-1.5 mb-1">
+                                  <span className="text-[10px] font-bold text-indigo-700">{ins.ec.name}</span>
+                                  <span className="text-[9px] text-indigo-500">{ins.ec.role}</span>
+                                </div>
+                                <p className="text-[10px] text-slate-600 leading-relaxed">{ins.suggestion}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {mentionedECs.length === 0 && suggestedECs.length === 0 && editContent.length > 50 && (
+                          <p className="text-[10px] text-slate-400">
+                            {promptAnalysis
+                              ? `None of your activities strongly match this ${promptAnalysis.label.toLowerCase()} prompt. Consider if any EC has an unexpected connection.`
+                              : 'Add a prompt to get activity-based suggestions.'}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {!ecsLoading && ecs.length === 0 && (
+                      <div className="bg-white rounded-xl border border-slate-100 p-4">
+                        <p className="text-[10px] text-slate-500">
+                          Add activities in your <a href="/dashboard/profile" className="text-accent font-semibold underline underline-offset-2">Profile</a> to get live essay suggestions based on your extracurriculars.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             ) : (
               <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-10 text-center flex-1 flex flex-col items-center justify-center">
