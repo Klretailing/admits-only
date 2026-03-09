@@ -100,6 +100,9 @@ export const authOptions: NextAuthOptions = {
           const valid = await compare(credentials.password, user.password);
           if (!valid) return null;
 
+          // Track last login time
+          await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } }).catch(() => {});
+
           return { id: user.id, name: user.name, email: user.email, role: user.role } as any;
         } catch (e) {
           console.error('Auth error:', (e as Error).message);
