@@ -1,32 +1,58 @@
 import Head from 'next/head';
+import { useState, useEffect } from 'react';
 import AdminLayout from '../../components/AdminLayout';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
 
-const revenueStats = [
-  { label: 'Monthly Revenue', value: '$42,800', change: '+15.2%', positive: true },
-  { label: 'Active Subscriptions', value: '284', change: '+12', positive: true },
-  { label: 'Avg Revenue/User', value: '$150.70', change: '+$8.20', positive: true },
-  { label: 'Churn Rate', value: '2.1%', change: '-0.3%', positive: true },
-];
+interface StatsData {
+  totalUsers: number;
+  totalStudents: number;
+  totalEssays: number;
+  revenue: {
+    mrr: number;
+    arr: number;
+    avgRevenuePerUser: number;
+    totalPaidUsers: number;
+    plans: {
+      foundations: { subscribers: number; revenue: number };
+      scholarship: { subscribers: number; revenue: number };
+      stem: { subscribers: number; revenue: number };
+    };
+    freeTierUsers: number;
+  };
+  recentSignups: Array<{
+    id: string;
+    name: string;
+    email: string;
+    plan: string | null;
+    createdAt: string;
+  }>;
+  engagement: {
+    essaysPerUser: string;
+    profileCompletionRate: number;
+  };
+}
 
-const recentTransactions = [
-  { id: 'INV-001', student: 'Maya Johnson', plan: 'Scholarship-Ready', amount: '$499.00', date: 'Feb 17, 2026', status: 'paid' },
-  { id: 'INV-002', student: 'Robert Chen', plan: 'Foundations', amount: '$299.00', date: 'Feb 17, 2026', status: 'paid' },
-  { id: 'INV-003', student: 'Aisha Patel', plan: 'STEM Elite', amount: '$449.00', date: 'Feb 16, 2026', status: 'paid' },
-  { id: 'INV-004', student: 'James Williams', plan: 'Scholarship-Ready', amount: '$499.00', date: 'Feb 15, 2026', status: 'paid' },
-  { id: 'INV-005', student: 'Emma Thompson', plan: 'STEM Elite', amount: '$449.00', date: 'Feb 14, 2026', status: 'paid' },
-  { id: 'INV-006', student: 'David Kim', plan: 'Scholarship-Ready', amount: '$499.00', date: 'Feb 13, 2026', status: 'refunded' },
-  { id: 'INV-007', student: 'Carlos Rivera', plan: 'Foundations', amount: '$299.00', date: 'Feb 12, 2026', status: 'paid' },
-];
+const PLAN_LABELS: Record<string, string> = {
+  foundations: 'Foundations',
+  scholarship: 'Scholarship-Ready',
+  stem: 'STEM Elite',
+};
 
-const planBreakdown = [
-  { plan: 'Foundations', subscribers: 98, revenue: '$29,302', pct: 34 },
-  { plan: 'Scholarship-Ready', subscribers: 124, revenue: '$61,876', pct: 44 },
-  { plan: 'STEM Elite', subscribers: 62, revenue: '$27,838', pct: 22 },
-];
+function fmt(n: number): string {
+  return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 });
+}
 
 export default function AdminPayments() {
   const { loading } = useAdminGuard();
+  const [stats, setStats] = useState<StatsData | null>(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/admin/stats')
+      .then((r) => r.json())
+      .then(setStats)
+      .catch(() => setError(true));
+  }, []);
 
   if (loading) {
     return (
@@ -36,102 +62,148 @@ export default function AdminPayments() {
     );
   }
 
+  const rev = stats?.revenue;
+  const plans = rev?.plans;
+
+  const planRows = plans
+    ? [
+        { key: 'scholarship', ...plans.scholarship },
+        { key: 'stem', ...plans.stem },
+        { key: 'foundations', ...plans.foundations },
+      ]
+    : [];
+
+  const totalPlanUsers = planRows.reduce((s, p) => s + p.subscribers, 0) || 1;
+
   return (
     <AdminLayout>
       <Head><title>Payments | Admin — AdmitsOnly</title></Head>
 
       <div className="space-y-8">
         <div>
-          <h1 className="text-2xl font-bold font-display text-primary">Payments & Revenue</h1>
-          <p className="mt-1 text-slate-500">Financial overview and transaction history.</p>
+          <h1 className="text-2xl font-bold font-display text-primary">Payments &amp; Revenue</h1>
+          <p className="mt-1 text-slate-500">Live financial overview based on plan subscriptions.</p>
         </div>
 
-        {/* Revenue stats */}
+        {error && (
+          <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-sm text-red-700">
+            Failed to load stats. Please refresh.
+          </div>
+        )}
+
+        {/* Revenue stat cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {revenueStats.map((stat) => (
+          {[
+            { label: 'Projected MRR', value: rev ? fmt(rev.mrr) : '—' },
+            { label: 'Projected ARR', value: rev ? fmt(rev.arr) : '—' },
+            { label: 'Paid Users', value: rev?.totalPaidUsers ?? '—' },
+            { label: 'Avg Revenue / User', value: rev ? fmt(rev.avgRevenuePerUser) : '—' },
+          ].map((stat) => (
             <div key={stat.label} className="bg-white rounded-2xl border border-slate-100 p-5">
               <p className="text-sm text-slate-500 font-medium">{stat.label}</p>
-              <div className="mt-2 flex items-end gap-2">
-                <span className="text-2xl font-bold font-display text-primary">{stat.value}</span>
-                <span className={`text-xs font-semibold ${stat.positive ? 'text-green-600' : 'text-red-500'}`}>
-                  {stat.change}
-                </span>
-              </div>
+              <p className="mt-2 text-2xl font-bold font-display text-primary">{stat.value}</p>
             </div>
           ))}
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
-          {/* Recent transactions */}
+          {/* Recent signups table */}
           <div className="bg-white rounded-2xl border border-slate-100 p-6">
-            <h3 className="text-lg font-bold font-display text-primary mb-6">Recent Transactions</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-100">
-                    <th className="text-left py-3 text-slate-500 font-medium">Invoice</th>
-                    <th className="text-left py-3 text-slate-500 font-medium">Student</th>
-                    <th className="text-left py-3 text-slate-500 font-medium hidden md:table-cell">Plan</th>
-                    <th className="text-right py-3 text-slate-500 font-medium">Amount</th>
-                    <th className="text-right py-3 text-slate-500 font-medium hidden sm:table-cell">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentTransactions.map((tx) => (
-                    <tr key={tx.id} className="border-b border-slate-50 last:border-0">
-                      <td className="py-3">
-                        <p className="font-mono text-xs text-slate-500">{tx.id}</p>
-                        <p className="text-xs text-slate-400">{tx.date}</p>
-                      </td>
-                      <td className="py-3 font-medium text-primary">{tx.student}</td>
-                      <td className="py-3 text-slate-500 hidden md:table-cell">{tx.plan}</td>
-                      <td className="py-3 text-right font-semibold text-primary">{tx.amount}</td>
-                      <td className="py-3 text-right hidden sm:table-cell">
-                        <span className={`inline-flex px-2 py-0.5 rounded-md text-[11px] font-semibold ${
-                          tx.status === 'paid' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'
-                        }`}>
-                          {tx.status}
-                        </span>
-                      </td>
+            <h3 className="text-lg font-bold font-display text-primary mb-6">Recent Signups</h3>
+            {stats?.recentSignups && stats.recentSignups.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-100">
+                      <th className="text-left py-3 text-slate-500 font-medium">Name</th>
+                      <th className="text-left py-3 text-slate-500 font-medium hidden md:table-cell">Email</th>
+                      <th className="text-left py-3 text-slate-500 font-medium">Plan</th>
+                      <th className="text-right py-3 text-slate-500 font-medium hidden sm:table-cell">Joined</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {stats.recentSignups.map((user) => (
+                      <tr key={user.id} className="border-b border-slate-50 last:border-0">
+                        <td className="py-3 font-medium text-primary">{user.name}</td>
+                        <td className="py-3 text-slate-500 hidden md:table-cell">{user.email}</td>
+                        <td className="py-3">
+                          {user.plan ? (
+                            <span className="inline-flex px-2 py-0.5 rounded-md text-[11px] font-semibold bg-accent/10 text-accent">
+                              {PLAN_LABELS[user.plan] || user.plan}
+                            </span>
+                          ) : (
+                            <span className="inline-flex px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-500">
+                              Free
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 text-right text-slate-400 text-xs hidden sm:table-cell">
+                          {new Date(user.createdAt).toLocaleDateString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-sm text-slate-400">No signups yet.</p>
+            )}
           </div>
 
           {/* Plan breakdown */}
           <div className="bg-white rounded-2xl border border-slate-100 p-6">
             <h3 className="text-lg font-bold font-display text-primary mb-6">Plan Breakdown</h3>
-            <div className="space-y-5">
-              {planBreakdown.map((plan) => (
-                <div key={plan.plan}>
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <p className="text-sm font-medium text-primary">{plan.plan}</p>
-                      <p className="text-xs text-slate-400">{plan.subscribers} subscribers</p>
+            {planRows.length > 0 ? (
+              <div className="space-y-5">
+                {planRows.map((plan) => {
+                  const pct = Math.round((plan.subscribers / totalPlanUsers) * 100);
+                  return (
+                    <div key={plan.key}>
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <p className="text-sm font-medium text-primary">{PLAN_LABELS[plan.key]}</p>
+                          <p className="text-xs text-slate-400">{plan.subscribers} subscriber{plan.subscribers !== 1 ? 's' : ''}</p>
+                        </div>
+                        <p className="text-sm font-bold text-primary">{fmt(plan.revenue)}</p>
+                      </div>
+                      <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-accent rounded-full transition-all duration-1000"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
                     </div>
-                    <p className="text-sm font-bold text-primary">{plan.revenue}</p>
+                  );
+                })}
+
+                {(rev?.freeTierUsers ?? 0) > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <p className="text-sm font-medium text-slate-500">Free Tier</p>
+                        <p className="text-xs text-slate-400">{rev!.freeTierUsers} student{rev!.freeTierUsers !== 1 ? 's' : ''}</p>
+                      </div>
+                      <p className="text-sm font-bold text-slate-400">$0</p>
+                    </div>
+                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-slate-300 rounded-full" style={{ width: `${Math.round((rev!.freeTierUsers / (totalPlanUsers + rev!.freeTierUsers)) * 100)}%` }} />
+                    </div>
                   </div>
-                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-accent rounded-full transition-all duration-1000"
-                      style={{ width: `${plan.pct}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-400">No plan data available.</p>
+            )}
 
             <div className="mt-8 p-4 rounded-xl bg-surface border border-slate-100">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Payment Provider</p>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#635BFF]/10 flex items-center justify-center">
-                  <span className="text-[#635BFF] font-bold text-sm">S</span>
+                <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
+                  <span className="text-slate-400 font-bold text-sm">S</span>
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-primary">Stripe</p>
-                  <p className="text-xs text-green-600 font-medium">Connected &middot; Live mode</p>
+                  <p className="text-xs text-slate-400 font-medium">Not configured &middot; Integration pending</p>
                 </div>
               </div>
             </div>

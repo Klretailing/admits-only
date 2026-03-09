@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../lib/auth';
 import { prisma, ensureSchema } from '../../lib/db';
+import { computeHolisticScore } from '../../lib/scoring';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getServerSession(req, res, authOptions);
@@ -16,35 +17,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'PUT') {
-    const { gpa, gpaScale, satMath, satRW, extracurriculars, holisticScore, percentile, gpaScore, satScore, ecScore } = req.body;
+    const { gpa, gpaScale, satMath, satRW, extracurriculars } = req.body;
+
+    // Compute scores server-side (authoritative)
+    const scores = computeHolisticScore({
+      gpa: gpa ?? '0',
+      gpaScale: gpaScale || '4.0',
+      satMath: satMath ?? '0',
+      satRW: satRW ?? '0',
+      extracurriculars: extracurriculars || [],
+    });
+
+    const data = {
+      gpa: gpa != null ? parseFloat(gpa) : null,
+      gpaScale: gpaScale || '4.0',
+      satMath: satMath != null ? parseInt(satMath) : null,
+      satRW: satRW != null ? parseInt(satRW) : null,
+      extracurriculars: extracurriculars || [],
+      holisticScore: scores.holistic,
+      percentile: scores.percentile,
+      gpaScore: scores.gpaScore,
+      satScore: scores.satScore,
+      ecScore: scores.ecScore,
+    };
 
     const profile = await prisma.studentProfile.upsert({
       where: { userId },
-      update: {
-        gpa: gpa != null ? parseFloat(gpa) : null,
-        gpaScale: gpaScale || '4.0',
-        satMath: satMath != null ? parseInt(satMath) : null,
-        satRW: satRW != null ? parseInt(satRW) : null,
-        extracurriculars: extracurriculars || [],
-        holisticScore: holisticScore != null ? parseInt(holisticScore) : null,
-        percentile: percentile != null ? parseInt(percentile) : null,
-        gpaScore: gpaScore != null ? parseInt(gpaScore) : null,
-        satScore: satScore != null ? parseInt(satScore) : null,
-        ecScore: ecScore != null ? parseInt(ecScore) : null,
-      },
-      create: {
-        userId,
-        gpa: gpa != null ? parseFloat(gpa) : null,
-        gpaScale: gpaScale || '4.0',
-        satMath: satMath != null ? parseInt(satMath) : null,
-        satRW: satRW != null ? parseInt(satRW) : null,
-        extracurriculars: extracurriculars || [],
-        holisticScore: holisticScore != null ? parseInt(holisticScore) : null,
-        percentile: percentile != null ? parseInt(percentile) : null,
-        gpaScore: gpaScore != null ? parseInt(gpaScore) : null,
-        satScore: satScore != null ? parseInt(satScore) : null,
-        ecScore: ecScore != null ? parseInt(ecScore) : null,
-      },
+      update: data,
+      create: { userId, ...data },
     });
 
     return res.json({ profile });

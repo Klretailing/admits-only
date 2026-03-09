@@ -4,88 +4,55 @@ import { useState, useEffect } from 'react';
 import AdminLayout from '../../components/AdminLayout';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
 
-/* ──────────────────────── DATA ──────────────────────── */
+/* ──────────────────────── TYPES ──────────────────────── */
 
-const kpiCards = [
-  { label: 'Monthly Revenue', value: '$42.8k', change: '+15.2%', positive: true, sparkline: [28, 32, 30, 38, 35, 40, 42.8] },
-  { label: 'Active Students', value: '284', change: '+12%', positive: true, sparkline: [210, 225, 240, 248, 260, 272, 284] },
-  { label: 'Retention Rate', value: '98%', change: '+1.2%', positive: true, sparkline: [94, 95, 95, 96, 97, 97, 98] },
-  { label: 'Avg. Score Improvement', value: '+127', change: 'SAT pts', positive: true, sparkline: [85, 92, 100, 108, 115, 120, 127] },
-  { label: 'Sessions This Month', value: '156', change: '+8%', positive: true, sparkline: [120, 128, 135, 140, 145, 150, 156] },
-  { label: 'Acceptance Rate', value: '94%', change: '+3%', positive: true, sparkline: [82, 85, 87, 89, 91, 92, 94] },
-];
-
-const revenueByMonth = [
-  { month: 'Sep', value: 28400 },
-  { month: 'Oct', value: 31200 },
-  { month: 'Nov', value: 29800 },
-  { month: 'Dec', value: 34500 },
-  { month: 'Jan', value: 38900 },
-  { month: 'Feb', value: 42800 },
-];
-
-const programPerformance = [
-  { name: 'Scholarship-Ready Academy', students: 124, revenue: '$61.9k', retention: '99%', avgImprovement: '+142 SAT', color: 'from-accent to-purple-600' },
-  { name: 'STEM Innovators Lab', students: 62, revenue: '$27.8k', retention: '97%', avgImprovement: '+118 SAT', color: 'from-emerald-500 to-teal-600' },
-  { name: 'Humanities Leadership', students: 48, revenue: '$21.6k', retention: '98%', avgImprovement: '+135 SAT', color: 'from-amber-500 to-orange-600' },
-  { name: 'Foundations for Growth', students: 50, revenue: '$14.9k', retention: '96%', avgImprovement: 'N/A', color: 'from-rose-500 to-pink-600' },
-];
-
-const coachLeaderboard = [
-  { name: 'Dr. Ravi Patel', role: 'SAT/Math Lead', students: 42, satisfaction: 4.9, sessions: 186 },
-  { name: 'Sarah Mitchell', role: 'Essay Strategist', students: 38, satisfaction: 4.8, sessions: 164 },
-  { name: 'Prof. Wei Liu', role: 'STEM Director', students: 35, satisfaction: 4.9, sessions: 152 },
-  { name: 'Dr. Lisa Chen', role: 'Admissions Advisor', students: 28, satisfaction: 4.7, sessions: 120 },
-];
-
-const pipelineStages = [
-  { stage: 'Leads', count: 89, color: 'bg-slate-400' },
-  { stage: 'Discovery Calls', count: 34, color: 'bg-accent/60' },
-  { stage: 'Enrolled', count: 18, color: 'bg-accent' },
-  { stage: 'Active', count: 284, color: 'bg-green-500' },
-];
-
-const operationalAlerts = [
-  { type: 'urgent', message: '3 essay reviews overdue by 48+ hours', action: 'Assign Now' },
-  { type: 'warning', message: '2 sessions next week have no coach assigned', action: 'Review' },
-  { type: 'info', message: '12 students approaching application deadlines (March 1)', action: 'View List' },
-  { type: 'success', message: 'February billing cycle completed — 0 failed payments', action: null },
-];
-
-const systemAlerts = [
-  { type: 'success', message: 'All systems operational — 99.9% uptime' },
-  { type: 'info', message: 'Next scheduled maintenance: Mar 1, 2:00 AM ET' },
-];
-
-/* ──────────────────────── MINI SPARKLINE ──────────────────────── */
-
-function Sparkline({ data, color = 'stroke-accent' }: { data: number[]; color?: string }) {
-  const max = Math.max(...data);
-  const min = Math.min(...data);
-  const range = max - min || 1;
-  const w = 80;
-  const h = 28;
-  const points = data.map((v, i) => `${(i / (data.length - 1)) * w},${h - ((v - min) / range) * h}`).join(' ');
-  return (
-    <svg width={w} height={h} className="overflow-visible">
-      <polyline points={points} fill="none" className={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
+interface Stats {
+  totalUsers: number;
+  totalStudents: number;
+  totalParents: number;
+  totalEssays: number;
+  unreadContacts: number;
+  revenue: {
+    mrr: number;
+    totalPaidUsers: number;
+    plans: {
+      foundations: { subscribers: number; revenue: number };
+      scholarship: { subscribers: number; revenue: number };
+      stem: { subscribers: number; revenue: number };
+    };
+    freeTierUsers: number;
+  };
+  essays: { total: number; draft: number; inReview: number; complete: number };
+  pods: { total: number; totalMessages: number; totalMembers: number; messagesPerPod: number };
+  motifBoards: number;
+  userGrowth: Array<{ month: string; count: number }>;
+  essayGrowth: Array<{ month: string; count: number }>;
+  engagement: { essaysPerUser: string; podsPerUser: string; profileCompletionRate: number };
+  recentSignups: Array<{ id: string; name: string; email: string; plan: string | null; createdAt: string }>;
 }
 
 /* ──────────────────────── MINI BAR CHART ──────────────────────── */
 
-function RevenueChart({ data }: { data: typeof revenueByMonth }) {
-  const max = Math.max(...data.map((d) => d.value));
+function GrowthChart({ data, label }: { data: Array<{ month: string; count: number }>; label: string }) {
+  if (!data || data.length === 0) {
+    return <p className="text-sm text-slate-400">No data yet.</p>;
+  }
+  const max = Math.max(...data.map((d) => d.count), 1);
   return (
-    <div className="flex items-end gap-2 h-32">
-      {data.map((d) => (
-        <div key={d.month} className="flex-1 flex flex-col items-center gap-1">
-          <span className="text-[10px] font-semibold text-slate-400">${(d.value / 1000).toFixed(1)}k</span>
-          <div className="w-full rounded-t-lg bg-gradient-to-t from-accent to-purple-500 transition-all duration-700" style={{ height: `${(d.value / max) * 100}%` }} />
-          <span className="text-[10px] font-medium text-slate-500">{d.month}</span>
-        </div>
-      ))}
+    <div>
+      <p className="text-xs text-slate-400 mb-3">{label}</p>
+      <div className="flex items-end gap-2 h-32">
+        {data.map((d) => (
+          <div key={d.month} className="flex-1 flex flex-col items-center gap-1">
+            <span className="text-[10px] font-semibold text-slate-400">{d.count}</span>
+            <div
+              className="w-full rounded-t-lg bg-gradient-to-t from-accent to-purple-500 transition-all duration-700"
+              style={{ height: `${(d.count / max) * 100}%`, minHeight: d.count > 0 ? 4 : 0 }}
+            />
+            <span className="text-[10px] font-medium text-slate-500">{d.month.slice(5)}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -95,7 +62,7 @@ function RevenueChart({ data }: { data: typeof revenueByMonth }) {
 export default function AdminDashboard() {
   const { loading } = useAdminGuard();
   const [viewMode, setViewMode] = useState<'admin' | 'student'>('admin');
-  const [stats, setStats] = useState({ totalUsers: 0, totalStudents: 0, totalEssays: 0, unreadContacts: 0 });
+  const [stats, setStats] = useState<Stats | null>(null);
 
   useEffect(() => {
     fetch('/api/admin/stats').then((r) => r.json()).then(setStats).catch(() => {});
@@ -108,6 +75,8 @@ export default function AdminDashboard() {
       </div>
     );
   }
+
+  const s = stats;
 
   return (
     <AdminLayout>
@@ -162,72 +131,18 @@ export default function AdminDashboard() {
               </p>
             </div>
 
-            {/* Student stat cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { label: 'SAT Score', value: '1480', change: '+40', positive: true },
-                { label: 'Essays Drafted', value: '7', change: '3 in review', positive: true },
-                { label: 'Sessions Completed', value: '24', change: 'this semester', positive: true },
-                { label: 'College List', value: '12', change: 'schools', positive: true },
+                { label: 'Total Essays', value: s?.totalEssays ?? '—' },
+                { label: 'Study Pods', value: s?.pods.total ?? '—' },
+                { label: 'Pod Messages', value: s?.pods.totalMessages ?? '—' },
+                { label: 'Motif Boards', value: s?.motifBoards ?? '—' },
               ].map((stat) => (
                 <div key={stat.label} className="bg-white rounded-2xl border border-slate-100 p-5">
                   <p className="text-sm text-slate-500 font-medium">{stat.label}</p>
-                  <div className="mt-2 flex items-end gap-2">
-                    <span className="text-2xl font-bold font-display text-primary">{stat.value}</span>
-                    <span className="text-xs font-semibold text-green-600">{stat.change}</span>
-                  </div>
+                  <p className="mt-2 text-2xl font-bold font-display text-primary">{stat.value}</p>
                 </div>
               ))}
-            </div>
-
-            <div className="grid gap-6 lg:grid-cols-2">
-              {/* Progress */}
-              <div className="bg-white rounded-2xl border border-slate-100 p-6">
-                <h3 className="text-lg font-bold font-display text-primary mb-6">Academic Progress</h3>
-                <div className="space-y-4">
-                  {[
-                    { subject: 'SAT Math', pct: 88, color: 'bg-accent' },
-                    { subject: 'SAT Reading & Writing', pct: 82, color: 'bg-purple-500' },
-                    { subject: 'Essay Writing', pct: 75, color: 'bg-emerald-500' },
-                    { subject: 'Research Project', pct: 60, color: 'bg-amber-500' },
-                  ].map((item) => (
-                    <div key={item.subject}>
-                      <div className="flex justify-between text-sm mb-1.5">
-                        <span className="font-medium text-primary">{item.subject}</span>
-                        <span className="font-semibold text-slate-500">{item.pct}%</span>
-                      </div>
-                      <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                        <div className={`h-full ${item.color} rounded-full`} style={{ width: `${item.pct}%` }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Upcoming sessions */}
-              <div className="bg-white rounded-2xl border border-slate-100 p-6">
-                <h3 className="text-lg font-bold font-display text-primary mb-6">Upcoming Sessions</h3>
-                <div className="space-y-3">
-                  {[
-                    { title: 'SAT Math Review', coach: 'Dr. Patel', date: 'Tomorrow, 4:00 PM' },
-                    { title: 'Common App Essay Draft 2', coach: 'Sarah M.', date: 'Wed, 3:30 PM' },
-                    { title: 'STEM Research Check-in', coach: 'Prof. Liu', date: 'Fri, 5:00 PM' },
-                  ].map((s) => (
-                    <div key={s.title} className="flex items-center gap-4 p-3 rounded-xl bg-surface border border-slate-100">
-                      <div className="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center flex-shrink-0">
-                        <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-primary">{s.title}</p>
-                        <p className="text-xs text-slate-400">{s.coach}</p>
-                      </div>
-                      <span className="text-xs font-medium text-accent">{s.date}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
           </div>
         ) : (
@@ -237,96 +152,98 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-white rounded-2xl border border-slate-100 p-5">
                 <p className="text-sm text-slate-500 font-medium">Registered Users</p>
-                <p className="mt-2 text-2xl font-bold font-display text-primary">{stats.totalUsers}</p>
+                <p className="mt-2 text-2xl font-bold font-display text-primary">{s?.totalUsers ?? '—'}</p>
               </div>
               <div className="bg-white rounded-2xl border border-slate-100 p-5">
                 <p className="text-sm text-slate-500 font-medium">Students</p>
-                <p className="mt-2 text-2xl font-bold font-display text-primary">{stats.totalStudents}</p>
+                <p className="mt-2 text-2xl font-bold font-display text-primary">{s?.totalStudents ?? '—'}</p>
               </div>
               <div className="bg-white rounded-2xl border border-slate-100 p-5">
                 <p className="text-sm text-slate-500 font-medium">Essays Written</p>
-                <p className="mt-2 text-2xl font-bold font-display text-primary">{stats.totalEssays}</p>
+                <p className="mt-2 text-2xl font-bold font-display text-primary">{s?.totalEssays ?? '—'}</p>
               </div>
               <Link href="/admin/messages" className="bg-white rounded-2xl border border-slate-100 p-5 hover:border-accent/30 transition-colors">
                 <p className="text-sm text-slate-500 font-medium">Unread Messages</p>
-                <p className={`mt-2 text-2xl font-bold font-display ${stats.unreadContacts > 0 ? 'text-accent' : 'text-primary'}`}>
-                  {stats.unreadContacts}
+                <p className={`mt-2 text-2xl font-bold font-display ${(s?.unreadContacts ?? 0) > 0 ? 'text-accent' : 'text-primary'}`}>
+                  {s?.unreadContacts ?? '—'}
                 </p>
               </Link>
             </div>
 
-            {/* Operational Alerts */}
-            <div className="space-y-2">
-              {operationalAlerts.map((alert, i) => (
-                <div key={i} className={`flex items-center gap-3 p-3.5 rounded-xl border ${
-                  alert.type === 'urgent' ? 'bg-red-50 border-red-100' :
-                  alert.type === 'warning' ? 'bg-amber-50 border-amber-100' :
-                  alert.type === 'success' ? 'bg-green-50 border-green-100' :
-                  'bg-blue-50 border-blue-100'
-                }`}>
-                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                    alert.type === 'urgent' ? 'bg-red-500 animate-pulse' :
-                    alert.type === 'warning' ? 'bg-amber-500' :
-                    alert.type === 'success' ? 'bg-green-500' :
-                    'bg-blue-500'
-                  }`} />
-                  <p className={`flex-1 text-sm font-medium ${
-                    alert.type === 'urgent' ? 'text-red-800' :
-                    alert.type === 'warning' ? 'text-amber-800' :
-                    alert.type === 'success' ? 'text-green-800' :
-                    'text-blue-800'
-                  }`}>{alert.message}</p>
-                  {alert.action && (
-                    <button className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors ${
-                      alert.type === 'urgent' ? 'text-red-700 bg-red-100 hover:bg-red-200' :
-                      alert.type === 'warning' ? 'text-amber-700 bg-amber-100 hover:bg-amber-200' :
-                      'text-blue-700 bg-blue-100 hover:bg-blue-200'
-                    }`}>{alert.action}</button>
-                  )}
-                </div>
-              ))}
-            </div>
+            {/* Alerts based on real data */}
+            {s && (
+              <div className="space-y-2">
+                {s.essays.draft > 0 && (
+                  <div className="flex items-center gap-3 p-3.5 rounded-xl border bg-amber-50 border-amber-100">
+                    <div className="w-2 h-2 rounded-full flex-shrink-0 bg-amber-500" />
+                    <p className="flex-1 text-sm font-medium text-amber-800">{s.essays.draft} essay{s.essays.draft !== 1 ? 's' : ''} in Draft status</p>
+                  </div>
+                )}
+                {s.essays.inReview > 0 && (
+                  <div className="flex items-center gap-3 p-3.5 rounded-xl border bg-blue-50 border-blue-100">
+                    <div className="w-2 h-2 rounded-full flex-shrink-0 bg-blue-500" />
+                    <p className="flex-1 text-sm font-medium text-blue-800">{s.essays.inReview} essay{s.essays.inReview !== 1 ? 's' : ''} awaiting review</p>
+                  </div>
+                )}
+                {s.unreadContacts > 0 && (
+                  <div className="flex items-center gap-3 p-3.5 rounded-xl border bg-red-50 border-red-100">
+                    <div className="w-2 h-2 rounded-full flex-shrink-0 bg-red-500 animate-pulse" />
+                    <p className="flex-1 text-sm font-medium text-red-800">{s.unreadContacts} unread contact submission{s.unreadContacts !== 1 ? 's' : ''}</p>
+                    <Link href="/admin/messages" className="px-3 py-1 text-xs font-semibold rounded-lg text-red-700 bg-red-100 hover:bg-red-200 transition-colors">View</Link>
+                  </div>
+                )}
+                {s.essays.draft === 0 && s.essays.inReview === 0 && s.unreadContacts === 0 && (
+                  <div className="flex items-center gap-3 p-3.5 rounded-xl border bg-green-50 border-green-100">
+                    <div className="w-2 h-2 rounded-full flex-shrink-0 bg-green-500" />
+                    <p className="flex-1 text-sm font-medium text-green-800">All clear — no pending items.</p>
+                  </div>
+                )}
+              </div>
+            )}
 
-            {/* KPI Grid */}
+            {/* KPI Grid — real metrics */}
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-              {kpiCards.map((kpi) => (
+              {[
+                { label: 'Projected MRR', value: s ? `$${s.revenue.mrr.toLocaleString()}` : '—' },
+                { label: 'Paid Users', value: s?.revenue.totalPaidUsers ?? '—' },
+                { label: 'Free Tier Students', value: s?.revenue.freeTierUsers ?? '—' },
+                { label: 'Essays / Student', value: s?.engagement.essaysPerUser ?? '—' },
+                { label: 'Profile Completion', value: s ? `${s.engagement.profileCompletionRate}%` : '—' },
+                { label: 'Study Pods', value: s?.pods.total ?? '—' },
+              ].map((kpi) => (
                 <div key={kpi.label} className="bg-white rounded-2xl border border-slate-100 p-5 hover:shadow-md hover:border-slate-200 transition-all">
-                  <div className="flex items-start justify-between">
-                    <p className="text-sm text-slate-500 font-medium">{kpi.label}</p>
-                    <Sparkline data={kpi.sparkline} />
-                  </div>
-                  <div className="mt-3 flex items-end gap-2">
-                    <span className="text-2xl font-bold font-display text-primary">{kpi.value}</span>
-                    <span className={`text-xs font-semibold ${kpi.positive ? 'text-green-600' : 'text-red-500'}`}>
-                      {kpi.change}
-                    </span>
-                  </div>
+                  <p className="text-sm text-slate-500 font-medium">{kpi.label}</p>
+                  <p className="mt-3 text-2xl font-bold font-display text-primary">{kpi.value}</p>
                 </div>
               ))}
             </div>
 
-            {/* Revenue + Pipeline row */}
+            {/* Growth charts + Pipeline */}
             <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
-              {/* Revenue Chart */}
               <div className="bg-white rounded-2xl border border-slate-100 p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h3 className="text-lg font-bold font-display text-primary">Revenue Trend</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">Monthly recurring revenue (MRR)</p>
+                    <h3 className="text-lg font-bold font-display text-primary">User Registrations</h3>
+                    <p className="text-xs text-slate-400 mt-0.5">Monthly new signups (last 12 months)</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-2xl font-bold font-display text-primary">$42.8k</p>
-                    <p className="text-xs font-semibold text-green-600">+15.2% vs last month</p>
+                    <p className="text-2xl font-bold font-display text-primary">{s?.totalUsers ?? '—'}</p>
+                    <p className="text-xs font-semibold text-slate-400">total registered</p>
                   </div>
                 </div>
-                <RevenueChart data={revenueByMonth} />
+                <GrowthChart data={s?.userGrowth ?? []} label="" />
               </div>
 
-              {/* Enrollment Pipeline */}
+              {/* Real Pipeline */}
               <div className="bg-white rounded-2xl border border-slate-100 p-6">
-                <h3 className="text-lg font-bold font-display text-primary mb-6">Enrollment Pipeline</h3>
+                <h3 className="text-lg font-bold font-display text-primary mb-6">User Pipeline</h3>
                 <div className="space-y-4">
-                  {pipelineStages.map((stage) => (
+                  {s && [
+                    { stage: 'Registered', count: s.totalUsers, color: 'bg-slate-400' },
+                    { stage: 'Profile Complete', count: Math.round(s.totalStudents * s.engagement.profileCompletionRate / 100), color: 'bg-accent/60' },
+                    { stage: 'Has Essays', count: s.essays.total > 0 ? Math.min(s.totalStudents, s.essays.total) : 0, color: 'bg-accent' },
+                    { stage: 'Paid Plan', count: s.revenue.totalPaidUsers, color: 'bg-green-500' },
+                  ].map((stage) => (
                     <div key={stage.stage}>
                       <div className="flex justify-between text-sm mb-1.5">
                         <span className="font-medium text-primary">{stage.stage}</span>
@@ -335,87 +252,63 @@ export default function AdminDashboard() {
                       <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
                         <div
                           className={`h-full ${stage.color} rounded-full transition-all duration-700`}
-                          style={{ width: `${Math.min((stage.count / 300) * 100, 100)}%` }}
+                          style={{ width: `${Math.min((stage.count / Math.max(s.totalUsers, 1)) * 100, 100)}%` }}
                         />
                       </div>
                     </div>
                   ))}
                 </div>
-                <div className="mt-6 pt-4 border-t border-slate-100">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-slate-500">Conversion Rate</p>
-                    <p className="text-lg font-bold font-display text-accent">20.2%</p>
-                  </div>
-                  <p className="text-xs text-slate-400 mt-1">Lead to enrolled (last 90 days)</p>
-                </div>
               </div>
             </div>
 
-            {/* Program Performance + Coach Leaderboard */}
+            {/* Engagement + Essay Growth */}
             <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
-              {/* Program Performance */}
               <div className="bg-white rounded-2xl border border-slate-100 p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-bold font-display text-primary">Program Performance</h3>
-                  <Link href="/admin/payments" className="text-sm font-semibold text-accent hover:underline">Details</Link>
+                  <h3 className="text-lg font-bold font-display text-primary">Engagement Overview</h3>
+                  <Link href="/admin/payments" className="text-sm font-semibold text-accent hover:underline">Revenue Details</Link>
                 </div>
                 <div className="space-y-4">
-                  {programPerformance.map((prog) => (
-                    <div key={prog.name} className="flex items-center gap-4 p-4 rounded-xl bg-surface border border-slate-100 hover:border-slate-200 transition-colors">
-                      <div className={`w-1.5 h-12 rounded-full bg-gradient-to-b ${prog.color} flex-shrink-0`} />
+                  {s && [
+                    { label: 'Essays Written', value: s.essays.total, sub: `${s.essays.complete} complete, ${s.essays.inReview} in review, ${s.essays.draft} draft`, color: 'from-accent to-purple-600' },
+                    { label: 'Pod Activity', value: s.pods.totalMessages, sub: `${s.pods.total} pod${s.pods.total !== 1 ? 's' : ''}, ${s.pods.totalMembers} member${s.pods.totalMembers !== 1 ? 's' : ''}`, color: 'from-emerald-500 to-teal-600' },
+                    { label: 'Motif Boards', value: s.motifBoards, sub: 'Total boards created', color: 'from-amber-500 to-orange-600' },
+                  ].map((item) => (
+                    <div key={item.label} className="flex items-center gap-4 p-4 rounded-xl bg-surface border border-slate-100 hover:border-slate-200 transition-colors">
+                      <div className={`w-1.5 h-12 rounded-full bg-gradient-to-b ${item.color} flex-shrink-0`} />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-primary truncate">{prog.name}</p>
-                        <p className="text-xs text-slate-400 mt-0.5">{prog.students} students</p>
+                        <p className="text-sm font-semibold text-primary">{item.label}</p>
+                        <p className="text-xs text-slate-400 mt-0.5">{item.sub}</p>
                       </div>
-                      <div className="hidden sm:block text-right">
-                        <p className="text-sm font-bold text-primary">{prog.revenue}</p>
-                        <p className="text-xs text-slate-400">revenue</p>
-                      </div>
-                      <div className="hidden md:block text-right">
-                        <p className="text-sm font-bold text-green-600">{prog.retention}</p>
-                        <p className="text-xs text-slate-400">retention</p>
-                      </div>
-                      <div className="hidden lg:block text-right">
-                        <p className="text-sm font-bold text-accent">{prog.avgImprovement}</p>
-                        <p className="text-xs text-slate-400">avg. gain</p>
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-primary">{item.value}</p>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Coach Leaderboard */}
+              {/* Recent Signups */}
               <div className="bg-white rounded-2xl border border-slate-100 p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-bold font-display text-primary">Coach Leaderboard</h3>
+                  <h3 className="text-lg font-bold font-display text-primary">Recent Signups</h3>
                   <Link href="/admin/users" className="text-sm font-semibold text-accent hover:underline">View all</Link>
                 </div>
                 <div className="space-y-3">
-                  {coachLeaderboard.map((coach, i) => (
-                    <div key={coach.name} className="flex items-center gap-3 p-3 rounded-xl hover:bg-surface transition-colors">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
-                        i === 0 ? 'bg-amber-100 text-amber-700' :
-                        i === 1 ? 'bg-slate-100 text-slate-600' :
-                        i === 2 ? 'bg-orange-100 text-orange-700' :
-                        'bg-slate-50 text-slate-500'
-                      }`}>
-                        {i + 1}
+                  {s?.recentSignups && s.recentSignups.length > 0 ? s.recentSignups.slice(0, 5).map((user) => (
+                    <div key={user.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-surface transition-colors">
+                      <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center text-sm font-bold text-accent flex-shrink-0">
+                        {user.name.charAt(0)}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-primary">{coach.name}</p>
-                        <p className="text-xs text-slate-400">{coach.role}</p>
+                        <p className="text-sm font-semibold text-primary truncate">{user.name}</p>
+                        <p className="text-xs text-slate-400">{user.plan ? (user.plan === 'foundations' ? 'Foundations' : user.plan === 'scholarship' ? 'Scholarship-Ready' : 'STEM Elite') : 'Free tier'}</p>
                       </div>
-                      <div className="text-right">
-                        <div className="flex items-center gap-1">
-                          <svg className="w-3.5 h-3.5 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                          </svg>
-                          <span className="text-sm font-bold text-primary">{coach.satisfaction}</span>
-                        </div>
-                        <p className="text-[11px] text-slate-400">{coach.sessions} sessions</p>
-                      </div>
+                      <span className="text-xs text-slate-400">{new Date(user.createdAt).toLocaleDateString()}</span>
                     </div>
-                  ))}
+                  )) : (
+                    <p className="text-sm text-slate-400">No signups yet.</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -430,14 +323,14 @@ export default function AdminDashboard() {
                 </span>
               </div>
               <div className="grid sm:grid-cols-3 gap-4">
-                {systemAlerts.map((alert, i) => (
-                  <div key={i} className="flex items-start gap-2.5 p-3 rounded-xl bg-white/5">
-                    <div className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${
-                      alert.type === 'success' ? 'bg-green-400' : 'bg-blue-400'
-                    }`} />
-                    <p className="text-sm text-white/70">{alert.message}</p>
-                  </div>
-                ))}
+                <div className="flex items-start gap-2.5 p-3 rounded-xl bg-white/5">
+                  <div className="w-2 h-2 mt-1.5 rounded-full flex-shrink-0 bg-green-400" />
+                  <p className="text-sm text-white/70">Database connected &mdash; all services running</p>
+                </div>
+                <div className="flex items-start gap-2.5 p-3 rounded-xl bg-white/5">
+                  <div className="w-2 h-2 mt-1.5 rounded-full flex-shrink-0 bg-blue-400" />
+                  <p className="text-sm text-white/70">{s?.totalUsers ?? 0} users, {s?.totalEssays ?? 0} essays in database</p>
+                </div>
                 <div className="flex items-center gap-4 p-3 rounded-xl bg-white/5">
                   <div>
                     <p className="text-xs text-white/40 uppercase tracking-wider font-semibold">Quick Actions</p>

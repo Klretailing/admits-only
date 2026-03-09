@@ -31,12 +31,20 @@ export async function ensureSchema() {
         "email"     TEXT NOT NULL,
         "password"  TEXT NOT NULL,
         "role"      TEXT NOT NULL DEFAULT 'student',
+        "plan"      TEXT,
+        "planStartedAt" TIMESTAMP(3),
+        "lastLoginAt"   TIMESTAMP(3),
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         CONSTRAINT "users_pkey" PRIMARY KEY ("id"),
         CONSTRAINT "users_email_key" UNIQUE ("email")
       );
     `);
+
+    // Add new columns if tables already exist (ALTER is idempotent via IF NOT EXISTS workaround)
+    await prisma.$executeRawUnsafe(`DO $$ BEGIN ALTER TABLE "users" ADD COLUMN "plan" TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END $$;`);
+    await prisma.$executeRawUnsafe(`DO $$ BEGIN ALTER TABLE "users" ADD COLUMN "planStartedAt" TIMESTAMP(3); EXCEPTION WHEN duplicate_column THEN NULL; END $$;`);
+    await prisma.$executeRawUnsafe(`DO $$ BEGIN ALTER TABLE "users" ADD COLUMN "lastLoginAt" TIMESTAMP(3); EXCEPTION WHEN duplicate_column THEN NULL; END $$;`);
 
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "student_profiles" (
