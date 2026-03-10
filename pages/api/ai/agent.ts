@@ -250,8 +250,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     return res.json({ reply, conversationId: convId, available: true });
-  } catch (e) {
-    console.error('Agent error:', (e as Error).message);
+  } catch (e: any) {
+    const errMsg = e?.message || String(e);
+    console.error('Agent error:', errMsg);
+
+    if (errMsg.includes('credit balance is too low') || errMsg.includes('billing')) {
+      return res.status(503).json({ error: 'billing', errorCode: 'BILLING', available: false });
+    }
+    if (errMsg.includes('authentication') || errMsg.includes('invalid x-api-key') || e?.status === 401) {
+      return res.status(503).json({ error: 'invalid_key', errorCode: 'INVALID_KEY', available: false });
+    }
+    if (errMsg.includes('rate limit') || e?.status === 429) {
+      return res.status(429).json({ error: 'Rate limited — please wait a moment and try again.' });
+    }
+
     return res.status(500).json({ error: 'AI request failed' });
   }
 }

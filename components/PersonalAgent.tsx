@@ -27,6 +27,7 @@ export default function PersonalAgent() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [available, setAvailable] = useState<boolean | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -109,6 +110,13 @@ export default function PersonalAgent() {
 
       if (res.status === 503) {
         setAvailable(false);
+        setErrorCode(data.errorCode || null);
+        setLoading(false);
+        return;
+      }
+
+      if (res.status === 429) {
+        setMessages(prev => [...prev, { role: 'assistant', content: 'I\'m getting too many requests right now. Please wait a moment and try again.' }]);
         setLoading(false);
         return;
       }
@@ -258,7 +266,11 @@ export default function PersonalAgent() {
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {available === false && (
               <div className="p-3 rounded-xl bg-amber-50 border border-amber-100 text-xs text-amber-700">
-                Ari is not available right now. An API key must be configured to enable AI features.
+                {errorCode === 'BILLING'
+                  ? 'Ari is temporarily unavailable — the AI service billing needs attention. Please check your Anthropic API account and ensure it has sufficient credits.'
+                  : errorCode === 'INVALID_KEY'
+                  ? 'Ari can\'t connect — the configured API key appears to be invalid. Please check the ANTHROPIC_API_KEY in your environment settings.'
+                  : 'Ari is not available right now. An API key must be configured to enable AI features.'}
               </div>
             )}
 
