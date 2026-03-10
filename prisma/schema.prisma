@@ -18,11 +18,13 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  profile      StudentProfile?
-  essays       Essay[]
-  podMembers   PodMember[]
-  podMessages  PodMessage[]
-  motifBoards  MotifBoard[]
+  profile            StudentProfile?
+  essays             Essay[]
+  podMembers         PodMember[]
+  podMessages        PodMessage[]
+  motifBoards        MotifBoard[]
+  agentConversations AgentConversation[]
+  agentMemory        AgentMemory?
 
   @@map("users")
 }
@@ -149,4 +151,41 @@ model MotifBoard {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("motif_boards")
+}
+
+model AgentConversation {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String   @default("New Conversation")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages AgentMessage[]
+
+  @@map("agent_conversations")
+}
+
+model AgentMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  role           String   // user | assistant
+  content        String
+  createdAt      DateTime @default(now())
+
+  conversation AgentConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@map("agent_messages")
+}
+
+model AgentMemory {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  facts     Json     @default("[]") // Array of learned facts about the user
+  preferences Json   @default("{}") // User preferences and style
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("agent_memories")
 }

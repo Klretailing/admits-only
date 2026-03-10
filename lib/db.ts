@@ -170,6 +170,43 @@ export async function ensureSchema() {
       );
     `);
 
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "agent_conversations" (
+        "id"        TEXT NOT NULL,
+        "userId"    TEXT NOT NULL,
+        "title"     TEXT NOT NULL DEFAULT 'New Conversation',
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "agent_conversations_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "agent_conversations_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "agent_messages" (
+        "id"             TEXT NOT NULL,
+        "conversationId" TEXT NOT NULL,
+        "role"           TEXT NOT NULL,
+        "content"        TEXT NOT NULL,
+        "createdAt"      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "agent_messages_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "agent_messages_conversationId_fkey" FOREIGN KEY ("conversationId") REFERENCES "agent_conversations"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "agent_memories" (
+        "id"          TEXT NOT NULL,
+        "userId"      TEXT NOT NULL,
+        "facts"       JSONB NOT NULL DEFAULT '[]',
+        "preferences" JSONB NOT NULL DEFAULT '{}',
+        "updatedAt"   TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "agent_memories_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "agent_memories_userId_key" UNIQUE ("userId"),
+        CONSTRAINT "agent_memories_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+
     globalForPrisma.schemaReady = true;
   } catch (e) {
     // Tables likely already exist — mark as ready
