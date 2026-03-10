@@ -1,9 +1,116 @@
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import DashboardLayout from '../../components/DashboardLayout';
+
+/* ─── Upcoming Deadlines Widget ─── */
+
+interface StoredApp {
+  id: string;
+  name: string;
+  deadline: string;
+  type: string;
+  status: string;
+  tasks: { id: string; label: string; done: boolean }[];
+}
+
+function daysUntil(dateStr: string): number {
+  const deadline = new Date(dateStr + 'T23:59:59');
+  const now = new Date();
+  return Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function deadlineBadge(days: number): { label: string; className: string } {
+  if (days < 0) return { label: `${Math.abs(days)}d overdue`, className: 'bg-red-100 text-red-700 border-red-200' };
+  if (days === 0) return { label: 'Due today', className: 'bg-red-100 text-red-700 border-red-200 animate-pulse' };
+  if (days <= 7) return { label: `${days}d left`, className: 'bg-amber-100 text-amber-700 border-amber-200' };
+  if (days <= 30) return { label: `${days}d left`, className: 'bg-blue-100 text-blue-600 border-blue-200' };
+  return { label: `${days}d left`, className: 'bg-slate-100 text-slate-500 border-slate-200' };
+}
+
+function UpcomingDeadlines() {
+  const [apps, setApps] = useState<StoredApp[]>([]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('admitsonly_applications');
+      if (stored) setApps(JSON.parse(stored));
+    } catch {}
+  }, []);
+
+  const upcoming = useMemo(() => {
+    return apps
+      .filter(a => a.status !== 'submitted' && a.status !== 'accepted' && a.status !== 'rejected')
+      .map(a => ({ ...a, days: daysUntil(a.deadline) }))
+      .sort((a, b) => a.days - b.days)
+      .slice(0, 4);
+  }, [apps]);
+
+  if (upcoming.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl border border-slate-100 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold font-display text-primary">Upcoming Deadlines</h3>
+          <Link href="/dashboard/progress" className="text-sm font-semibold text-accent hover:underline">Add Schools</Link>
+        </div>
+        <div className="text-center py-6">
+          <div className="w-12 h-12 mx-auto rounded-2xl bg-amber-50 flex items-center justify-center mb-3">
+            <svg className="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <p className="text-sm text-slate-500">No deadlines tracked yet.</p>
+          <p className="text-xs text-slate-400 mt-1">Add schools in Applications to see countdowns here.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-bold font-display text-primary">Upcoming Deadlines</h3>
+        <Link href="/dashboard/progress" className="text-sm font-semibold text-accent hover:underline">View All</Link>
+      </div>
+      <div className="space-y-3">
+        {upcoming.map((app) => {
+          const badge = deadlineBadge(app.days);
+          const doneTasks = app.tasks.filter(t => t.done).length;
+          const totalTasks = app.tasks.length;
+          const pct = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
+          return (
+            <Link
+              key={app.id}
+              href="/dashboard/progress"
+              className="flex items-center gap-3 p-3 rounded-xl bg-surface border border-slate-100 hover:border-slate-200 hover:shadow-sm transition-all"
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-sm font-semibold text-primary truncate">{app.name}</p>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase flex-shrink-0">{app.type}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${pct === 100 ? 'bg-emerald-500' : 'bg-accent'}`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-medium flex-shrink-0">{doneTasks}/{totalTasks}</span>
+                </div>
+              </div>
+              <span className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border flex-shrink-0 ${badge.className}`}>
+                {badge.label}
+              </span>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 interface DashboardStats {
   satScore: string;
@@ -191,36 +298,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Quick links */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Link href="/dashboard/profile" className="bg-white rounded-2xl border border-slate-100 p-5 hover:shadow-md hover:border-slate-200 transition-all group">
-            <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center mb-3">
-              <svg className="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-            </div>
-            <p className="text-sm font-bold text-primary group-hover:text-accent transition-colors">My Profile</p>
-            <p className="text-xs text-slate-400 mt-0.5">Update scores & activities</p>
-          </Link>
-          <Link href="/dashboard/essays" className="bg-white rounded-2xl border border-slate-100 p-5 hover:shadow-md hover:border-slate-200 transition-all group">
-            <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center mb-3">
-              <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
-            <p className="text-sm font-bold text-primary group-hover:text-purple-600 transition-colors">Essay Workspace</p>
-            <p className="text-xs text-slate-400 mt-0.5">Write & analyze essays</p>
-          </Link>
-          <Link href="/dashboard/progress" className="bg-white rounded-2xl border border-slate-100 p-5 hover:shadow-md hover:border-slate-200 transition-all group">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center mb-3">
-              <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-              </svg>
-            </div>
-            <p className="text-sm font-bold text-primary group-hover:text-emerald-600 transition-colors">Applications</p>
-            <p className="text-xs text-slate-400 mt-0.5">Track deadlines & tasks</p>
-          </Link>
-        </div>
+        {/* Upcoming Deadlines */}
+        <UpcomingDeadlines />
       </div>
     </DashboardLayout>
   );
