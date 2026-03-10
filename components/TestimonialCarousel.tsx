@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 interface Testimonial {
   quote: string;
@@ -49,10 +49,20 @@ const testimonials: Testimonial[] = [
 export default function TestimonialCarousel() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
 
   const totalSlides = testimonials.length;
 
+  // Track screen size for responsive carousel math
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
+  // Auto-advance
   useEffect(() => {
     if (isPaused) return;
     const timer = setInterval(() => {
@@ -61,16 +71,47 @@ export default function TestimonialCarousel() {
     return () => clearInterval(timer);
   }, [isPaused, totalSlides]);
 
+  // On mobile: each card is 100% width, move 100% per slide
+  // On desktop: each card is 33.33% width, move 33.33% per slide
+  const slidePercent = isMobile ? 100 : 100 / 3;
+
+  // Touch/swipe support for mobile
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    setIsPaused(true);
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    touchEndX.current = e.changedTouches[0].clientX;
+    const diff = touchStartX.current - touchEndX.current;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) {
+        setActiveIndex((prev) => (prev + 1) % totalSlides);
+      } else {
+        setActiveIndex((prev) => (prev - 1 + totalSlides) % totalSlides);
+      }
+    }
+    setIsPaused(false);
+  }, [totalSlides]);
+
   return (
     <div
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
       {/* Cards track */}
-      <div className="overflow-hidden" ref={trackRef}>
+      <div
+        className="overflow-hidden"
+        ref={trackRef}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         <div
           className="flex transition-transform duration-500 ease-out"
-          style={{ transform: `translateX(-${activeIndex * (100 / 3)}%)` }}
+          style={{ transform: `translateX(-${activeIndex * slidePercent}%)` }}
         >
           {testimonials.map((t, i) => (
             <div

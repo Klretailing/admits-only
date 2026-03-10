@@ -3,7 +3,6 @@ import { useRouter } from 'next/router';
 import { signOut, useSession } from 'next-auth/react';
 import { useState, type ReactNode } from 'react';
 import HelpChatbot from './HelpChatbot';
-import PersonalAgent from './PersonalAgent';
 import { useTheme } from '../lib/themeContext';
 
 const sidebarLinks = [
@@ -319,9 +318,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
       {/* Help chatbot */}
       <HelpChatbot />
-
-      {/* Personal AI Agent */}
-      <PersonalAgent />
     </div>
   );
 }

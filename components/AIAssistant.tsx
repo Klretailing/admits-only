@@ -10,6 +10,7 @@ export default function AIAssistant({ context }: { context?: string }) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [available, setAvailable] = useState<boolean | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -35,6 +36,12 @@ export default function AIAssistant({ context }: { context?: string }) {
 
       if (res.status === 503) {
         setAvailable(false);
+        setErrorCode(data.errorCode || null);
+        return;
+      }
+
+      if (res.status === 429) {
+        setMessages([...updated, { role: 'assistant', content: 'I\'m getting too many requests right now. Please wait a moment and try again.' }]);
         return;
       }
 
@@ -82,7 +89,11 @@ export default function AIAssistant({ context }: { context?: string }) {
       <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-[300px]">
         {available === false && (
           <div className="p-3 rounded-lg bg-amber-50 border border-amber-100 text-xs text-amber-700">
-            AI Assistant is not available. An API key must be configured to enable this feature.
+            {errorCode === 'BILLING'
+              ? 'AI Assistant is temporarily unavailable — the AI service billing needs attention. Please check your Anthropic API account and ensure it has sufficient credits.'
+              : errorCode === 'INVALID_KEY'
+              ? 'AI Assistant can\'t connect — the configured API key appears to be invalid. Please check the ANTHROPIC_API_KEY in your environment settings.'
+              : 'AI Assistant is not available. An API key must be configured to enable this feature.'}
           </div>
         )}
 

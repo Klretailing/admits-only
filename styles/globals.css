@@ -253,3 +253,28 @@ html.dark ::-webkit-scrollbar-thumb:hover { background: #334266; }
   box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.08),
               0 0 0 1px rgba(99, 102, 241, 0.08);
 }
+
+/* Focus-visible — keyboard navigation styles */
+*:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #6366f1;
+}
+
+/* Safe area bottom padding for mobile notch devices */
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}

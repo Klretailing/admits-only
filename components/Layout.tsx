@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Head from 'next/head';
-import { useState, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode, type FormEvent } from 'react';
+import { useRouter } from 'next/router';
 
 interface LayoutProps {
   children: ReactNode;
@@ -38,6 +39,58 @@ const navLinks = [
   { href: '/contact', label: 'Contact' },
 ];
 
+function ScrollToTop() {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setVisible(window.scrollY > 500);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  if (!visible) return null;
+
+  return (
+    <button
+      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+      className="fixed bottom-6 right-6 z-40 w-11 h-11 rounded-full bg-white/90 backdrop-blur border border-slate-200 shadow-lg flex items-center justify-center text-slate-500 hover:text-accent hover:border-accent/30 hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5"
+      aria-label="Scroll to top"
+    >
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+      </svg>
+    </button>
+  );
+}
+
+function FooterNewsletter() {
+  const router = useRouter();
+  const [email, setEmail] = useState('');
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (email.trim()) {
+      router.push(`/newsletter?email=${encodeURIComponent(email.trim())}`);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex gap-2">
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="Email address"
+        required
+        className="flex-1 min-w-0 px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30"
+      />
+      <button type="submit" className="px-3 py-2 bg-accent text-white text-xs font-semibold rounded-lg hover:bg-accent/90 transition-colors whitespace-nowrap">
+        Subscribe
+      </button>
+    </form>
+  );
+}
+
 export default function Layout({ children }: LayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -50,6 +103,14 @@ export default function Layout({ children }: LayoutProps) {
         <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect rx='20' width='100' height='100' fill='%236366f1'/><text x='50' y='68' font-size='60' text-anchor='middle' fill='white' font-weight='bold'>A</text></svg>" />
         <title>AdmitsOnly | Premium College Admissions Consulting &amp; Academic Coaching</title>
       </Head>
+
+      {/* Skip to content — accessibility */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-accent focus:text-white focus:rounded-lg focus:text-sm focus:font-semibold focus:shadow-lg"
+      >
+        Skip to content
+      </a>
 
       <div className="min-h-screen bg-white text-slate-900 font-sans">
         {/* Header */}
@@ -128,7 +189,7 @@ export default function Layout({ children }: LayoutProps) {
           )}
         </header>
 
-        <main>{children}</main>
+        <main id="main-content">{children}</main>
 
         {/* Footer */}
         <footer className="bg-primary text-white">
@@ -173,20 +234,7 @@ export default function Layout({ children }: LayoutProps) {
               <div>
                 <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-4">Newsletter</h4>
                 <p className="text-sm text-slate-400 leading-relaxed mb-4">Free weekly education insights for Bay Area families.</p>
-                <ul className="space-y-3 text-sm text-slate-300 mb-4">
-                  <li><Link href="/newsletter" className="hover:text-white transition-colors">Subscribe</Link></li>
-                </ul>
-                <form action="/newsletter" className="flex gap-2">
-                  <input
-                    type="email"
-                    name="email"
-                    placeholder="Email address"
-                    className="flex-1 min-w-0 px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-accent"
-                  />
-                  <button type="submit" className="px-3 py-2 bg-accent text-white text-xs font-semibold rounded-lg hover:bg-accent/90 transition-colors whitespace-nowrap">
-                    Subscribe
-                  </button>
-                </form>
+                <FooterNewsletter />
               </div>
             </div>
 
@@ -197,6 +245,9 @@ export default function Layout({ children }: LayoutProps) {
           </div>
         </footer>
       </div>
+
+      {/* Scroll to top button */}
+      <ScrollToTop />
     </>
   );
 }
