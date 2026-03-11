@@ -44,15 +44,45 @@ html.dark .border-slate-100 { border-color: #1e2847 !important; }
 html.dark .border-slate-200 { border-color: #293556 !important; }
 html.dark .border-slate-200\/50 { border-color: rgba(41, 53, 86, 0.5) !important; }
 
-/* Text */
+/* Text — ensure all shades meet WCAG AA contrast on dark surfaces (#151929) */
 html.dark .text-primary { color: #f1f5f9 !important; }
-html.dark .text-slate-900 { color: #e2e8f0 !important; }
+html.dark .text-slate-900 { color: #f1f5f9 !important; }
 html.dark .text-slate-800 { color: #e2e8f0 !important; }
 html.dark .text-slate-700 { color: #cbd5e1 !important; }
-html.dark .text-slate-600 { color: #94a3b8 !important; }
-html.dark .text-slate-500 { color: #64748b !important; }
-html.dark .text-slate-400 { color: #64748b !important; }
-html.dark .text-slate-300 { color: #475569 !important; }
+html.dark .text-slate-600 { color: #b0bdd0 !important; }
+html.dark .text-slate-500 { color: #94a3b8 !important; }
+html.dark .text-slate-400 { color: #8494b0 !important; }
+html.dark .text-slate-300 { color: #94a3b8 !important; }
+
+/* Inner element backgrounds — progress bars, dividers, etc. */
+html.dark .bg-slate-200 { background-color: #293556 !important; }
+html.dark .bg-slate-200\/50 { background-color: rgba(41, 53, 86, 0.5) !important; }
+html.dark .bg-slate-300 { background-color: #334266 !important; }
+html.dark .divide-slate-50 > :not([hidden]) ~ :not([hidden]) { border-color: #1e2337 !important; }
+
+/* Colored light backgrounds for icon containers / badges in dark mode */
+html.dark .bg-purple-100 { background-color: rgba(139, 92, 246, 0.15) !important; }
+html.dark .bg-emerald-100 { background-color: rgba(16, 185, 129, 0.15) !important; }
+html.dark .bg-amber-50 { background-color: rgba(245, 158, 11, 0.1) !important; }
+html.dark .bg-amber-100 { background-color: rgba(245, 158, 11, 0.15) !important; }
+html.dark .bg-red-100 { background-color: rgba(239, 68, 68, 0.15) !important; }
+html.dark .bg-blue-100 { background-color: rgba(59, 130, 246, 0.15) !important; }
+html.dark .bg-green-50 { background-color: rgba(16, 185, 129, 0.1) !important; }
+html.dark .bg-orange-50 { background-color: rgba(249, 115, 22, 0.1) !important; }
+html.dark .bg-blue-50 { background-color: rgba(59, 130, 246, 0.1) !important; }
+
+/* Status bar gradient backgrounds */
+html.dark .bg-gradient-to-r.from-accent\/\[0\.03\] { background: rgba(99, 102, 241, 0.06) !important; }
+html.dark .bg-gradient-to-r.from-emerald-500\/\[0\.03\] { background: rgba(16, 185, 129, 0.06) !important; }
+html.dark .bg-gradient-to-r.from-amber-500\/\[0\.03\] { background: rgba(245, 158, 11, 0.06) !important; }
+
+/* Ecosystem / testimonial cards in dark mode */
+html.dark .bg-gradient-to-br.from-slate-50 { background: #1a1f35 !important; }
+
+/* Header & floating UI in dark mode */
+html.dark .bg-white\/80 { background-color: rgba(21, 25, 41, 0.85) !important; }
+html.dark .bg-white\/90 { background-color: rgba(21, 25, 41, 0.92) !important; }
+html.dark .bg-white\/70 { background-color: rgba(21, 25, 41, 0.7) !important; }
 
 /* Hover states */
 html.dark .hover\:bg-slate-50:hover { background-color: #1e2337 !important; }
