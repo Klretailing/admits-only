@@ -170,3 +170,11 @@ class OrderManager:
             return 0.0
         wins = sum(1 for t in self.closed_trades if t["pnl"] > 0)
         return wins / len(self.closed_trades) * 100
+
+    def get_avg_win(self) -> float:
+        wins = [t["pnl"] for t in self.closed_trades if t["pnl"] > 0]
+        return sum(wins) / len(wins) if wins else 0.0
+
+    def get_avg_loss(self) -> float:
+        losses = [abs(t["pnl"]) for t in self.closed_trades if t["pnl"] < 0]
+        return sum(losses) / len(losses) if losses else 0.0

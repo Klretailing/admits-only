@@ -3,6 +3,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from data.market_data import MarketDataFetcher, MarketSnapshot
+from quant.engine import QuantEngine
 
 
 @dataclass
@@ -21,7 +22,8 @@ class BaseStrategy(ABC):
 
     @abstractmethod
     def evaluate(
-        self, snapshot: MarketSnapshot, data: MarketDataFetcher
+        self, snapshot: MarketSnapshot, data: MarketDataFetcher,
+        quant: QuantEngine | None = None,
     ) -> Signal | None:
         """Evaluate market conditions and return a signal, or None if no action."""
         ...

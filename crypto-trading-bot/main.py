@@ -2,8 +2,18 @@
 """
 Crypto Trading Bot — Main daemon loop.
 
-Continuously scans configured trading pairs, evaluates strategies,
-executes trades, and manages risk. Designed to run 24/7 unattended.
+Continuously scans configured trading pairs, runs multi-timeframe quant
+analysis, evaluates strategies, executes trades, and manages risk.
+Designed to run 24/7 unattended.
+
+Architecture:
+  1. Fetch real-time snapshots for all configured pairs
+  2. Run quant engine analysis (indicators, patterns, statistics)
+  3. Run multi-timeframe confluence check
+  4. Evaluate all strategies with quant context
+  5. Execute highest-confidence trade (if any passes risk gates)
+  6. Manage open positions (trailing stops, take-profits)
+  7. Sleep, repeat
 """
 
 import sys
@@ -20,6 +30,9 @@ from exchange.coinbase_client import CoinbaseClient
 from exchange.order_manager import OrderManager
 from data.market_data import MarketDataFetcher
 from risk.manager import RiskManager
+from quant.engine import QuantEngine
+from quant.multi_timeframe import MultiTimeframeEngine
+from quant.statistics import kelly_criterion
 from strategies.scalper import ScalpingStrategy
 from strategies.momentum import MomentumStrategy
 from strategies.mean_reversion import MeanReversionStrategy
@@ -39,6 +52,10 @@ class TradingBot:
         self.market_data = MarketDataFetcher(self.client, config.trading.pairs)
         self.risk_manager = RiskManager(config.risk, self.order_manager)
 
+        # Quant engine
+        self.quant = QuantEngine()
+        self.mtf = MultiTimeframeEngine(self.quant, self.market_data)
+
         # Initialize strategies
         self.strategies: list[BaseStrategy] = []
         if config.trading.enable_scalper:
@@ -50,7 +67,8 @@ class TradingBot:
 
         self.logger.info(
             f"Bot initialized | pairs={config.trading.pairs} | "
-            f"strategies={[s.name for s in self.strategies]}"
+            f"strategies={[s.name for s in self.strategies]} | "
+            f"quant_engine=enabled | multi_timeframe=enabled"
         )
 
     def start(self):
@@ -60,7 +78,7 @@ class TradingBot:
         signal.signal(signal.SIGTERM, self._shutdown)
 
         self.logger.info("=" * 60)
-        self.logger.info("TRADING BOT STARTING")
+        self.logger.info("TRADING BOT STARTING — QUANT ENGINE v2")
         self.logger.info("=" * 60)
 
         # Record starting balance
@@ -94,7 +112,7 @@ class TradingBot:
         self._cleanup()
 
     def _run_cycle(self, cycle: int):
-        """Single scan-evaluate-execute cycle."""
+        """Single scan-analyze-evaluate-execute cycle."""
         # Reset daily P&L if needed
         self.order_manager.reset_daily_pnl_if_needed()
 
@@ -122,30 +140,63 @@ class TradingBot:
                 self.logger.info(f"Trading paused: {reason}")
             return
 
+        # Get win/loss stats for Kelly sizing
+        win_rate = self.order_manager.get_win_rate() / 100
+        avg_win = self.order_manager.get_avg_win()
+        avg_loss = self.order_manager.get_avg_loss()
+
         # Evaluate strategies for each pair
         best_signal: Signal | None = None
+        best_confluence_strength: float = 0.0
 
         for pair, snapshot in snapshots.items():
             # Skip if we already have a position
             if self.order_manager.has_position(pair):
                 continue
 
+            # Run multi-timeframe confluence analysis
+            bid_depth = snapshot.bid_depth if hasattr(snapshot, "bid_depth") else 0
+            ask_depth = snapshot.ask_depth if hasattr(snapshot, "ask_depth") else 0
+            confluence = self.mtf.evaluate(
+                pair, bid_depth=bid_depth, ask_depth=ask_depth,
+                win_rate=max(win_rate, 0.5), avg_win=max(avg_win, 1.0),
+                avg_loss=max(avg_loss, 1.0),
+            )
+
+            # Skip if multi-timeframe says neutral or bearish
+            if confluence.direction != "buy" or confluence.strength < 0.3:
+                continue
+
+            # Now run individual strategies with quant context
             for strategy in self.strategies:
                 try:
-                    sig = strategy.evaluate(snapshot, self.market_data)
+                    sig = strategy.evaluate(snapshot, self.market_data, quant=self.quant)
                     if sig and sig.action == "buy":
-                        if best_signal is None or sig.confidence > best_signal.confidence:
+                        # Boost confidence with MTF confluence
+                        boosted_confidence = sig.confidence * (0.7 + 0.3 * confluence.strength)
+
+                        # Only take the best signal
+                        if boosted_confidence > (best_signal.confidence if best_signal else 0):
+                            sig.confidence = min(boosted_confidence, 1.0)
+                            sig.reason += f" | MTF={confluence.strength:.2f} ({confluence.timeframes_aligned}TF)"
                             best_signal = sig
+                            best_confluence_strength = confluence.strength
                 except Exception as e:
                     self.logger.error(f"Strategy {strategy.name} error on {pair}: {e}")
 
         # Execute the highest-confidence signal
         if best_signal and best_signal.confidence >= 0.5:
-            self._execute_signal(best_signal, usd_balance)
+            self._execute_signal(best_signal, usd_balance, win_rate, avg_win, avg_loss)
 
-    def _execute_signal(self, signal: Signal, usd_balance: float):
-        """Execute a trade based on a strategy signal."""
-        position_size = self.risk_manager.compute_position_size(usd_balance)
+    def _execute_signal(self, signal: Signal, usd_balance: float,
+                        win_rate: float, avg_win: float, avg_loss: float):
+        """Execute a trade based on a strategy signal with Kelly-optimal sizing."""
+        # Compute position size: min of risk-based and Kelly-based
+        risk_size = self.risk_manager.compute_position_size(usd_balance)
+        kelly_frac = kelly_criterion(max(win_rate, 0.5), max(avg_win, 1.0), max(avg_loss, 1.0))
+        kelly_size = usd_balance * kelly_frac if kelly_frac > 0 else risk_size
+
+        position_size = min(risk_size, kelly_size) if kelly_size > 0 else risk_size
 
         # Ensure minimum trade size ($1 on Coinbase)
         if position_size < 1.0:
@@ -153,8 +204,9 @@ class TradingBot:
             return
 
         self.logger.info(
-            f"SIGNAL | {signal.product_id} | {signal.strategy} | "
-            f"confidence={signal.confidence:.2f} | {signal.reason}"
+            f"EXECUTING | {signal.product_id} | {signal.strategy} | "
+            f"confidence={signal.confidence:.2f} | size=${position_size:.2f} | "
+            f"kelly={kelly_frac:.3f} | {signal.reason}"
         )
 
         snapshot = self.market_data.price_history.get(signal.product_id, [])
@@ -179,11 +231,17 @@ class TradingBot:
             self.logger.warning(f"Failed to open position for {signal.product_id}")
 
     def _log_market_summary(self, snapshots: dict):
+        self.logger.info("─── MARKET SUMMARY ───")
         for pid, snap in snapshots.items():
-            rsi = self.market_data.compute_rsi(pid)
+            assessment = self.quant.get_assessment(f"{pid}_scalp")
+            regime = assessment.regime if assessment else "?"
+            hurst = f"{assessment.hurst:.2f}" if assessment else "?"
+            buy = f"{assessment.buy_score:.2f}" if assessment else "?"
+            sell = f"{assessment.sell_score:.2f}" if assessment else "?"
             self.logger.info(
                 f"  {pid}: ${snap.price:.2f} | 24h={snap.price_change_24h_pct:+.1f}% | "
-                f"spread={snap.spread_pct:.3f}% | RSI={rsi:.1f}"
+                f"spread={snap.spread_pct:.3f}% | regime={regime} (H={hurst}) | "
+                f"buy={buy} sell={sell}"
             )
 
     def _shutdown(self, signum, frame):
