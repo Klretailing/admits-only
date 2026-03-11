@@ -4,51 +4,25 @@ import { useInView, useCountUp } from '../hooks/useAnimations';
 import EssayMockup from '../components/EssayMockup';
 import BentoGrid from '../components/BentoGrid';
 import TestimonialCarousel from '../components/TestimonialCarousel';
+import ServiceShowcase from '../components/ServiceShowcase';
 
 /* ──────────────────────── DATA ──────────────────────── */
-
-const programs = [
-  {
-    title: 'Scholarship-Ready Academy',
-    tag: 'Grades 9–12',
-    description: 'Holistic admissions prep with narrative coaching, standardized test strategy, and portfolio development for top-tier universities.',
-    color: 'from-accent to-purple-600',
-  },
-  {
-    title: 'STEM Innovators Lab',
-    tag: 'Grades 8–12',
-    description: 'Hands-on research, coding sprints, and competition prep guided by published academics and industry professionals.',
-    color: 'from-emerald-500 to-teal-600',
-  },
-  {
-    title: 'Humanities Leadership Studio',
-    tag: 'Grades 9–12',
-    description: 'Debate, advanced writing, and civic leadership training with curated reading circles and publication pathways.',
-    color: 'from-amber-500 to-orange-600',
-  },
-  {
-    title: 'Foundations for Growth',
-    tag: 'Grades 5–8',
-    description: 'Confidence-building and executive function coaching that sets the foundation for rigorous high school coursework.',
-    color: 'from-rose-500 to-pink-600',
-  },
-];
 
 const journey = [
   {
     step: '01',
-    title: 'Discovery & Diagnostics',
-    description: 'We assess skills, interests, and goals to build a custom academic roadmap with clear milestones and success metrics.',
+    title: 'Initial Conversation',
+    description: 'We start by listening. A free strategy call helps us understand your student\'s strengths, challenges, and goals so we can recommend the right path forward.',
   },
   {
     step: '02',
-    title: 'Immersive Instruction',
-    description: 'Students engage in live classes, studio projects, and interactive coaching tailored to their unique learning style.',
+    title: 'Personalized Plan',
+    description: 'Based on what we learn, we build a tailored plan — whether that\'s mentoring, admissions support, test prep, or a combination — with clear milestones and regular check-ins.',
   },
   {
     step: '03',
-    title: 'Portfolio & Outcomes',
-    description: 'Growth translates into tangible results: certifications, competition wins, polished essays, and recommendation support.',
+    title: 'Ongoing Support & Results',
+    description: 'We walk alongside your family every step of the way. Progress is tracked, plans adapt as needed, and we celebrate every milestone together.',
   },
 ];
 
@@ -273,39 +247,8 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ─── SIGNATURE PROGRAMS ─── */}
-        <section className="section-padding bg-surface bg-grid">
-          <div className="max-w-7xl mx-auto px-6">
-            <RevealSection>
-              <div className="text-center">
-                <div className="section-label">Signature Programs</div>
-                <h2 className="section-title">Curated academic tracks for every stage of the student journey</h2>
-                <p className="section-subtitle mx-auto">
-                  From middle school foundations to Ivy League admissions strategy, our programs unlock potential at every level.
-                </p>
-              </div>
-            </RevealSection>
-            <div className="mt-14 grid gap-6 sm:grid-cols-2">
-              {programs.map((program, i) => (
-                <RevealSection key={program.title} delay={i * 100}>
-                  <div className="group card !p-0 overflow-hidden h-full">
-                    <div className={`h-1.5 bg-gradient-to-r ${program.color}`} />
-                    <div className="p-7">
-                      <div className="flex items-start justify-between gap-4">
-                        <h3 className="text-xl font-bold font-display text-primary">{program.title}</h3>
-                        <span className="badge-warm flex-shrink-0">{program.tag}</span>
-                      </div>
-                      <p className="mt-4 text-slate-500 leading-relaxed">{program.description}</p>
-                      <Link href="/services" className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-accent hover:gap-2 transition-all">
-                        Learn more <span>&rarr;</span>
-                      </Link>
-                    </div>
-                  </div>
-                </RevealSection>
-              ))}
-            </div>
-          </div>
-        </section>
+        {/* ─── SERVICES ─── */}
+        <ServiceShowcase />
 
         {/* ─── LEARNING JOURNEY ─── */}
         <section className="section-padding bg-primary relative overflow-hidden">
@@ -317,10 +260,10 @@ export default function Home() {
               <div className="text-center">
                 <div className="badge bg-white/10 text-white border-white/20 mb-4">How It Works</div>
                 <h2 className="text-3xl lg:text-4xl font-bold font-display text-white tracking-tight">
-                  Your personalized college admissions journey
+                  Getting started is straightforward
                 </h2>
                 <p className="mt-4 text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed">
-                  A structured three-phase approach that transforms academic potential into measurable outcomes and acceptance letters.
+                  No pressure, no commitment upfront. We start with a conversation and build from there.
                 </p>
               </div>
             </RevealSection>
