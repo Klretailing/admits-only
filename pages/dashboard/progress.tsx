@@ -5,6 +5,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import DashboardLayout from '../../components/DashboardLayout';
 import { findSchoolByName, generateSmartTimeline, generateWeeklyDigest, type SchoolData } from '../../lib/schoolData';
+import { useCountUp } from '../../hooks/useAnimations';
 
 /* ══════════════════════════════════════════════════════════════════════
    TYPES
@@ -181,28 +182,38 @@ export default function Applications() {
           </button>
         </div>
 
-        {/* Stats bar */}
+        {/* Stats bar — enhanced with gradients */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="bg-white rounded-xl border border-slate-100 p-4">
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Schools</p>
-            <p className="text-2xl font-bold font-display text-primary mt-1">{apps.length}</p>
-          </div>
-          <div className="bg-white rounded-xl border border-slate-100 p-4">
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Submitted</p>
-            <p className="text-2xl font-bold font-display text-accent mt-1">{submitted}</p>
-          </div>
-          <div className="bg-white rounded-xl border border-slate-100 p-4">
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Accepted</p>
-            <p className="text-2xl font-bold font-display text-emerald-600 mt-1">{accepted}</p>
-          </div>
-          <div className="bg-white rounded-xl border border-slate-100 p-4">
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Tasks Done</p>
+          {[
+            { label: 'Schools', value: apps.length, color: 'text-primary', gradient: 'from-blue-500 to-indigo-600' },
+            { label: 'Submitted', value: submitted, color: 'text-accent', gradient: 'from-accent to-purple-600' },
+            { label: 'Accepted', value: accepted, color: 'text-emerald-600', gradient: 'from-emerald-500 to-teal-600' },
+          ].map((stat, i) => (
+            <div key={stat.label} className="dash-stat-card dash-card-hover bg-white rounded-xl border border-slate-100 p-4" style={{ '--stat-accent': i === 0 ? '#3b82f6' : i === 1 ? '#6366f1' : '#10b981', '--stat-accent-end': i === 0 ? '#4f46e5' : i === 1 ? '#9333ea' : '#0d9488' } as React.CSSProperties}>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">{stat.label}</p>
+                <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${stat.gradient} flex items-center justify-center opacity-80`}>
+                  {i === 0 && <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5" /></svg>}
+                  {i === 1 && <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>}
+                  {i === 2 && <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+                </div>
+              </div>
+              <p className={`text-2xl font-bold font-display ${stat.color} mt-1`}>{stat.value}</p>
+            </div>
+          ))}
+          <div className="dash-stat-card dash-card-hover bg-white rounded-xl border border-slate-100 p-4" style={{ '--stat-accent': '#f59e0b', '--stat-accent-end': '#ea580c' } as React.CSSProperties}>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Tasks Done</p>
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center opacity-80">
+                <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2" /></svg>
+              </div>
+            </div>
             <div className="flex items-end gap-2 mt-1">
               <p className="text-2xl font-bold font-display text-primary">{doneTasks}<span className="text-sm text-slate-300 font-normal">/{totalTasks}</span></p>
             </div>
             {totalTasks > 0 && (
               <div className="h-1.5 bg-slate-100 rounded-full mt-2 overflow-hidden">
-                <div className="h-full bg-accent rounded-full transition-all duration-500" style={{ width: `${(doneTasks / totalTasks) * 100}%` }} />
+                <div className="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full progress-animated" style={{ width: `${(doneTasks / totalTasks) * 100}%` }} />
               </div>
             )}
           </div>
@@ -335,9 +346,10 @@ export default function Applications() {
               return (
                 <div
                   key={app.id}
-                  className={`bg-white rounded-2xl border transition-all duration-200 ${
-                    isExpanded ? 'border-accent/30 shadow-lg shadow-accent/5' : 'border-slate-100 hover:border-slate-200 hover:shadow-sm'
+                  className={`bg-white rounded-2xl border transition-all duration-300 ${
+                    isExpanded ? 'border-accent/30 shadow-lg shadow-accent/5' : 'border-slate-100 dash-card-hover'
                   } ${isUrgent ? 'ring-2 ring-amber-200' : ''}`}
+                  style={{ animationDelay: `${sortedApps.indexOf(app) * 60}ms` }}
                 >
                   {/* Collapsed row */}
                   <div
@@ -374,7 +386,7 @@ export default function Applications() {
                     <div className="hidden sm:flex items-center gap-3 flex-shrink-0">
                       <div className="flex items-center gap-2">
                         <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-accent rounded-full transition-all duration-500" style={{ width: `${taskPct}%` }} />
+                          <div className="h-full bg-gradient-to-r from-accent to-purple-500 rounded-full progress-animated" style={{ width: `${taskPct}%` }} />
                         </div>
                         <span className="text-[11px] font-semibold text-slate-400 w-8">{taskPct}%</span>
                       </div>

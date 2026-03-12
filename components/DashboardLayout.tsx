@@ -83,8 +83,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-slate-100">
         <div className="p-5 border-b border-slate-100">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-accent to-purple-600 flex items-center justify-center">
+          <Link href="/" className="flex items-center gap-2.5 group">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-accent to-purple-600 flex items-center justify-center shadow-md shadow-accent/20 group-hover:shadow-lg group-hover:shadow-accent/30 transition-shadow">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                 <path d="M12 2L2 9L12 16L22 9L12 2Z" fill="white" opacity="0.9" />
                 <path d="M4 11V17L12 22L20 17V11" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
@@ -103,14 +103,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
                   active
-                    ? 'bg-accent/10 text-accent'
+                    ? 'bg-gradient-to-r from-accent/10 to-purple-500/5 text-accent shadow-sm border border-accent/10'
                     : 'text-slate-500 hover:text-primary hover:bg-slate-50'
                 }`}
               >
                 {link.icon}
                 {link.label}
+                {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-accent" />}
               </Link>
             );
           })}
@@ -240,7 +241,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-h-screen pb-16 lg:pb-0">
         {/* Top bar */}
-        <header className="h-14 lg:h-16 bg-white border-b border-slate-100 flex items-center justify-between px-4 lg:px-6 flex-shrink-0">
+        <header className="h-14 lg:h-16 bg-white border-b border-slate-100 flex items-center justify-between px-4 lg:px-6 flex-shrink-0 relative">
+          {/* Subtle accent line at top */}
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-accent via-purple-500 to-accent opacity-20" />
           <div className="flex items-center gap-3">
             {/* Mobile hamburger */}
             <button
@@ -314,12 +317,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors ${
+                className={`flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-all relative ${
                   active ? 'text-accent' : 'text-slate-400'
                 }`}
               >
+                {active && <div className="absolute top-0 left-1/4 right-1/4 h-[2px] bg-gradient-to-r from-accent to-purple-500 rounded-full" />}
                 <span className={active ? 'text-accent' : 'text-slate-400'}>{link.icon}</span>
-                <span className="text-[10px] font-medium">{link.mobileLabel}</span>
+                <span className={`text-[10px] font-medium ${active ? 'font-semibold' : ''}`}>{link.mobileLabel}</span>
               </Link>
             );
           })}
