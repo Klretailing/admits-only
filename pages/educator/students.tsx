@@ -35,6 +35,7 @@ export default function EducatorStudents() {
   const [newStudent, setNewStudent] = useState({ studentName: '', studentEmail: '', tags: [] as string[] });
   const [noteText, setNoteText] = useState('');
   const [saving, setSaving] = useState(false);
+  const [addError, setAddError] = useState('');
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/login');
@@ -55,15 +56,24 @@ export default function EducatorStudents() {
   const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    const res = await fetch('/api/educator/students', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newStudent),
-    });
-    if (res.ok) {
-      setShowAddModal(false);
-      setNewStudent({ studentName: '', studentEmail: '', tags: [] });
-      fetchStudents();
+    setAddError('');
+    try {
+      const res = await fetch('/api/educator/students', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newStudent),
+      });
+      if (res.ok) {
+        setShowAddModal(false);
+        setNewStudent({ studentName: '', studentEmail: '', tags: [] });
+        setAddError('');
+        fetchStudents();
+      } else {
+        const data = await res.json();
+        setAddError(data.error || 'Failed to add student. Please try again.');
+      }
+    } catch {
+      setAddError('Network error. Please try again.');
     }
     setSaving(false);
   };
@@ -214,6 +224,9 @@ export default function EducatorStudents() {
           <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setShowAddModal(false)} />
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
             <h2 className="text-lg font-bold font-display text-primary mb-4">Add New Student</h2>
+            {addError && (
+              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700 mb-4">{addError}</div>
+            )}
             <form onSubmit={handleAddStudent} className="space-y-4">
               <div>
                 <label className="block mb-1.5 text-sm font-semibold text-primary">Student Name</label>

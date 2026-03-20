@@ -31,6 +31,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const allBookings = await prisma.booking.count({ where: { educatorId: userId } });
     const completedCount = await prisma.booking.count({ where: { educatorId: userId, status: 'completed' } });
 
+    // Build monthly breakdown for charts (last 12 months)
+    const monthlyBreakdown: { month: string; label: string; earnings: number; cumulative: number }[] = [];
+    let cumulative = 0;
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59);
+      const label = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+      const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const monthEarnings = completed
+        .filter(b => b.date >= d && b.date <= monthEnd)
+        .reduce((sum, b) => sum + b.amount, 0);
+      cumulative += monthEarnings;
+      monthlyBreakdown.push({ month: monthKey, label, earnings: monthEarnings, cumulative });
+    }
+
     return res.json({
       totalRevenue,
       monthRevenue,
@@ -38,6 +53,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       unpaidAmount,
       totalSessions: allBookings,
       completedSessions: completedCount,
+      monthlyBreakdown,
       payments: bookings.map(b => ({
         id: b.id,
         title: b.title,
@@ -50,6 +66,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   } catch (e) {
     console.error('Earnings error:', (e as Error).message);
-    return res.json({ totalRevenue: 0, monthRevenue: 0, paidAmount: 0, unpaidAmount: 0, totalSessions: 0, completedSessions: 0, payments: [] });
+    return res.json({ totalRevenue: 0, monthRevenue: 0, paidAmount: 0, unpaidAmount: 0, totalSessions: 0, completedSessions: 0, monthlyBreakdown: [], payments: [] });
   }
 }
