@@ -20,6 +20,7 @@ async function seedAccounts() {
       { name: 'Aisha Patel', email: 'aisha@beta.admitsonly.com', password: 'Beta@2026', role: 'student' },
       { name: 'James Williams', email: 'james@beta.admitsonly.com', password: 'Beta@2026', role: 'student' },
       { name: 'Robert Chen', email: 'robert@beta.admitsonly.com', password: 'Beta@2026', role: 'parent' },
+      { name: 'Sarah Mitchell', email: 'demo.educator@admitsonly.com', password: 'Educator@2026', role: 'educator' },
     ];
 
     for (const acct of accounts) {
