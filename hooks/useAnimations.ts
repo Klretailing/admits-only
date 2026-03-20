@@ -1,4 +1,46 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+
+/** Triggers staggered entrance animations for child elements */
+export function useStaggerReveal(itemCount: number, delay = 80) {
+  const [visibleCount, setVisibleCount] = useState(0);
+  const { ref, isVisible } = useInView(0.05);
+
+  useEffect(() => {
+    if (!isVisible || itemCount === 0) return;
+    let i = 0;
+    const interval = setInterval(() => {
+      i++;
+      setVisibleCount(i);
+      if (i >= itemCount) clearInterval(interval);
+    }, delay);
+    return () => clearInterval(interval);
+  }, [isVisible, itemCount, delay]);
+
+  return { ref, visibleCount };
+}
+
+/** Animates a progress bar width from 0 to target on scroll into view */
+export function useAnimatedProgress(targetPct: number, duration = 800) {
+  const [pct, setPct] = useState(0);
+  const { ref, isVisible } = useInView(0.1);
+
+  useEffect(() => {
+    if (!isVisible) return;
+    let start: number;
+    let raf: number;
+    const animate = (ts: number) => {
+      if (!start) start = ts;
+      const progress = Math.min((ts - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setPct(Math.round(eased * targetPct));
+      if (progress < 1) raf = requestAnimationFrame(animate);
+    };
+    raf = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(raf);
+  }, [isVisible, targetPct, duration]);
+
+  return { pct, ref };
+}
 
 export function useInView(threshold = 0.15) {
   const ref = useRef<HTMLDivElement>(null);

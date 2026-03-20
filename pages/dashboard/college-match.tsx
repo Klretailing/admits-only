@@ -217,11 +217,16 @@ export default function CollegeMatchPage() {
 
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold font-display text-primary">College Match</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Personalized school recommendations based on your GPA ({studentStats?.gpa.toFixed(2)}) and SAT ({studentStats?.totalSAT})
-          </p>
+        <div className="flex items-center gap-4">
+          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-accent to-purple-600 flex items-center justify-center shadow-md shadow-accent/20">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold font-display text-primary">College Match</h1>
+            <p className="text-sm text-slate-500 mt-0.5">
+              Personalized recommendations based on your GPA ({studentStats?.gpa.toFixed(2)}) and SAT ({studentStats?.totalSAT})
+            </p>
+          </div>
         </div>
 
         {/* Tier Summary Cards */}
@@ -347,7 +352,7 @@ export default function CollegeMatchPage() {
               return (
                 <div
                   key={match.college.id}
-                  className="bg-white rounded-2xl border border-slate-100 hover:border-slate-200 transition-all overflow-hidden"
+                  className="bg-white rounded-2xl border border-slate-100 hover:border-slate-200 dash-card-hover transition-all overflow-hidden"
                 >
                   {/* Main row */}
                   <div
@@ -475,7 +480,7 @@ export default function CollegeMatchPage() {
 function FitBar({ label, value, studentVal, schoolVal }: { label: string; value: number; studentVal: string; schoolVal: string }) {
   // value is -1 to 1; 0 = dead center
   const pct = Math.round((value + 1) * 50);
-  const barColor = value >= 0.2 ? 'bg-emerald-500' : value >= -0.2 ? 'bg-amber-500' : 'bg-rose-500';
+  const barColor = value >= 0.2 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' : value >= -0.2 ? 'bg-gradient-to-r from-amber-400 to-amber-500' : 'bg-gradient-to-r from-rose-400 to-rose-500';
 
   return (
     <div>

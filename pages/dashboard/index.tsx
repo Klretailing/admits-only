@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import DashboardLayout from '../../components/DashboardLayout';
+import { useCountUp, useInView } from '../../hooks/useAnimations';
 
 /* ─── Upcoming Deadlines Widget ─── */
 
@@ -112,6 +113,59 @@ function UpcomingDeadlines() {
   );
 }
 
+/* ─── Animated Stat Card ─── */
+function AnimatedStatCard({ label, value, change, positive, href, gradient, delay }: {
+  label: string;
+  value: string;
+  change: string;
+  positive: boolean;
+  href: string;
+  gradient: string;
+  delay: number;
+}) {
+  const numericValue = parseFloat(value);
+  const isNumeric = !isNaN(numericValue) && value !== '—';
+  const { count, ref: countRef } = useCountUp(isNumeric ? numericValue : 0, 1200);
+
+  return (
+    <Link
+      href={href}
+      className={`dash-stat-card dash-card-hover bg-white rounded-2xl border border-slate-100 p-5 dash-card-enter visible`}
+      style={{
+        '--stat-accent': gradient.split(',')[0],
+        '--stat-accent-end': gradient.split(',')[1] || gradient.split(',')[0],
+        transitionDelay: `${delay}ms`,
+      } as React.CSSProperties}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-sm text-slate-500 font-medium">{label}</p>
+        <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${gradient} flex items-center justify-center opacity-80`}>
+          {label === 'SAT Score' && (
+            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+          )}
+          {label === 'Essays' && (
+            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+          )}
+          {label === 'Holistic Score' && (
+            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+          )}
+          {label === 'GPA' && (
+            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+          )}
+        </div>
+      </div>
+      <div ref={countRef} className="flex items-end gap-2">
+        <span className="text-2xl font-bold font-display text-primary">
+          {isNumeric ? count : value}
+        </span>
+        <span className={`text-xs font-semibold mb-0.5 ${positive ? 'text-green-600' : 'text-slate-400'}`}>
+          {change}
+        </span>
+      </div>
+    </Link>
+  );
+}
+
 interface DashboardStats {
   satScore: string;
   essayCount: string;
@@ -182,55 +236,72 @@ export default function Dashboard() {
           <p className="mt-1 text-slate-500">Here&apos;s your academic progress at a glance.</p>
         </div>
 
-        {/* Stat cards — real data from DB */}
+        {/* Stat cards — real data from DB with animated counters */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'SAT Score', value: stats?.satScore || '—', change: hasProfile ? 'from profile' : 'add in profile', positive: hasProfile },
-            { label: 'Essays', value: stats?.essayCount || '0', change: stats?.essayStatus || 'none yet', positive: (parseInt(stats?.essayCount || '0') > 0) },
-            { label: 'Holistic Score', value: stats?.holisticScore || '—', change: hasProfile ? '/100' : 'evaluate profile', positive: hasProfile },
-            { label: 'GPA', value: stats?.gpa || '—', change: hasProfile ? 'from profile' : 'add in profile', positive: hasProfile },
-          ].map((stat) => (
-            <Link href="/dashboard/profile" key={stat.label} className="bg-white rounded-2xl border border-slate-100 p-5 hover:shadow-md hover:border-slate-200 transition-all">
-              <p className="text-sm text-slate-500 font-medium">{stat.label}</p>
-              <div className="mt-2 flex items-end gap-2">
-                <span className="text-2xl font-bold font-display text-primary">{stat.value}</span>
-                <span className={`text-xs font-semibold ${stat.positive ? 'text-green-600' : 'text-slate-400'}`}>
-                  {stat.change}
-                </span>
-              </div>
-            </Link>
+            { label: 'SAT Score', value: stats?.satScore || '—', change: hasProfile ? 'from profile' : 'add in profile', positive: hasProfile, gradient: 'from-amber-500,to-orange-600' },
+            { label: 'Essays', value: stats?.essayCount || '0', change: stats?.essayStatus || 'none yet', positive: (parseInt(stats?.essayCount || '0') > 0), gradient: 'from-accent,to-purple-600' },
+            { label: 'Holistic Score', value: stats?.holisticScore || '—', change: hasProfile ? '/100' : 'evaluate profile', positive: hasProfile, gradient: 'from-emerald-500,to-teal-600' },
+            { label: 'GPA', value: stats?.gpa || '—', change: hasProfile ? 'from profile' : 'add in profile', positive: hasProfile, gradient: 'from-blue-500,to-indigo-600' },
+          ].map((stat, i) => (
+            <AnimatedStatCard
+              key={stat.label}
+              label={stat.label}
+              value={stat.value}
+              change={stat.change}
+              positive={stat.positive}
+              href="/dashboard/profile"
+              gradient={stat.gradient}
+              delay={i * 100}
+            />
           ))}
         </div>
 
         {/* Progress / CTA */}
         <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
           {hasProfile ? (
-            <div className="bg-white rounded-2xl border border-slate-100 p-6">
+            <div className="bg-white rounded-2xl border border-slate-100 p-6 dash-card-hover">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold font-display text-primary">Score Breakdown</h3>
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-accent to-purple-600 flex items-center justify-center">
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                  </div>
+                  <h3 className="text-lg font-bold font-display text-primary">Score Breakdown</h3>
+                </div>
                 <Link href="/dashboard/profile" className="text-sm font-semibold text-accent hover:underline">Update Profile</Link>
               </div>
               <div className="space-y-4">
                 {[
-                  { subject: 'GPA Score', pct: profile?.gpaScore || 0, color: 'bg-accent' },
-                  { subject: 'SAT Score', pct: profile?.satScore || 0, color: 'bg-purple-500' },
-                  { subject: 'Extracurriculars', pct: profile?.ecScore || 0, color: 'bg-emerald-500' },
-                  { subject: 'Overall Holistic', pct: profile?.holisticScore || 0, color: 'bg-gradient-to-r from-accent to-purple-500' },
+                  { subject: 'GPA Score', pct: profile?.gpaScore || 0, color: 'bg-accent', gradient: 'from-accent to-indigo-400' },
+                  { subject: 'SAT Score', pct: profile?.satScore || 0, color: 'bg-purple-500', gradient: 'from-purple-500 to-violet-400' },
+                  { subject: 'Extracurriculars', pct: profile?.ecScore || 0, color: 'bg-emerald-500', gradient: 'from-emerald-500 to-teal-400' },
+                  { subject: 'Overall Holistic', pct: profile?.holisticScore || 0, color: 'bg-gradient-to-r from-accent to-purple-500', gradient: 'from-accent to-purple-500' },
                 ].map((item) => (
                   <div key={item.subject}>
                     <div className="flex justify-between text-sm mb-1.5">
                       <span className="font-medium text-primary">{item.subject}</span>
                       <span className="font-semibold text-slate-500">{item.pct}/100</span>
                     </div>
-                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
                       <div
-                        className={`h-full ${item.color} rounded-full transition-all duration-1000`}
+                        className={`h-full bg-gradient-to-r ${item.gradient} rounded-full progress-animated`}
                         style={{ width: `${item.pct}%` }}
                       />
                     </div>
                   </div>
                 ))}
               </div>
+              {profile?.holisticScore != null && (
+                <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${profile.holisticScore >= 70 ? 'bg-emerald-500' : profile.holisticScore >= 40 ? 'bg-amber-500' : 'bg-rose-500'} status-pulse`} />
+                    <span className="text-xs font-medium text-slate-500">
+                      {profile.holisticScore >= 70 ? 'Strong Profile' : profile.holisticScore >= 40 ? 'Building' : 'Getting Started'}
+                    </span>
+                  </div>
+                  <span className="text-xs font-bold text-accent">{profile.holisticScore}/100 Overall</span>
+                </div>
+              )}
             </div>
           ) : (
             <div className="bg-white rounded-2xl border border-slate-100 p-6">
@@ -253,14 +324,19 @@ export default function Dashboard() {
           )}
 
           {/* Quick Actions */}
-          <div className="bg-white rounded-2xl border border-slate-100 p-6">
+          <div className="bg-white rounded-2xl border border-slate-100 p-6 dash-card-hover">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold font-display text-primary">Quick Actions</h3>
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                </div>
+                <h3 className="text-lg font-bold font-display text-primary">Quick Actions</h3>
+              </div>
             </div>
             <div className="space-y-3">
-              <Link href="/dashboard/essays" className="flex items-center gap-4 p-4 rounded-xl bg-surface border border-slate-100 hover:border-slate-200 hover:shadow-sm transition-all">
-                <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <Link href="/dashboard/essays" className="flex items-center gap-4 p-4 rounded-xl bg-surface border border-slate-100 hover:border-accent/20 hover:shadow-md hover:shadow-accent/5 hover:-translate-y-0.5 transition-all">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent to-purple-600 flex items-center justify-center flex-shrink-0 shadow-sm shadow-accent/20">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
@@ -270,9 +346,9 @@ export default function Dashboard() {
                 </div>
                 <svg className="w-5 h-5 text-slate-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
               </Link>
-              <Link href="/dashboard/progress" className="flex items-center gap-4 p-4 rounded-xl bg-surface border border-slate-100 hover:border-slate-200 hover:shadow-sm transition-all">
-                <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <Link href="/dashboard/progress" className="flex items-center gap-4 p-4 rounded-xl bg-surface border border-slate-100 hover:border-purple-200 hover:shadow-md hover:shadow-purple-500/5 hover:-translate-y-0.5 transition-all">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center flex-shrink-0 shadow-sm shadow-purple-500/20">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                   </svg>
                 </div>
@@ -282,9 +358,9 @@ export default function Dashboard() {
                 </div>
                 <svg className="w-5 h-5 text-slate-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
               </Link>
-              <Link href="/dashboard/pods" className="flex items-center gap-4 p-4 rounded-xl bg-surface border border-slate-100 hover:border-slate-200 hover:shadow-sm transition-all">
-                <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <Link href="/dashboard/pods" className="flex items-center gap-4 p-4 rounded-xl bg-surface border border-slate-100 hover:border-emerald-200 hover:shadow-md hover:shadow-emerald-500/5 hover:-translate-y-0.5 transition-all">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center flex-shrink-0 shadow-sm shadow-emerald-500/20">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                 </div>
