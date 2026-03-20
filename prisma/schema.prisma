@@ -31,6 +31,7 @@ model User {
   educatorServices   EducatorService[]
   educatorStudents   EducatorStudent[]
   bookings           Booking[]
+  manualEarnings     ManualEarning[]
 
   @@map("users")
 }
@@ -281,4 +282,19 @@ model Booking {
 
   @@index([educatorId, date])
   @@map("bookings")
+}
+
+model ManualEarning {
+  id          String   @id @default(cuid())
+  educatorId  String
+  description String
+  hours       Float
+  amount      Float
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  educator User @relation(fields: [educatorId], references: [id], onDelete: Cascade)
+
+  @@index([educatorId])
+  @@map("manual_earnings")
 }
