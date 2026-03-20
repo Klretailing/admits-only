@@ -5,7 +5,7 @@ import Link from 'next/link';
 
 export default function Register() {
   const router = useRouter();
-  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'student' as 'student' | 'parent' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'student' as 'student' | 'parent' | 'educator' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -75,22 +75,44 @@ export default function Register() {
               {/* Role selector */}
               <div>
                 <label className="block mb-2 text-sm font-semibold text-primary">I am a</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {(['student', 'parent'] as const).map((role) => (
+                <div className="grid grid-cols-3 gap-3">
+                  {([
+                    { value: 'student' as const, label: 'Student', icon: (
+                      <svg className="w-5 h-5 mb-1.5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                      </svg>
+                    )},
+                    { value: 'parent' as const, label: 'Parent', icon: (
+                      <svg className="w-5 h-5 mb-1.5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    )},
+                    { value: 'educator' as const, label: 'Educator', icon: (
+                      <svg className="w-5 h-5 mb-1.5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 2L2 9l10 7 10-7-10-7zM2 17l10 7 10-7M2 12l10 7 10-7" />
+                      </svg>
+                    )},
+                  ]).map((role) => (
                     <button
-                      key={role}
+                      key={role.value}
                       type="button"
-                      onClick={() => update('role', role)}
-                      className={`p-3.5 rounded-xl border text-sm font-semibold transition-all ${
-                        form.role === role
+                      onClick={() => update('role', role.value)}
+                      className={`p-3.5 rounded-xl border text-sm font-semibold transition-all text-center ${
+                        form.role === role.value
                           ? 'border-accent bg-accent/5 text-accent'
                           : 'border-slate-200 text-slate-500 hover:border-slate-300'
                       }`}
                     >
-                      {role === 'student' ? 'Student' : 'Parent / Guardian'}
+                      {role.icon}
+                      {role.label}
                     </button>
                   ))}
                 </div>
+                {form.role === 'educator' && (
+                  <p className="mt-2 text-xs text-slate-400">
+                    Set up your coaching business — manage students, sessions, and earnings.
+                  </p>
+                )}
               </div>
 
               <div>

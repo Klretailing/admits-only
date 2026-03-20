@@ -3,7 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { compare, hash } from 'bcryptjs';
 import { prisma, ensureSchema } from './db';
 
-export type UserRole = 'student' | 'parent' | 'admin';
+export type UserRole = 'student' | 'parent' | 'educator' | 'admin';
 
 // Seed default accounts (admin + beta testers) — runs once per server start
 let seeded = false;

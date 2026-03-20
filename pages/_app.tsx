@@ -8,7 +8,7 @@ import { tracker } from '../lib/analytics'
 import { ThemeProvider } from '../lib/themeContext'
 
 // Pages that need auth (SessionProvider) and use their own layout
-const authPrefixes = ['/dashboard', '/admin', '/auth/'];
+const authPrefixes = ['/dashboard', '/educator', '/admin', '/auth/'];
 
 export default function MyApp({ Component, pageProps: { session, ...pageProps } }: AppProps) {
   const router = useRouter();

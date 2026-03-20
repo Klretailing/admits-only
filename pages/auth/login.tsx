@@ -27,7 +27,11 @@ export default function Login() {
     if (result?.error) {
       setError('Invalid email or password. Please try again.');
     } else {
-      router.push('/dashboard');
+      // Fetch session to check role and redirect accordingly
+      const { getSession } = await import('next-auth/react');
+      const sess = await getSession();
+      const role = (sess?.user as any)?.role;
+      router.push(role === 'educator' ? '/educator' : '/dashboard');
     }
   };
 
@@ -54,7 +58,7 @@ export default function Login() {
               </span>
             </Link>
             <h1 className="text-2xl font-bold font-display text-primary">Welcome back</h1>
-            <p className="mt-2 text-slate-500">Sign in to access your student dashboard</p>
+            <p className="mt-2 text-slate-500">Sign in to access your dashboard</p>
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-100 shadow-xl shadow-slate-200/50 p-8">

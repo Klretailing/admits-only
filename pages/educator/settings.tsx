@@ -1,0 +1,285 @@
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
+import Head from 'next/head';
+import EducatorDashboardLayout from '../../components/EducatorDashboardLayout';
+
+interface EducatorProfile {
+  bio: string;
+  headline: string;
+  credentials: { title: string; institution: string; year: string }[];
+  subjects: string[];
+  hourlyRate: number | null;
+  zoomLink: string;
+  googleMeetLink: string;
+  timezone: string;
+}
+
+const SUBJECT_OPTIONS = [
+  'SAT Math', 'SAT Reading', 'SAT Writing', 'ACT', 'AP Calculus', 'AP Physics',
+  'AP Chemistry', 'AP Biology', 'AP English', 'Essay Writing', 'College Counseling',
+  'Interview Prep', 'STEM Tutoring', 'Humanities', 'Test Strategy', 'Financial Aid',
+];
+
+const TIMEZONES = [
+  'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
+  'America/Anchorage', 'Pacific/Honolulu', 'Europe/London', 'Europe/Paris',
+  'Asia/Tokyo', 'Asia/Shanghai', 'Australia/Sydney',
+];
+
+export default function EducatorSettings() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [profile, setProfile] = useState<EducatorProfile>({
+    bio: '', headline: '', credentials: [], subjects: [],
+    hourlyRate: null, zoomLink: '', googleMeetLink: '', timezone: 'America/New_York',
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [newCred, setNewCred] = useState({ title: '', institution: '', year: '' });
+
+  useEffect(() => {
+    if (status === 'unauthenticated') router.push('/auth/login');
+    if (status === 'authenticated' && (session?.user as any)?.role !== 'educator') router.push('/dashboard');
+  }, [status, session, router]);
+
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    fetch('/api/educator/profile')
+      .then(r => r.json())
+      .then(d => {
+        if (d.profile) setProfile(d.profile);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [status]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSaved(false);
+    const res = await fetch('/api/educator/profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(profile),
+    });
+    if (res.ok) setSaved(true);
+    setSaving(false);
+    setTimeout(() => setSaved(false), 3000);
+  };
+
+  const addCredential = () => {
+    if (!newCred.title.trim()) return;
+    setProfile(p => ({ ...p, credentials: [...p.credentials, { ...newCred }] }));
+    setNewCred({ title: '', institution: '', year: '' });
+  };
+
+  const removeCredential = (index: number) => {
+    setProfile(p => ({ ...p, credentials: p.credentials.filter((_, i) => i !== index) }));
+  };
+
+  const toggleSubject = (subject: string) => {
+    setProfile(p => ({
+      ...p,
+      subjects: p.subjects.includes(subject) ? p.subjects.filter(s => s !== subject) : [...p.subjects, subject],
+    }));
+  };
+
+  if (status === 'loading' || loading) {
+    return <div className="min-h-screen flex items-center justify-center bg-surface"><div className="animate-pulse text-slate-400">Loading...</div></div>;
+  }
+
+  return (
+    <EducatorDashboardLayout>
+      <Head><title>Settings | AdmitsOnly Educator</title></Head>
+
+      <div className="max-w-2xl space-y-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold font-display text-primary">Settings</h1>
+            <p className="mt-1 text-slate-500">Configure your educator profile and integrations</p>
+          </div>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="btn-primary text-sm flex items-center gap-2 disabled:opacity-60"
+          >
+            {saving ? 'Saving...' : saved ? 'Saved!' : 'Save Changes'}
+          </button>
+        </div>
+
+        {saved && (
+          <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-xl text-sm text-emerald-700 font-medium">
+            Profile saved successfully!
+          </div>
+        )}
+
+        {/* Profile Info */}
+        <section className="bg-white rounded-2xl border border-slate-100 p-6 space-y-5">
+          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Profile</h2>
+          <div>
+            <label className="block mb-1.5 text-sm font-semibold text-primary">Headline</label>
+            <input
+              type="text"
+              value={profile.headline}
+              onChange={e => setProfile(p => ({ ...p, headline: e.target.value }))}
+              className="w-full border border-slate-200 bg-surface p-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+              placeholder="e.g. SAT & College Admissions Coach"
+            />
+          </div>
+          <div>
+            <label className="block mb-1.5 text-sm font-semibold text-primary">Bio</label>
+            <textarea
+              value={profile.bio}
+              onChange={e => setProfile(p => ({ ...p, bio: e.target.value }))}
+              className="w-full border border-slate-200 bg-surface p-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 min-h-[120px] resize-y"
+              placeholder="Tell students about your experience, teaching style, and what makes you unique..."
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block mb-1.5 text-sm font-semibold text-primary">Hourly Rate ($)</label>
+              <input
+                type="number"
+                value={profile.hourlyRate || ''}
+                onChange={e => setProfile(p => ({ ...p, hourlyRate: parseFloat(e.target.value) || null }))}
+                className="w-full border border-slate-200 bg-surface p-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                placeholder="100"
+                min={0}
+                step={5}
+              />
+            </div>
+            <div>
+              <label className="block mb-1.5 text-sm font-semibold text-primary">Timezone</label>
+              <select
+                value={profile.timezone}
+                onChange={e => setProfile(p => ({ ...p, timezone: e.target.value }))}
+                className="w-full border border-slate-200 bg-surface p-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+              >
+                {TIMEZONES.map(tz => (
+                  <option key={tz} value={tz}>{tz.replace(/_/g, ' ')}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </section>
+
+        {/* Subjects */}
+        <section className="bg-white rounded-2xl border border-slate-100 p-6 space-y-4">
+          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Specialties</h2>
+          <div className="flex flex-wrap gap-2">
+            {SUBJECT_OPTIONS.map(subject => (
+              <button
+                key={subject}
+                onClick={() => toggleSubject(subject)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  profile.subjects.includes(subject)
+                    ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                    : 'bg-slate-50 text-slate-500 border border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                {subject}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* Credentials */}
+        <section className="bg-white rounded-2xl border border-slate-100 p-6 space-y-4">
+          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Credentials</h2>
+          {profile.credentials.length > 0 && (
+            <div className="space-y-2">
+              {profile.credentials.map((cred, i) => (
+                <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-surface border border-slate-100">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-primary">{cred.title}</p>
+                    <p className="text-xs text-slate-400">{cred.institution}{cred.year ? ` · ${cred.year}` : ''}</p>
+                  </div>
+                  <button onClick={() => removeCredential(i)} className="p-1 text-slate-400 hover:text-red-500">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="grid grid-cols-[1fr_1fr_80px_40px] gap-2 items-end">
+            <div>
+              <label className="block mb-1 text-xs font-medium text-slate-400">Title / Degree</label>
+              <input
+                type="text"
+                value={newCred.title}
+                onChange={e => setNewCred(p => ({ ...p, title: e.target.value }))}
+                className="w-full border border-slate-200 bg-surface p-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                placeholder="M.Ed."
+              />
+            </div>
+            <div>
+              <label className="block mb-1 text-xs font-medium text-slate-400">Institution</label>
+              <input
+                type="text"
+                value={newCred.institution}
+                onChange={e => setNewCred(p => ({ ...p, institution: e.target.value }))}
+                className="w-full border border-slate-200 bg-surface p-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                placeholder="Harvard"
+              />
+            </div>
+            <div>
+              <label className="block mb-1 text-xs font-medium text-slate-400">Year</label>
+              <input
+                type="text"
+                value={newCred.year}
+                onChange={e => setNewCred(p => ({ ...p, year: e.target.value }))}
+                className="w-full border border-slate-200 bg-surface p-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                placeholder="2020"
+              />
+            </div>
+            <button onClick={addCredential} className="p-2.5 rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+            </button>
+          </div>
+        </section>
+
+        {/* Meeting Integration */}
+        <section className="bg-white rounded-2xl border border-slate-100 p-6 space-y-5">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Meeting Integration</h2>
+            <p className="text-xs text-slate-400 mt-1">Add your meeting links — these will auto-populate when scheduling sessions.</p>
+          </div>
+          <div>
+            <label className="block mb-1.5 text-sm font-semibold text-primary flex items-center gap-2">
+              <svg className="w-4 h-4 text-blue-600" viewBox="0 0 24 24" fill="currentColor"><path d="M4.5 4.5h15v15h-15V4.5zM6.5 8v8h5.5v-3.5l3 2.5v-6l-3 2.5V8H6.5z" /></svg>
+              Zoom Personal Meeting Link
+            </label>
+            <input
+              type="url"
+              value={profile.zoomLink}
+              onChange={e => setProfile(p => ({ ...p, zoomLink: e.target.value }))}
+              className="w-full border border-slate-200 bg-surface p-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+              placeholder="https://zoom.us/j/1234567890"
+            />
+          </div>
+          <div>
+            <label className="block mb-1.5 text-sm font-semibold text-primary flex items-center gap-2">
+              <svg className="w-4 h-4 text-green-600" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" /></svg>
+              Google Meet Link
+            </label>
+            <input
+              type="url"
+              value={profile.googleMeetLink}
+              onChange={e => setProfile(p => ({ ...p, googleMeetLink: e.target.value }))}
+              className="w-full border border-slate-200 bg-surface p-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+              placeholder="https://meet.google.com/abc-defg-hij"
+            />
+          </div>
+        </section>
+
+        {/* Save button (bottom) */}
+        <div className="flex justify-end">
+          <button onClick={handleSave} disabled={saving} className="btn-primary text-sm disabled:opacity-60">
+            {saving ? 'Saving...' : saved ? 'Saved!' : 'Save All Changes'}
+          </button>
+        </div>
+      </div>
+    </EducatorDashboardLayout>
+  );
+}
