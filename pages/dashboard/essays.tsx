@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import Head from 'next/head';
 import DashboardLayout from '../../components/DashboardLayout';
 import { SCHOOLS, PROMPT_TYPES as SUPP_PROMPT_TYPES, getPromptTypeInfo, findSchoolByName, findReuseOpportunities, type SchoolData, type SupplementalPrompt, type ReuseMatch, type PromptType as SuppPromptType } from '../../lib/schoolData';
+import { analyzeSentences, computeStats, type AnalyzedSentence, type AnalysisStats } from '../../lib/sentenceAnalysis';
 
 /* ══════════════════════════════════════════════════════════════════════
    TYPES
@@ -1927,6 +1928,18 @@ export default function Essays() {
     setBoardTitle('');
   }, []);
 
+  // ─── Sentence Analysis state ───
+  const [showSentenceAnalysis, setShowSentenceAnalysis] = useState(false);
+  const editorScrollRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const sentenceAnalysis = useMemo(() => {
+    if (!showSentenceAnalysis || !editContent || editContent.trim().length < 30) return null;
+    const analyzed = analyzeSentences(editContent);
+    const stats = computeStats(analyzed);
+    return { sentences: analyzed, stats };
+  }, [editContent, showSentenceAnalysis]);
+
   if (status !== 'authenticated') return null;
 
   const wordCount = editContent.trim() ? editContent.trim().split(/\s+/).length : 0;
@@ -2853,6 +2866,15 @@ export default function Essays() {
                         <span key={t} className={`text-[9px] px-1.5 py-0.5 rounded-md font-medium ${wordCount >= t ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>{t}</span>
                       ))}
                     </div>
+                    <button
+                      onClick={() => setShowSentenceAnalysis(prev => !prev)}
+                      disabled={wordCount < 10}
+                      title="Sentence Analysis: highlights internalized (thoughts/feelings) vs externalized (actions/events) sentences"
+                      className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed ${showSentenceAnalysis ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md shadow-purple-200' : 'text-slate-500 bg-slate-100 hover:bg-slate-200'}`}
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>
+                      {showSentenceAnalysis ? 'Analysis On' : 'Analyze'}
+                    </button>
                     <button onClick={markComplete} disabled={wordCount < 50} className="hidden sm:block px-3 py-1.5 text-xs font-semibold text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all">Mark Complete</button>
                   </div>
                 </div>
@@ -2882,15 +2904,126 @@ export default function Essays() {
                       )}
                     </span>
                   </button>
+                  <button
+                    onClick={() => { setShowSentenceAnalysis(prev => !prev); setMobileEditorTab('write'); }}
+                    disabled={wordCount < 10}
+                    className={`px-4 py-2.5 text-xs font-semibold transition-all ${showSentenceAnalysis ? 'text-purple-600 border-b-2 border-purple-500 bg-purple-50' : 'text-slate-400 hover:text-slate-600'}`}
+                  >
+                    <span className="flex items-center justify-center gap-1.5">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>
+                      Analyze
+                    </span>
+                  </button>
                 </div>
 
-                {/* Textarea — fills remaining height (hidden on mobile when scores tab active) */}
-                <textarea
-                  value={editContent}
-                  onChange={e => handleContentChange(e.target.value)}
-                  placeholder="Start writing your essay here...&#10;&#10;Your writing will be analyzed in real-time as you type. Tap &quot;Live Scores&quot; above to see your scores, tips, and suggestions."
-                  className={`flex-1 min-h-0 w-full px-4 lg:px-6 py-4 lg:py-5 text-[14px] lg:text-[15px] leading-[1.8] focus:outline-none resize-none font-sans text-slate-800 placeholder:text-slate-300 ${mobileEditorTab === 'scores' ? 'hidden lg:block' : ''}`}
-                />
+                {/* Textarea with optional sentence analysis overlay */}
+                <div className={`flex-1 min-h-0 flex flex-col relative ${mobileEditorTab === 'scores' ? 'hidden lg:flex' : ''}`}>
+                  {/* Highlighted overlay — shown when analysis is on */}
+                  {showSentenceAnalysis && sentenceAnalysis && editContent.trim().length > 0 ? (
+                    <div className="flex-1 min-h-0 flex flex-col">
+                      <div
+                        ref={editorScrollRef}
+                        className="flex-1 min-h-0 overflow-y-auto px-4 lg:px-6 py-4 lg:py-5 text-[14px] lg:text-[15px] leading-[1.8] font-sans"
+                        onClick={() => {
+                          setShowSentenceAnalysis(false);
+                          setTimeout(() => textareaRef.current?.focus(), 50);
+                        }}
+                      >
+                        <div className="whitespace-pre-wrap break-words cursor-text">
+                          {sentenceAnalysis.sentences.map((s, i) => (
+                            <span
+                              key={i}
+                              className={`${
+                                s.type === 'internalized'
+                                  ? 'bg-blue-100/70 text-blue-900 rounded-sm'
+                                  : s.type === 'externalized'
+                                  ? 'bg-amber-100/70 text-amber-900 rounded-sm'
+                                  : 'text-slate-700'
+                              } ${s.isPassive ? 'underline decoration-red-400 decoration-wavy decoration-2 underline-offset-4' : ''}`}
+                              title={
+                                `${s.type === 'internalized' ? 'Internalized: thoughts, feelings, reflection' : s.type === 'externalized' ? 'Externalized: actions, events, experiences' : 'Neutral'}${s.isPassive ? ' | Passive voice detected' : ''}`
+                              }
+                            >
+                              {s.text}
+                            </span>
+                          )).reduce<React.ReactNode[]>((acc, el, i) => {
+                            if (i > 0) acc.push(' ');
+                            acc.push(el);
+                            return acc;
+                          }, [])}
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-3 italic">Click anywhere to return to editing</p>
+                      </div>
+
+                      {/* ─── Sentence Analysis Legend & Stats ─── */}
+                      <div className="flex-shrink-0 border-t border-slate-100 bg-slate-50/80 px-4 lg:px-6 py-2.5">
+                        <div className="flex flex-wrap items-center justify-between gap-y-2">
+                          {/* Legend */}
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <div className="flex items-center gap-1.5">
+                              <span className="inline-block w-3 h-3 rounded-sm bg-blue-100 border border-blue-200" />
+                              <span className="text-[10px] font-semibold text-blue-800">Internalized</span>
+                              <span className="text-[9px] text-slate-400">(thoughts, feelings, reflection)</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="inline-block w-3 h-3 rounded-sm bg-amber-100 border border-amber-200" />
+                              <span className="text-[10px] font-semibold text-amber-800">Externalized</span>
+                              <span className="text-[9px] text-slate-400">(actions, events, experiences)</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="inline-block w-8 border-b-2 border-wavy border-red-400" style={{ textDecorationStyle: 'wavy' }} />
+                              <span className="text-[10px] font-semibold text-red-600">Passive Voice</span>
+                              <span className="text-[9px] text-slate-400">(wavy underline)</span>
+                            </div>
+                          </div>
+
+                          {/* Stats counters */}
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1 px-2 py-1 bg-blue-50 rounded-md border border-blue-100">
+                              <span className="text-[10px] font-bold text-blue-700">{sentenceAnalysis.stats.internalized}</span>
+                              <span className="text-[9px] text-blue-500">int</span>
+                            </div>
+                            <div className="flex items-center gap-1 px-2 py-1 bg-amber-50 rounded-md border border-amber-100">
+                              <span className="text-[10px] font-bold text-amber-700">{sentenceAnalysis.stats.externalized}</span>
+                              <span className="text-[9px] text-amber-500">ext</span>
+                            </div>
+                            <div className="flex items-center gap-1 px-2 py-1 bg-slate-50 rounded-md border border-slate-200">
+                              <span className="text-[10px] font-bold text-slate-600">{sentenceAnalysis.stats.neutral}</span>
+                              <span className="text-[9px] text-slate-400">neutral</span>
+                            </div>
+                            {sentenceAnalysis.stats.passive > 0 && (
+                              <div className="flex items-center gap-1 px-2 py-1 bg-red-50 rounded-md border border-red-100">
+                                <span className="text-[10px] font-bold text-red-600">{sentenceAnalysis.stats.passive}</span>
+                                <span className="text-[9px] text-red-400">passive</span>
+                              </div>
+                            )}
+                            {/* Balance indicator */}
+                            <div className="flex items-center gap-1.5 px-2 py-1 bg-white rounded-md border border-slate-200" title={`Balance: ${Math.round(sentenceAnalysis.stats.balanceRatio * 100)}% internalized vs ${Math.round((1 - sentenceAnalysis.stats.balanceRatio) * 100)}% externalized`}>
+                              <div className="w-16 h-1.5 rounded-full overflow-hidden bg-amber-100 flex">
+                                <div className="h-full bg-blue-400 rounded-full transition-all duration-500" style={{ width: `${sentenceAnalysis.stats.balanceRatio * 100}%` }} />
+                              </div>
+                              <span className="text-[9px] font-semibold text-slate-500">
+                                {sentenceAnalysis.stats.balanceRatio >= 0.4 && sentenceAnalysis.stats.balanceRatio <= 0.6
+                                  ? 'Balanced'
+                                  : sentenceAnalysis.stats.balanceRatio > 0.6
+                                  ? 'More reflective'
+                                  : 'More action-focused'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <textarea
+                      ref={textareaRef}
+                      value={editContent}
+                      onChange={e => handleContentChange(e.target.value)}
+                      placeholder="Start writing your essay here...&#10;&#10;Your writing will be analyzed in real-time as you type. Tap &quot;Live Scores&quot; above to see your scores, tips, and suggestions."
+                      className="flex-1 min-h-0 w-full px-4 lg:px-6 py-4 lg:py-5 text-[14px] lg:text-[15px] leading-[1.8] focus:outline-none resize-none font-sans text-slate-800 placeholder:text-slate-300"
+                    />
+                  )}
+                </div>
 
                 {/* Mobile Scores Panel — shown only on mobile when scores tab is active */}
                 <div className={`flex-1 min-h-0 overflow-y-auto ${mobileEditorTab === 'write' ? 'hidden' : 'lg:hidden'}`}>
