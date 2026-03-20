@@ -40,7 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
       return res.status(201).json({ student: { ...student, tags: student.tags as string[], notes: student.notes as any[] } });
     } catch (e: any) {
-      if (e.code === 'P2002') return res.status(409).json({ error: 'Student with this email already exists' });
+      console.error('Add student error:', e.message);
       return res.status(500).json({ error: 'Failed to add student' });
     }
   }

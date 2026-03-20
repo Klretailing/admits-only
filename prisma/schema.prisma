@@ -254,7 +254,7 @@ model EducatorStudent {
   educator User      @relation(fields: [educatorId], references: [id], onDelete: Cascade)
   bookings Booking[]
 
-  @@unique([educatorId, studentEmail])
+  @@index([educatorId])
   @@map("educator_students")
 }
 
