@@ -11,7 +11,7 @@ model User {
   name      String
   email     String   @unique
   password  String
-  role      String   @default("student") // student | parent | admin
+  role      String   @default("student") // student | parent | educator | admin
   plan      String?  // foundations | scholarship | stem — null = free/no plan
   planStartedAt DateTime?
   lastLoginAt   DateTime?
@@ -25,6 +25,12 @@ model User {
   motifBoards        MotifBoard[]
   agentConversations AgentConversation[]
   agentMemory        AgentMemory?
+
+  // Educator relations
+  educatorProfile    EducatorProfile?
+  educatorServices   EducatorService[]
+  educatorStudents   EducatorStudent[]
+  bookings           Booking[]
 
   @@map("users")
 }
@@ -188,4 +194,91 @@ model AgentMemory {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("agent_memories")
+}
+
+// ─── Educator Models ───
+
+model EducatorProfile {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  bio              String   @default("")
+  headline         String   @default("") // e.g. "SAT & College Admissions Coach"
+  credentials      Json     @default("[]") // Array of { title, institution, year }
+  subjects         Json     @default("[]") // Array of speciality strings
+  hourlyRate       Float?
+  currency         String   @default("USD")
+  zoomLink         String   @default("")
+  googleMeetLink   String   @default("")
+  availability     Json     @default("{}") // { mon: [{start,end}], tue: [...], ... }
+  timezone         String   @default("America/New_York")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("educator_profiles")
+}
+
+model EducatorService {
+  id          String   @id @default(cuid())
+  educatorId  String
+  name        String   // e.g. "SAT Prep Session", "Essay Review"
+  description String   @default("")
+  duration    Int      @default(60) // minutes
+  price       Float
+  currency    String   @default("USD")
+  type        String   @default("one_on_one") // one_on_one | group | package
+  maxStudents Int      @default(1)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user     User      @relation(fields: [educatorId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@map("educator_services")
+}
+
+model EducatorStudent {
+  id         String   @id @default(cuid())
+  educatorId String
+  studentName String
+  studentEmail String  @default("")
+  tags       Json     @default("[]") // Array of tag strings e.g. ["SAT Prep", "Essay Review"]
+  notes      Json     @default("[]") // Array of { id, text, date }
+  status     String   @default("active") // active | paused | completed
+  startDate  DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  educator User      @relation(fields: [educatorId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@unique([educatorId, studentEmail])
+  @@map("educator_students")
+}
+
+model Booking {
+  id          String   @id @default(cuid())
+  educatorId  String
+  studentId   String?  // EducatorStudent id
+  serviceId   String?  // EducatorService id
+  title       String
+  date        DateTime
+  duration    Int      @default(60) // minutes
+  status      String   @default("scheduled") // scheduled | completed | cancelled | no_show
+  meetingLink String   @default("")
+  platform    String   @default("zoom") // zoom | google_meet | in_person | other
+  amount      Float    @default(0)
+  paid        Boolean  @default(false)
+  notes       String   @default("") // Session notes (educator fills in after session)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  educator User              @relation(fields: [educatorId], references: [id], onDelete: Cascade)
+  student  EducatorStudent?  @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  service  EducatorService?  @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+
+  @@index([educatorId, date])
+  @@map("bookings")
 }
