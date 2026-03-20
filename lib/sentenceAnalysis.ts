@@ -78,6 +78,11 @@ const COGNITIVE_VERBS = new Set([
   'worry', 'worried', 'agonize', 'agonized', 'fret', 'fretted',
   'suffer', 'suffered', 'grieve', 'grieved', 'mourn', 'mourned',
 
+  // Belief & opinion
+  'trust', 'trusted', 'accept', 'accepted', 'reject', 'rejected',
+  'deny', 'denied', 'identify', 'identified', 'distinguish', 'distinguished',
+  'differentiate', 'differentiated', 'puzzle', 'puzzled',
+
   // Learning & discovery
   'learn', 'learned', 'learnt', 'discover', 'discovered', 'uncover', 'uncovered',
   'notice', 'noticed', 'observe', 'observed', 'sense', 'sensed',
@@ -117,11 +122,11 @@ const INTERNALIZED_PATTERNS: RegExp[] = [
   // Emotional state descriptions
   /\b(?:a\s+(?:wave|surge|pang|rush|flood|sense|feeling)\s+of)\b/i,
 
-  // "the thought of" / "the idea of" / "the realization that"
-  /\b(?:the\s+(?:thought|idea|notion|realization|understanding|feeling|sense|fear|hope|belief|knowledge)\s+(?:of|that))\b/i,
+  // "the thought of" / "the idea of" / "the realization that" / "the importance of"
+  /\b(?:the\s+(?:thought|idea|notion|realization|understanding|feeling|sense|fear|hope|belief|knowledge|importance|significance|meaning|value|beauty|power|truth|reality|lesson|impact|weight|depth|essence|purpose)\s+(?:of|that))\b/i,
 
-  // "I was overwhelmed/moved/touched/struck/torn"
-  /\bI\s+(?:was|am|felt|feel)\s+(?:overwhelm|moved|touch|struck|torn|conflicted|confused|certain|unsure|grateful|ashamed|proud|humbled|inspired|motivated|discouraged|encouraged|determined|afraid|anxious|nervous|excited|thrilled|devastated|heartbroken|relieved|content|satisfied|dissatisfied|frustrated|fulfilled|empty|alive|numb|lost|found)/i,
+  // "I was overwhelmed/moved/touched/struck/torn" + "I became/grew [emotion]"
+  /\bI\s+(?:was|am|felt|feel|became|grew)\s+(?:overwhelm|moved|touch|struck|torn|conflicted|confused|certain|unsure|grateful|ashamed|proud|humbled|inspired|motivated|discouraged|encouraged|determined|afraid|anxious|nervous|excited|thrilled|devastated|heartbroken|relieved|content|satisfied|dissatisfied|frustrated|fulfilled|empty|alive|numb|lost|found|confident|comfortable|uncomfortable|curious|passionate|aware|conscious)/i,
 
   // Questions to self
   /\b(?:I\s+asked\s+myself|I\s+questioned\s+(?:whether|if|why|how))\b/i,
@@ -131,6 +136,9 @@ const INTERNALIZED_PATTERNS: RegExp[] = [
 
   // "looking back" / "in hindsight" / "in retrospect"
   /\b(?:looking\s+back|in\s+hindsight|in\s+retrospect|upon\s+reflection|reflecting\s+on)\b/i,
+
+  // "I have since learned/come to appreciate"
+  /\bI\s+have\s+since\s+(?:learned|come\s+to|realized|understood|grown|changed|become)\b/i,
 
   // "to this day" (ongoing internal state)
   /\bto\s+this\s+day\b/i,
@@ -162,6 +170,23 @@ const ACTION_VERBS = new Set([
   'open', 'opened', 'close', 'closed', 'shut', 'lock', 'locked',
   'turn', 'turned', 'twist', 'twisted', 'fold', 'folded', 'tear', 'tore',
 
+  // Gesture & body language
+  'nod', 'nodded', 'shrug', 'shrugged', 'wave', 'waved', 'gesture', 'gestured',
+  'point', 'pointed', 'duck', 'ducked', 'dodge', 'dodged', 'crouch', 'crouched',
+  'kneel', 'knelt', 'kneeled', 'seize', 'seized', 'snatch', 'snatched',
+
+  // Manner of walking
+  'stumble', 'stumbled', 'stagger', 'staggered', 'stroll', 'strolled',
+  'trudge', 'trudged', 'limp', 'limped', 'dive', 'dived', 'dove',
+  'soar', 'soared', 'glide', 'glided', 'slip', 'slipped',
+  'tumble', 'tumbled', 'roll', 'rolled', 'spin', 'spun',
+
+  // Manipulation & craft
+  'craft', 'crafted', 'carve', 'carved', 'sculpt', 'sculpted',
+  'mold', 'molded', 'shape', 'shaped', 'slice', 'sliced',
+  'chop', 'chopped', 'smash', 'smashed', 'crush', 'crushed',
+  'mix', 'mixed', 'stir', 'stirred', 'hammer', 'hammered',
+
   // Communication actions (external)
   'say', 'said', 'tell', 'told', 'ask', 'asked', 'answer', 'answered',
   'speak', 'spoke', 'shout', 'shouted', 'whisper', 'whispered',
@@ -171,6 +196,10 @@ const ACTION_VERBS = new Set([
   'teach', 'taught', 'instruct', 'instructed', 'lecture', 'lectured',
   'yell', 'yelled', 'scream', 'screamed', 'cry', 'cried', 'laugh', 'laughed',
   'sing', 'sang', 'read', 'recite', 'recited',
+  'murmur', 'murmured', 'mutter', 'muttered', 'mumble', 'mumbled',
+  'stammer', 'stammered', 'stutter', 'stuttered', 'plead', 'pleaded',
+  'beg', 'begged', 'demand', 'demanded', 'convince', 'convinced',
+  'persuade', 'persuaded', 'negotiate', 'negotiated', 'warn', 'warned',
 
   // Work & creation
   'work', 'worked', 'create', 'created', 'make', 'made', 'produce', 'produced',
@@ -223,6 +252,12 @@ const EXTERNALIZED_PATTERNS: RegExp[] = [
 
   // Lists of actions (X, Y, and Z-ed)
   /\b(?:and\s+then|after\s+that|next|afterward|subsequently|meanwhile|finally|eventually|immediately|suddenly|quickly)\b/i,
+
+  // Sensory detail patterns (strong external signal)
+  /\b(?:the\s+(?:sound|smell|taste|sight|feel|touch|warmth|cold|chill|heat|light|darkness|noise|silence|aroma|stench|fragrance|texture|weight)\s+of)\b/i,
+
+  // Specific temporal anchors
+  /\b(?:at\s+(?:dawn|dusk|noon|midnight|\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?))|on\s+(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday))\b/i,
 ];
 
 /* ─── Passive Voice Detection ───
@@ -232,13 +267,13 @@ const EXTERNALIZED_PATTERNS: RegExp[] = [
 
 const BE_FORMS = /\b(?:am|is|are|was|were|been|being|be|get|got|gets|getting)\b/i;
 
-// Common past participles (regular -ed and irregular)
-const PAST_PARTICIPLES = /\b(?:\w+ed|given|taken|made|done|seen|shown|known|gone|written|broken|chosen|driven|eaten|fallen|forgotten|frozen|hidden|ridden|risen|spoken|stolen|sworn|torn|woken|worn|born|built|bought|brought|caught|felt|found|held|kept|left|lost|meant|met|paid|put|read|said|sent|set|shot|shut|sold|spent|stood|struck|taught|thought|told|understood|won)\b/i;
+// Common irregular past participles for passive detection
+const IRREGULAR_PARTICIPLES = 'given|taken|made|done|seen|shown|known|gone|written|broken|chosen|driven|eaten|fallen|forgotten|frozen|hidden|ridden|risen|spoken|stolen|sworn|torn|woken|worn|born|built|bought|brought|caught|felt|found|held|kept|left|lost|meant|met|paid|put|read|said|sent|set|shot|shut|sold|spent|stood|struck|taught|thought|told|understood|won|hurt|stuck|fed|shaken|swept|hung|lit|grown|dealt|begun|spread|gotten|bent|blown|fought|bitten|bled|led|lent|let|quit|slid|spun|stung|swum|swung|sunk|sung|rung';
 
 // More specific passive patterns
 const PASSIVE_PATTERNS: RegExp[] = [
   // "was/were + past participle"
-  /\b(?:was|were)\s+(?:\w+ed|given|taken|made|done|seen|shown|known|written|broken|chosen|driven|eaten|fallen|forgotten|frozen|hidden|ridden|spoken|stolen|torn|born|built|bought|brought|caught|found|held|kept|left|lost|meant|met|paid|sent|set|shot|sold|spent|struck|taught|told|understood|won)\b/i,
+  new RegExp(`\\b(?:was|were)\\s+(?:\\w+ed|${IRREGULAR_PARTICIPLES})\\b`, 'i'),
 
   // "is/are/am + being + past participle"
   /\b(?:is|are|am)\s+being\s+\w+(?:ed|en|t|n)\b/i,
@@ -250,7 +285,7 @@ const PASSIVE_PATTERNS: RegExp[] = [
   /\b(?:will|can|could|should|would|must|may|might|shall)\s+be\s+\w+(?:ed|en|t|n)\b/i,
 
   // "get/got + past participle" (informal passive)
-  /\b(?:get|got|gets|getting)\s+(?:\w+ed|given|taken|made|done|seen|shown|known|written|broken|chosen|driven|eaten|fallen|forgotten|frozen|hidden|ridden|spoken|stolen|torn|born|built|bought|brought|caught|found|held|kept|left|lost|meant|met|paid|sent|set|shot|sold|spent|struck|taught|told|understood|won)\b/i,
+  new RegExp(`\\b(?:get|got|gets|getting)\\s+(?:\\w+ed|${IRREGULAR_PARTICIPLES})\\b`, 'i'),
 ];
 
 // Exceptions: "was/were + adjective" (not truly passive)
