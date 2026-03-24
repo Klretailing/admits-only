@@ -33,6 +33,10 @@ model User {
   bookings           Booking[]
   manualEarnings     ManualEarning[]
 
+  // Document collaboration
+  podDocuments       PodDocument[]
+  documentComments   DocumentComment[]
+
   @@map("users")
 }
 
@@ -111,8 +115,9 @@ model StudyPod {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  members  PodMember[]
-  messages PodMessage[]
+  members   PodMember[]
+  messages  PodMessage[]
+  documents PodDocument[]
 
   @@map("study_pods")
 }
@@ -297,4 +302,44 @@ model ManualEarning {
 
   @@index([educatorId])
   @@map("manual_earnings")
+}
+
+// ─── Pod Document Collaboration ───
+
+model PodDocument {
+  id          String   @id @default(cuid())
+  podId       String
+  uploaderId  String
+  fileName    String
+  fileType    String   // pdf | doc | docx | txt | image
+  fileSize    Int      // bytes
+  content     String   @default("") // text content for txt/extracted text
+  fileData    String   @default("") // base64-encoded file data for rendering
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  pod      StudyPod          @relation(fields: [podId], references: [id], onDelete: Cascade)
+  uploader User              @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+  comments DocumentComment[]
+
+  @@index([podId])
+  @@map("pod_documents")
+}
+
+model DocumentComment {
+  id          String   @id @default(cuid())
+  documentId  String
+  userId      String
+  content     String
+  section     String   @default("") // section/page reference for anchored comments
+  parentId    String?  // for threaded replies
+  createdAt   DateTime @default(now())
+
+  document PodDocument      @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent   DocumentComment? @relation("CommentThread", fields: [parentId], references: [id], onDelete: SetNull)
+  replies  DocumentComment[] @relation("CommentThread")
+
+  @@index([documentId])
+  @@map("document_comments")
 }

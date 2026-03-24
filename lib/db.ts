@@ -307,6 +307,43 @@ export async function ensureSchema() {
     `);
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "manual_earnings_educatorId_idx" ON "manual_earnings"("educatorId");`);
 
+    // ─── Pod Document Collaboration tables ───
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "pod_documents" (
+        "id"          TEXT NOT NULL,
+        "podId"       TEXT NOT NULL,
+        "uploaderId"  TEXT NOT NULL,
+        "fileName"    TEXT NOT NULL,
+        "fileType"    TEXT NOT NULL,
+        "fileSize"    INTEGER NOT NULL,
+        "content"     TEXT NOT NULL DEFAULT '',
+        "fileData"    TEXT NOT NULL DEFAULT '',
+        "createdAt"   TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt"   TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "pod_documents_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "pod_documents_podId_fkey" FOREIGN KEY ("podId") REFERENCES "study_pods"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "pod_documents_uploaderId_fkey" FOREIGN KEY ("uploaderId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "pod_documents_podId_idx" ON "pod_documents"("podId");`);
+
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "document_comments" (
+        "id"          TEXT NOT NULL,
+        "documentId"  TEXT NOT NULL,
+        "userId"      TEXT NOT NULL,
+        "content"     TEXT NOT NULL,
+        "section"     TEXT NOT NULL DEFAULT '',
+        "parentId"    TEXT,
+        "createdAt"   TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "document_comments_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "document_comments_documentId_fkey" FOREIGN KEY ("documentId") REFERENCES "pod_documents"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "document_comments_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "document_comments_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "document_comments"("id") ON DELETE SET NULL ON UPDATE CASCADE
+      );
+    `);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "document_comments_documentId_idx" ON "document_comments"("documentId");`);
+
     globalForPrisma.schemaReady = true;
   } catch (e) {
     // Tables likely already exist — mark as ready
