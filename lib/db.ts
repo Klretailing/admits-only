@@ -344,6 +344,44 @@ export async function ensureSchema() {
     `);
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "document_comments_documentId_idx" ON "document_comments"("documentId");`);
 
+    // ─── Pod Study Sessions tables ───
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "pod_study_sessions" (
+        "id"             TEXT NOT NULL,
+        "podId"          TEXT NOT NULL,
+        "creatorId"      TEXT NOT NULL,
+        "title"          TEXT NOT NULL DEFAULT 'Focus Session',
+        "focusDuration"  INTEGER NOT NULL DEFAULT 25,
+        "breakDuration"  INTEGER NOT NULL DEFAULT 5,
+        "rounds"         INTEGER NOT NULL DEFAULT 4,
+        "status"         TEXT NOT NULL DEFAULT 'waiting',
+        "currentRound"   INTEGER NOT NULL DEFAULT 0,
+        "startedAt"      TIMESTAMP(3),
+        "endsAt"         TIMESTAMP(3),
+        "createdAt"      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt"      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "pod_study_sessions_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "pod_study_sessions_podId_fkey" FOREIGN KEY ("podId") REFERENCES "study_pods"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "pod_study_sessions_creatorId_fkey" FOREIGN KEY ("creatorId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "pod_study_sessions_podId_idx" ON "pod_study_sessions"("podId");`);
+
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "session_participants" (
+        "id"         TEXT NOT NULL,
+        "sessionId"  TEXT NOT NULL,
+        "userId"     TEXT NOT NULL,
+        "goal"       TEXT NOT NULL DEFAULT '',
+        "completed"  BOOLEAN NOT NULL DEFAULT false,
+        "joinedAt"   TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "session_participants_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "session_participants_sessionId_userId_key" UNIQUE ("sessionId", "userId"),
+        CONSTRAINT "session_participants_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "pod_study_sessions"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "session_participants_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+
     globalForPrisma.schemaReady = true;
   } catch (e) {
     // Tables likely already exist — mark as ready

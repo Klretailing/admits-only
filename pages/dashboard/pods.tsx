@@ -65,6 +65,34 @@ interface DocComment {
   replies?: DocComment[];
 }
 
+interface StudySession {
+  id: string;
+  podId: string;
+  creatorId: string;
+  title: string;
+  focusDuration: number;
+  breakDuration: number;
+  rounds: number;
+  status: string;
+  currentRound: number;
+  startedAt: string | null;
+  endsAt: string | null;
+  createdAt: string;
+  creator: { id: string; name: string };
+  participants: SessionParticipant[];
+  _count?: { participants: number };
+}
+
+interface SessionParticipant {
+  id: string;
+  sessionId: string;
+  userId: string;
+  goal: string;
+  completed: boolean;
+  joinedAt: string;
+  user: { id: string; name: string };
+}
+
 /* ─── Avatar color generator ─── */
 const AVATAR_COLORS = [
   'from-indigo-500 to-purple-600',
@@ -127,7 +155,7 @@ export default function StudyPods() {
   const [error, setError] = useState('');
 
   // Document Collaboration Hub
-  const [activeTab, setActiveTab] = useState<'chat' | 'documents'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'documents' | 'focus'>('chat');
   const [documents, setDocuments] = useState<PodDoc[]>([]);
   const [selectedDoc, setSelectedDoc] = useState<PodDoc | null>(null);
   const [docLoading, setDocLoading] = useState(false);
@@ -136,6 +164,18 @@ export default function StudyPods() {
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Focus Sessions (Pomodoro)
+  const [sessions, setSessions] = useState<StudySession[]>([]);
+  const [selectedSession, setSelectedSession] = useState<StudySession | null>(null);
+  const [showCreateSession, setShowCreateSession] = useState(false);
+  const [sessionTitle, setSessionTitle] = useState('Focus Session');
+  const [sessionFocusDuration, setSessionFocusDuration] = useState(25);
+  const [sessionBreakDuration, setSessionBreakDuration] = useState(5);
+  const [sessionRounds, setSessionRounds] = useState(4);
+  const [sessionGoal, setSessionGoal] = useState('');
+  const [timerDisplay, setTimerDisplay] = useState('');
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -287,6 +327,138 @@ export default function StudyPods() {
       loadDocuments(selectedPod.id);
     }
   }, [selectedPod, activeTab, loadDocuments]);
+
+  /* ─── Focus Sessions functions ─── */
+  const loadSessions = useCallback(async (podId: string) => {
+    try {
+      const r = await fetch(`/api/pod-sessions?podId=${podId}`);
+      const data = await r.json();
+      setSessions(data.sessions || []);
+    } catch { /* ignore */ }
+  }, []);
+
+  const loadSession = useCallback(async (sessionId: string) => {
+    try {
+      const r = await fetch(`/api/pod-sessions?podId=${selectedPod?.id}&sessionId=${sessionId}`);
+      const data = await r.json();
+      if (data.session) setSelectedSession(data.session);
+    } catch { /* ignore */ }
+  }, [selectedPod]);
+
+  useEffect(() => {
+    if (selectedPod && activeTab === 'focus') {
+      loadSessions(selectedPod.id);
+    }
+  }, [selectedPod, activeTab, loadSessions]);
+
+  // Timer countdown
+  useEffect(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (!selectedSession || !selectedSession.endsAt || selectedSession.status === 'waiting' || selectedSession.status === 'completed') {
+      setTimerDisplay('');
+      return;
+    }
+    const tick = () => {
+      const now = Date.now();
+      const end = new Date(selectedSession.endsAt!).getTime();
+      const diff = Math.max(0, end - now);
+      const mins = Math.floor(diff / 60000);
+      const secs = Math.floor((diff % 60000) / 1000);
+      setTimerDisplay(`${mins}:${secs.toString().padStart(2, '0')}`);
+      if (diff <= 0) {
+        setTimerDisplay('0:00');
+        if (timerRef.current) clearInterval(timerRef.current);
+      }
+    };
+    tick();
+    timerRef.current = setInterval(tick, 1000);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [selectedSession]);
+
+  // Auto-refresh active session
+  useEffect(() => {
+    if (selectedSession && (selectedSession.status === 'active' || selectedSession.status === 'break')) {
+      const interval = setInterval(() => loadSession(selectedSession.id), 10000);
+      return () => clearInterval(interval);
+    }
+  }, [selectedSession, loadSession]);
+
+  const createSession = async () => {
+    if (!selectedPod) return;
+    try {
+      const r = await fetch('/api/pod-sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create',
+          podId: selectedPod.id,
+          title: sessionTitle,
+          focusDuration: sessionFocusDuration,
+          breakDuration: sessionBreakDuration,
+          rounds: sessionRounds,
+          goal: sessionGoal,
+        }),
+      });
+      const data = await r.json();
+      if (r.ok) {
+        setShowCreateSession(false);
+        setSessionTitle('Focus Session');
+        setSessionGoal('');
+        loadSessions(selectedPod.id);
+        if (data.session) {
+          loadSession(data.session.id);
+        }
+      }
+    } catch { /* ignore */ }
+  };
+
+  const joinSession = async (sessionId: string) => {
+    try {
+      await fetch('/api/pod-sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'join', sessionId, goal: sessionGoal }),
+      });
+      setSessionGoal('');
+      loadSession(sessionId);
+      if (selectedPod) loadSessions(selectedPod.id);
+    } catch { /* ignore */ }
+  };
+
+  const startSession = async (sessionId: string) => {
+    try {
+      await fetch('/api/pod-sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'start', sessionId }),
+      });
+      loadSession(sessionId);
+      if (selectedPod) loadSessions(selectedPod.id);
+    } catch { /* ignore */ }
+  };
+
+  const advanceSession = async (sessionId: string) => {
+    try {
+      await fetch('/api/pod-sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'advance', sessionId }),
+      });
+      loadSession(sessionId);
+      if (selectedPod) loadSessions(selectedPod.id);
+    } catch { /* ignore */ }
+  };
+
+  const toggleGoalComplete = async (sessionId: string) => {
+    try {
+      await fetch('/api/pod-sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'complete-goal', sessionId }),
+      });
+      loadSession(sessionId);
+    } catch { /* ignore */ }
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -756,6 +928,24 @@ export default function StudyPods() {
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent/10 text-accent font-bold">{documents.length}</span>
                     )}
                   </button>
+                  <button
+                    onClick={() => { setActiveTab('focus'); setSelectedSession(null); }}
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                      activeTab === 'focus'
+                        ? 'bg-white text-primary shadow-sm'
+                        : 'text-slate-400 hover:text-slate-600'
+                    }`}
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Focus
+                    {sessions.filter(s => s.status !== 'completed').length > 0 && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold">
+                        {sessions.filter(s => s.status !== 'completed').length}
+                      </span>
+                    )}
+                  </button>
                 </div>
               </div>
 
@@ -1081,6 +1271,319 @@ export default function StudyPods() {
                           </div>
                         )}
                       </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ═══════════════ FOCUS TAB ═══════════════ */}
+              {activeTab === 'focus' && (
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  {selectedSession ? (
+                    /* ─── Session detail view ─── */
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                      {/* Session header */}
+                      <div className="px-4 lg:px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <button
+                            onClick={() => setSelectedSession(null)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-primary hover:bg-white transition-all flex-shrink-0"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                          </button>
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-primary truncate">{selectedSession.title}</p>
+                            <p className="text-[10px] text-slate-400">
+                              by {selectedSession.creator.name} &middot; {selectedSession.focusDuration}m focus / {selectedSession.breakDuration}m break &middot; {selectedSession.rounds} rounds
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[10px] px-2 py-1 rounded-full font-bold ${
+                            selectedSession.status === 'waiting' ? 'bg-amber-100 text-amber-700' :
+                            selectedSession.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
+                            selectedSession.status === 'break' ? 'bg-blue-100 text-blue-700' :
+                            'bg-slate-100 text-slate-500'
+                          }`}>
+                            {selectedSession.status === 'waiting' ? 'Waiting' :
+                             selectedSession.status === 'active' ? `Round ${selectedSession.currentRound}/${selectedSession.rounds}` :
+                             selectedSession.status === 'break' ? 'Break' : 'Completed'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Timer display */}
+                      <div className="flex-1 overflow-y-auto px-4 lg:px-5 py-6">
+                        {(selectedSession.status === 'active' || selectedSession.status === 'break') && (
+                          <div className="text-center mb-6">
+                            <div className={`inline-flex flex-col items-center justify-center w-40 h-40 rounded-full border-4 ${
+                              selectedSession.status === 'active' ? 'border-emerald-400 bg-emerald-50' : 'border-blue-400 bg-blue-50'
+                            }`}>
+                              <span className="text-4xl font-bold font-display text-primary">{timerDisplay || '--:--'}</span>
+                              <span className={`text-xs font-semibold mt-1 ${
+                                selectedSession.status === 'active' ? 'text-emerald-600' : 'text-blue-600'
+                              }`}>
+                                {selectedSession.status === 'active' ? 'Focus Time' : 'Break Time'}
+                              </span>
+                            </div>
+                            {selectedSession.creatorId === currentUserId && (
+                              <div className="mt-4">
+                                <button
+                                  onClick={() => advanceSession(selectedSession.id)}
+                                  className="px-4 py-2 bg-accent text-white text-xs font-semibold rounded-lg hover:bg-accent/90 transition-all shadow-sm"
+                                >
+                                  {selectedSession.status === 'active' && selectedSession.currentRound >= selectedSession.rounds
+                                    ? 'Complete Session'
+                                    : selectedSession.status === 'active'
+                                    ? 'Start Break'
+                                    : 'Start Next Round'}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {selectedSession.status === 'waiting' && (
+                          <div className="text-center mb-6">
+                            <div className="inline-flex flex-col items-center justify-center w-40 h-40 rounded-full border-4 border-amber-300 bg-amber-50">
+                              <svg className="w-10 h-10 text-amber-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <span className="text-xs font-semibold text-amber-600">Waiting to start</span>
+                            </div>
+                            {selectedSession.creatorId === currentUserId && (
+                              <div className="mt-4">
+                                <button
+                                  onClick={() => startSession(selectedSession.id)}
+                                  className="px-5 py-2.5 bg-emerald-500 text-white text-sm font-bold rounded-lg hover:bg-emerald-600 transition-all shadow-sm"
+                                >
+                                  Start Session
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {selectedSession.status === 'completed' && (
+                          <div className="text-center mb-6">
+                            <div className="inline-flex flex-col items-center justify-center w-40 h-40 rounded-full border-4 border-slate-200 bg-slate-50">
+                              <svg className="w-10 h-10 text-emerald-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <span className="text-xs font-semibold text-slate-500">Session Complete</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Participants */}
+                        <div className="mt-4">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">
+                            Participants — {selectedSession.participants?.length || 0}
+                          </p>
+                          <div className="space-y-2">
+                            {selectedSession.participants?.map(p => (
+                              <div key={p.id} className="flex items-center gap-3 px-3 py-2.5 bg-white rounded-xl border border-slate-100 shadow-sm">
+                                <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${getAvatarColor(p.user.name)} flex items-center justify-center text-white text-[10px] font-bold`}>
+                                  {getInitials(p.user.name)}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-semibold text-primary">{p.user.name}</p>
+                                  {p.goal && <p className="text-[10px] text-slate-400 truncate">{p.goal}</p>}
+                                </div>
+                                {p.userId === currentUserId && selectedSession.status !== 'completed' && (
+                                  <button
+                                    onClick={() => toggleGoalComplete(selectedSession.id)}
+                                    className={`p-1.5 rounded-lg transition-all ${
+                                      p.completed
+                                        ? 'text-emerald-500 bg-emerald-50'
+                                        : 'text-slate-300 hover:text-emerald-500 hover:bg-emerald-50'
+                                    }`}
+                                    title={p.completed ? 'Mark incomplete' : 'Mark complete'}
+                                  >
+                                    <svg className="w-4 h-4" fill={p.completed ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                  </button>
+                                )}
+                                {p.userId !== currentUserId && p.completed && (
+                                  <svg className="w-4 h-4 text-emerald-500" fill="currentColor" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Join button if not already a participant */}
+                          {selectedSession.status !== 'completed' &&
+                           !selectedSession.participants?.some(p => p.userId === currentUserId) && (
+                            <div className="mt-4 space-y-2">
+                              <input
+                                type="text"
+                                value={sessionGoal}
+                                onChange={e => setSessionGoal(e.target.value)}
+                                placeholder="What will you work on? (optional)"
+                                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30"
+                              />
+                              <button
+                                onClick={() => joinSession(selectedSession.id)}
+                                className="w-full px-4 py-2 bg-accent text-white text-xs font-semibold rounded-lg hover:bg-accent/90 transition-all"
+                              >
+                                Join Session
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ) : showCreateSession ? (
+                    /* ─── Create session form ─── */
+                    <div className="flex-1 overflow-y-auto px-4 lg:px-5 py-5">
+                      <div className="max-w-sm mx-auto space-y-4">
+                        <div className="flex items-center gap-3 mb-2">
+                          <button
+                            onClick={() => setShowCreateSession(false)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-primary hover:bg-slate-50 transition-all"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                          </button>
+                          <h4 className="text-sm font-bold text-primary">New Focus Session</h4>
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Session Title</label>
+                          <input
+                            type="text"
+                            value={sessionTitle}
+                            onChange={e => setSessionTitle(e.target.value)}
+                            className="w-full mt-1 px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30"
+                          />
+                        </div>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Focus (min)</label>
+                            <input
+                              type="number"
+                              value={sessionFocusDuration}
+                              onChange={e => setSessionFocusDuration(Math.max(1, parseInt(e.target.value) || 1))}
+                              min={1}
+                              className="w-full mt-1 px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Break (min)</label>
+                            <input
+                              type="number"
+                              value={sessionBreakDuration}
+                              onChange={e => setSessionBreakDuration(Math.max(1, parseInt(e.target.value) || 1))}
+                              min={1}
+                              className="w-full mt-1 px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Rounds</label>
+                            <input
+                              type="number"
+                              value={sessionRounds}
+                              onChange={e => setSessionRounds(Math.max(1, parseInt(e.target.value) || 1))}
+                              min={1}
+                              className="w-full mt-1 px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Your Goal (optional)</label>
+                          <input
+                            type="text"
+                            value={sessionGoal}
+                            onChange={e => setSessionGoal(e.target.value)}
+                            placeholder="e.g. Finish Common App essay draft"
+                            className="w-full mt-1 px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30"
+                          />
+                        </div>
+                        <div className="flex gap-3 pt-2">
+                          <button
+                            onClick={() => setShowCreateSession(false)}
+                            className="flex-1 px-4 py-2 border border-slate-200 text-slate-600 text-xs font-semibold rounded-lg hover:bg-slate-50 transition-all"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={createSession}
+                            className="flex-1 px-4 py-2 bg-accent text-white text-xs font-semibold rounded-lg hover:bg-accent/90 transition-all shadow-sm"
+                          >
+                            Create Session
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    /* ─── Sessions list ─── */
+                    <div className="flex-1 overflow-y-auto px-4 lg:px-5 py-4">
+                      {/* Create button */}
+                      <button
+                        onClick={() => setShowCreateSession(true)}
+                        className="w-full mb-4 flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-slate-200 text-slate-500 text-xs font-semibold rounded-xl hover:border-accent/30 hover:text-accent hover:bg-accent/5 transition-all"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                        New Focus Session
+                      </button>
+
+                      {sessions.length === 0 ? (
+                        <div className="text-center py-12">
+                          <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-emerald-100 to-teal-50 flex items-center justify-center mb-4">
+                            <svg className="w-8 h-8 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </div>
+                          <h4 className="text-sm font-bold text-primary mb-1">No Focus Sessions Yet</h4>
+                          <p className="text-xs text-slate-400 max-w-xs mx-auto">Start a Pomodoro focus session and study together with your pod members in real time.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {sessions.map(s => {
+                            const isActive = s.status === 'active' || s.status === 'break';
+                            const participantCount = s._count?.participants || s.participants?.length || 0;
+                            return (
+                              <button
+                                key={s.id}
+                                onClick={() => loadSession(s.id)}
+                                className={`w-full text-left px-4 py-3 rounded-xl border transition-all ${
+                                  isActive
+                                    ? 'border-emerald-200 bg-emerald-50/50 hover:border-emerald-300'
+                                    : s.status === 'waiting'
+                                    ? 'border-amber-200 bg-amber-50/30 hover:border-amber-300'
+                                    : 'border-slate-100 bg-white hover:border-slate-200'
+                                } hover:shadow-sm`}
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="text-sm font-semibold text-primary truncate">{s.title}</p>
+                                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold flex-shrink-0 ${
+                                    s.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
+                                    s.status === 'break' ? 'bg-blue-100 text-blue-700' :
+                                    s.status === 'waiting' ? 'bg-amber-100 text-amber-700' :
+                                    'bg-slate-100 text-slate-500'
+                                  }`}>
+                                    {s.status === 'active' ? `Round ${s.currentRound}/${s.rounds}` :
+                                     s.status === 'break' ? 'Break' :
+                                     s.status === 'waiting' ? 'Waiting' : 'Done'}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-3 mt-1.5">
+                                  <span className="text-[10px] text-slate-400">
+                                    {s.focusDuration}m/{s.breakDuration}m x{s.rounds}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400">
+                                    {participantCount} {participantCount === 1 ? 'person' : 'people'}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 ml-auto">
+                                    {formatTime(s.createdAt)}
+                                  </span>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

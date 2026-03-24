@@ -37,6 +37,10 @@ model User {
   podDocuments       PodDocument[]
   documentComments   DocumentComment[]
 
+  // Study sessions
+  createdSessions    PodStudySession[]    @relation("SessionCreator")
+  sessionParticipations SessionParticipant[]
+
   @@map("users")
 }
 
@@ -115,9 +119,10 @@ model StudyPod {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  members   PodMember[]
-  messages  PodMessage[]
-  documents PodDocument[]
+  members       PodMember[]
+  messages      PodMessage[]
+  documents     PodDocument[]
+  studySessions PodStudySession[]
 
   @@map("study_pods")
 }
@@ -342,4 +347,44 @@ model DocumentComment {
 
   @@index([documentId])
   @@map("document_comments")
+}
+
+// ─── Pod Study Sessions (Pomodoro Focus Rooms) ───
+
+model PodStudySession {
+  id            String   @id @default(cuid())
+  podId         String
+  creatorId     String
+  title         String   @default("Focus Session")
+  focusDuration Int      @default(25)  // minutes
+  breakDuration Int      @default(5)   // minutes
+  rounds        Int      @default(4)   // number of pomodoro rounds
+  status        String   @default("waiting") // waiting | active | break | completed
+  currentRound  Int      @default(0)
+  startedAt     DateTime?
+  endsAt        DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  pod          StudyPod               @relation(fields: [podId], references: [id], onDelete: Cascade)
+  creator      User                   @relation("SessionCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  participants SessionParticipant[]
+
+  @@index([podId])
+  @@map("pod_study_sessions")
+}
+
+model SessionParticipant {
+  id          String   @id @default(cuid())
+  sessionId   String
+  userId      String
+  goal        String   @default("") // what they plan to work on
+  completed   Boolean  @default(false)
+  joinedAt    DateTime @default(now())
+
+  session PodStudySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId])
+  @@map("session_participants")
 }
