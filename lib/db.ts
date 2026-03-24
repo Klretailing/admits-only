@@ -207,6 +207,181 @@ export async function ensureSchema() {
       );
     `);
 
+    // ─── Educator tables ───
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "educator_profiles" (
+        "id"             TEXT NOT NULL,
+        "userId"         TEXT NOT NULL,
+        "bio"            TEXT NOT NULL DEFAULT '',
+        "headline"       TEXT NOT NULL DEFAULT '',
+        "credentials"    JSONB NOT NULL DEFAULT '[]',
+        "subjects"       JSONB NOT NULL DEFAULT '[]',
+        "hourlyRate"     DOUBLE PRECISION,
+        "currency"       TEXT NOT NULL DEFAULT 'USD',
+        "zoomLink"       TEXT NOT NULL DEFAULT '',
+        "googleMeetLink" TEXT NOT NULL DEFAULT '',
+        "availability"   JSONB NOT NULL DEFAULT '{}',
+        "timezone"       TEXT NOT NULL DEFAULT 'America/New_York',
+        "createdAt"      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt"      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "educator_profiles_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "educator_profiles_userId_key" UNIQUE ("userId"),
+        CONSTRAINT "educator_profiles_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "educator_services" (
+        "id"          TEXT NOT NULL,
+        "educatorId"  TEXT NOT NULL,
+        "name"        TEXT NOT NULL,
+        "description" TEXT NOT NULL DEFAULT '',
+        "duration"    INTEGER NOT NULL DEFAULT 60,
+        "price"       DOUBLE PRECISION NOT NULL,
+        "currency"    TEXT NOT NULL DEFAULT 'USD',
+        "type"        TEXT NOT NULL DEFAULT 'one_on_one',
+        "maxStudents" INTEGER NOT NULL DEFAULT 1,
+        "active"      BOOLEAN NOT NULL DEFAULT true,
+        "createdAt"   TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt"   TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "educator_services_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "educator_services_educatorId_fkey" FOREIGN KEY ("educatorId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "educator_students" (
+        "id"           TEXT NOT NULL,
+        "educatorId"   TEXT NOT NULL,
+        "studentName"  TEXT NOT NULL,
+        "studentEmail" TEXT NOT NULL DEFAULT '',
+        "tags"         JSONB NOT NULL DEFAULT '[]',
+        "notes"        JSONB NOT NULL DEFAULT '[]',
+        "status"       TEXT NOT NULL DEFAULT 'active',
+        "startDate"    TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "createdAt"    TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt"    TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "educator_students_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "educator_students_educatorId_fkey" FOREIGN KEY ("educatorId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "educator_students_educatorId_idx" ON "educator_students"("educatorId");`);
+
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "bookings" (
+        "id"          TEXT NOT NULL,
+        "educatorId"  TEXT NOT NULL,
+        "studentId"   TEXT,
+        "serviceId"   TEXT,
+        "title"       TEXT NOT NULL,
+        "date"        TIMESTAMP(3) NOT NULL,
+        "duration"    INTEGER NOT NULL DEFAULT 60,
+        "status"      TEXT NOT NULL DEFAULT 'scheduled',
+        "meetingLink" TEXT NOT NULL DEFAULT '',
+        "platform"    TEXT NOT NULL DEFAULT 'zoom',
+        "amount"      DOUBLE PRECISION NOT NULL DEFAULT 0,
+        "paid"        BOOLEAN NOT NULL DEFAULT false,
+        "notes"       TEXT NOT NULL DEFAULT '',
+        "createdAt"   TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt"   TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "bookings_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "bookings_educatorId_fkey" FOREIGN KEY ("educatorId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "bookings_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "educator_students"("id") ON DELETE SET NULL ON UPDATE CASCADE,
+        CONSTRAINT "bookings_serviceId_fkey" FOREIGN KEY ("serviceId") REFERENCES "educator_services"("id") ON DELETE SET NULL ON UPDATE CASCADE
+      );
+    `);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "bookings_educatorId_date_idx" ON "bookings"("educatorId", "date");`);
+
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "manual_earnings" (
+        "id"          TEXT NOT NULL,
+        "educatorId"  TEXT NOT NULL,
+        "description" TEXT NOT NULL,
+        "hours"       DOUBLE PRECISION NOT NULL,
+        "amount"      DOUBLE PRECISION NOT NULL,
+        "date"        TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "createdAt"   TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "manual_earnings_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "manual_earnings_educatorId_fkey" FOREIGN KEY ("educatorId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "manual_earnings_educatorId_idx" ON "manual_earnings"("educatorId");`);
+
+    // ─── Pod Document Collaboration tables ───
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "pod_documents" (
+        "id"          TEXT NOT NULL,
+        "podId"       TEXT NOT NULL,
+        "uploaderId"  TEXT NOT NULL,
+        "fileName"    TEXT NOT NULL,
+        "fileType"    TEXT NOT NULL,
+        "fileSize"    INTEGER NOT NULL,
+        "content"     TEXT NOT NULL DEFAULT '',
+        "fileData"    TEXT NOT NULL DEFAULT '',
+        "createdAt"   TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt"   TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "pod_documents_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "pod_documents_podId_fkey" FOREIGN KEY ("podId") REFERENCES "study_pods"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "pod_documents_uploaderId_fkey" FOREIGN KEY ("uploaderId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "pod_documents_podId_idx" ON "pod_documents"("podId");`);
+
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "document_comments" (
+        "id"          TEXT NOT NULL,
+        "documentId"  TEXT NOT NULL,
+        "userId"      TEXT NOT NULL,
+        "content"     TEXT NOT NULL,
+        "section"     TEXT NOT NULL DEFAULT '',
+        "parentId"    TEXT,
+        "createdAt"   TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "document_comments_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "document_comments_documentId_fkey" FOREIGN KEY ("documentId") REFERENCES "pod_documents"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "document_comments_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "document_comments_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "document_comments"("id") ON DELETE SET NULL ON UPDATE CASCADE
+      );
+    `);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "document_comments_documentId_idx" ON "document_comments"("documentId");`);
+
+    // ─── Pod Study Sessions tables ───
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "pod_study_sessions" (
+        "id"             TEXT NOT NULL,
+        "podId"          TEXT NOT NULL,
+        "creatorId"      TEXT NOT NULL,
+        "title"          TEXT NOT NULL DEFAULT 'Focus Session',
+        "focusDuration"  INTEGER NOT NULL DEFAULT 25,
+        "breakDuration"  INTEGER NOT NULL DEFAULT 5,
+        "rounds"         INTEGER NOT NULL DEFAULT 4,
+        "status"         TEXT NOT NULL DEFAULT 'waiting',
+        "currentRound"   INTEGER NOT NULL DEFAULT 0,
+        "startedAt"      TIMESTAMP(3),
+        "endsAt"         TIMESTAMP(3),
+        "createdAt"      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt"      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "pod_study_sessions_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "pod_study_sessions_podId_fkey" FOREIGN KEY ("podId") REFERENCES "study_pods"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "pod_study_sessions_creatorId_fkey" FOREIGN KEY ("creatorId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "pod_study_sessions_podId_idx" ON "pod_study_sessions"("podId");`);
+
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "session_participants" (
+        "id"         TEXT NOT NULL,
+        "sessionId"  TEXT NOT NULL,
+        "userId"     TEXT NOT NULL,
+        "goal"       TEXT NOT NULL DEFAULT '',
+        "completed"  BOOLEAN NOT NULL DEFAULT false,
+        "joinedAt"   TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "session_participants_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "session_participants_sessionId_userId_key" UNIQUE ("sessionId", "userId"),
+        CONSTRAINT "session_participants_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "pod_study_sessions"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "session_participants_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+
     globalForPrisma.schemaReady = true;
   } catch (e) {
     // Tables likely already exist — mark as ready

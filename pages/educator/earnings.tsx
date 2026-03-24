@@ -11,6 +11,15 @@ interface MonthlyData {
   cumulative: number;
 }
 
+interface ManualEarningEntry {
+  id: string;
+  description: string;
+  hours: number;
+  amount: number;
+  date: string;
+  type: 'manual';
+}
+
 interface EarningsData {
   totalRevenue: number;
   monthRevenue: number;
@@ -18,6 +27,8 @@ interface EarningsData {
   unpaidAmount: number;
   totalSessions: number;
   completedSessions: number;
+  totalHours: number;
+  avgHourlyRate: number;
   monthlyBreakdown: MonthlyData[];
   payments: {
     id: string;
@@ -27,7 +38,9 @@ interface EarningsData {
     paid: boolean;
     status: string;
     studentName: string;
+    type: 'booking';
   }[];
+  manualEarnings: ManualEarningEntry[];
 }
 
 function formatCurrency(amount: number) {
@@ -39,10 +52,10 @@ function formatCompact(amount: number) {
   return `$${amount}`;
 }
 
-function BarChart({ data, valueKey, color, gradientFrom, gradientTo }: {
+function BarChart({ data, valueKey, gradientFrom, gradientTo }: {
   data: MonthlyData[];
   valueKey: 'earnings' | 'cumulative';
-  color: string;
+  color?: string;
   gradientFrom: string;
   gradientTo: string;
 }) {
@@ -53,14 +66,12 @@ function BarChart({ data, valueKey, color, gradientFrom, gradientTo }: {
 
   return (
     <div className="relative">
-      {/* Y-axis labels */}
       <div className="flex">
         <div className="flex flex-col justify-between pr-3 py-1" style={{ height: 260 }}>
           {[...tickValues].reverse().map((v, i) => (
             <span key={i} className="text-[10px] text-slate-400 text-right whitespace-nowrap">{formatCompact(v)}</span>
           ))}
         </div>
-        {/* Chart area */}
         <div className="flex-1">
           <div className="flex items-end gap-1.5 sm:gap-2.5" style={{ height: 260 }}>
             {data.map((d, i) => {
@@ -86,7 +97,6 @@ function BarChart({ data, valueKey, color, gradientFrom, gradientTo }: {
               );
             })}
           </div>
-          {/* X-axis labels */}
           <div className="flex gap-1.5 sm:gap-2.5 mt-2 border-t border-slate-100 pt-2">
             {data.map(d => (
               <div key={d.month} className="flex-1 text-center">
@@ -107,18 +117,26 @@ export default function EducatorEarnings() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'paid' | 'unpaid'>('all');
   const [chartModal, setChartModal] = useState<'monthly' | 'total' | null>(null);
+  const [showAddEarning, setShowAddEarning] = useState(false);
+  const [earningForm, setEarningForm] = useState({ description: '', hours: '', amount: '', date: '' });
+  const [earningError, setEarningError] = useState('');
+  const [savingEarning, setSavingEarning] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/login');
     if (status === 'authenticated' && (session?.user as any)?.role !== 'educator') router.push('/dashboard');
   }, [status, session, router]);
 
-  useEffect(() => {
-    if (status !== 'authenticated') return;
+  const fetchEarnings = () => {
     fetch('/api/educator/earnings')
       .then(r => r.json())
       .then(d => { setData(d); setLoading(false); })
       .catch(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    fetchEarnings();
   }, [status]);
 
   const handleTogglePaid = async (bookingId: string, currentPaid: boolean) => {
@@ -127,9 +145,45 @@ export default function EducatorEarnings() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ paid: !currentPaid }),
     });
-    const r = await fetch('/api/educator/earnings');
-    const d = await r.json();
-    setData(d);
+    fetchEarnings();
+  };
+
+  const handleAddEarning = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingEarning(true);
+    setEarningError('');
+    try {
+      const res = await fetch('/api/educator/earnings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          description: earningForm.description,
+          hours: parseFloat(earningForm.hours),
+          amount: parseFloat(earningForm.amount),
+          date: earningForm.date || undefined,
+        }),
+      });
+      if (res.ok) {
+        setShowAddEarning(false);
+        setEarningForm({ description: '', hours: '', amount: '', date: '' });
+        fetchEarnings();
+      } else {
+        const d = await res.json();
+        setEarningError(d.error || 'Failed to add earning');
+      }
+    } catch {
+      setEarningError('Network error. Please try again.');
+    }
+    setSavingEarning(false);
+  };
+
+  const handleDeleteEarning = async (id: string) => {
+    await fetch('/api/educator/earnings', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+    fetchEarnings();
   };
 
   const filtered = useMemo(() => {
@@ -150,9 +204,15 @@ export default function EducatorEarnings() {
       <Head><title>Earnings | AdmitsOnly Educator</title></Head>
 
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold font-display text-primary">Earnings</h1>
-          <p className="mt-1 text-slate-500">Track your revenue and payment history</p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold font-display text-primary">Earnings</h1>
+            <p className="mt-1 text-slate-500">Track your revenue and payment history</p>
+          </div>
+          <button onClick={() => setShowAddEarning(true)} className="btn-primary text-sm flex items-center gap-2 self-start">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+            Log Earnings
+          </button>
         </div>
 
         {/* Revenue Cards */}
@@ -189,10 +249,18 @@ export default function EducatorEarnings() {
           ))}
         </div>
 
-        {/* Session stats */}
+        {/* Avg Hourly Rate & Hours Card */}
         <div className="bg-white rounded-2xl border border-slate-100 p-6">
-          <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Session Summary</h3>
-          <div className="grid grid-cols-2 gap-4">
+          <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Earnings Breakdown</h3>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+            <div>
+              <p className="text-2xl font-bold font-display text-emerald-600">{formatCurrency(data?.avgHourlyRate || 0)}</p>
+              <p className="text-sm text-slate-500">Avg. Hourly Rate</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold font-display text-primary">{data?.totalHours || 0}</p>
+              <p className="text-sm text-slate-500">Total Hours</p>
+            </div>
             <div>
               <p className="text-2xl font-bold font-display text-primary">{data?.completedSessions || 0}</p>
               <p className="text-sm text-slate-500">Completed Sessions</p>
@@ -214,6 +282,42 @@ export default function EducatorEarnings() {
             </div>
           )}
         </div>
+
+        {/* Manual Earnings */}
+        {data && data.manualEarnings && data.manualEarnings.length > 0 && (
+          <div>
+            <h3 className="text-lg font-bold font-display text-primary mb-4">Logged Earnings</h3>
+            <div className="space-y-2">
+              {data.manualEarnings.map(entry => (
+                <div key={entry.id} className="bg-white rounded-xl border border-slate-100 p-4 flex items-center justify-between hover:shadow-sm transition-all">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-2 h-2 rounded-full flex-shrink-0 bg-purple-500" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-primary truncate">{entry.description}</p>
+                      <div className="flex items-center gap-2 text-xs text-slate-400">
+                        <span>{entry.hours}h</span>
+                        <span>&middot;</span>
+                        <span>{formatCurrency(entry.amount / entry.hours)}/hr</span>
+                        <span>&middot;</span>
+                        <span>{new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <span className="text-sm font-bold text-primary">{formatCurrency(entry.amount)}</span>
+                    <button
+                      onClick={() => handleDeleteEarning(entry.id)}
+                      className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+                      title="Remove"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Payment History */}
         <div>
@@ -274,6 +378,81 @@ export default function EducatorEarnings() {
         </div>
       </div>
 
+      {/* Add Manual Earning Modal */}
+      {showAddEarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setShowAddEarning(false)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <h2 className="text-lg font-bold font-display text-primary mb-4">Log Earnings</h2>
+            <p className="text-sm text-slate-500 mb-4">Add earnings from outside classes or other sources.</p>
+            {earningError && (
+              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700 mb-4">{earningError}</div>
+            )}
+            <form onSubmit={handleAddEarning} className="space-y-4">
+              <div>
+                <label className="block mb-1.5 text-sm font-semibold text-primary">Description</label>
+                <input
+                  type="text"
+                  value={earningForm.description}
+                  onChange={e => setEarningForm(p => ({ ...p, description: e.target.value }))}
+                  className="w-full border border-slate-200 bg-surface p-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  placeholder="e.g. Private SAT tutoring, Workshop at community center"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block mb-1.5 text-sm font-semibold text-primary">Hours Spent</label>
+                  <input
+                    type="number"
+                    step="0.25"
+                    min="0.25"
+                    value={earningForm.hours}
+                    onChange={e => setEarningForm(p => ({ ...p, hours: e.target.value }))}
+                    className="w-full border border-slate-200 bg-surface p-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                    placeholder="2.5"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1.5 text-sm font-semibold text-primary">Amount Earned ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={earningForm.amount}
+                    onChange={e => setEarningForm(p => ({ ...p, amount: e.target.value }))}
+                    className="w-full border border-slate-200 bg-surface p-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                    placeholder="125.00"
+                    required
+                  />
+                </div>
+              </div>
+              {earningForm.hours && earningForm.amount && parseFloat(earningForm.hours) > 0 && (
+                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100">
+                  <p className="text-sm text-emerald-700 font-medium">
+                    Rate: {formatCurrency(parseFloat(earningForm.amount) / parseFloat(earningForm.hours))}/hr
+                  </p>
+                </div>
+              )}
+              <div>
+                <label className="block mb-1.5 text-sm font-semibold text-primary">Date (optional)</label>
+                <input
+                  type="date"
+                  value={earningForm.date}
+                  onChange={e => setEarningForm(p => ({ ...p, date: e.target.value }))}
+                  className="w-full border border-slate-200 bg-surface p-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setShowAddEarning(false)} className="flex-1 py-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-500 hover:bg-slate-50">Cancel</button>
+                <button type="submit" disabled={savingEarning} className="flex-1 btn-primary text-sm disabled:opacity-60">{savingEarning ? 'Saving...' : 'Log Earning'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Monthly Earnings Chart Modal */}
       {chartModal === 'monthly' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -292,7 +471,6 @@ export default function EducatorEarnings() {
               <BarChart
                 data={data.monthlyBreakdown}
                 valueKey="earnings"
-                color="orange"
                 gradientFrom="#ea580c"
                 gradientTo="#f97316"
               />
@@ -328,7 +506,6 @@ export default function EducatorEarnings() {
               <BarChart
                 data={data.monthlyBreakdown}
                 valueKey="cumulative"
-                color="green"
                 gradientFrom="#059669"
                 gradientTo="#34d399"
               />
