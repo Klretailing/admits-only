@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       { name: "first_name", value: firstName },
       { name: "last_name", value: lastName },
       ...(grade ? [{ name: "grade", value: grade }] : []),
-      ...(region ? [{ name: "region", value: region }] : []),
+      ...(region ? [{ name: "subscriber_region", value: region }] : []),
       ...(district ? [{ name: "district", value: district }] : []),
       ...(interest ? [{ name: "interest", value: interest }] : []),
       ...(phone ? [{ name: "phone", value: phone }] : []),
