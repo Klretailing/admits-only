@@ -165,6 +165,12 @@ export default function StudyPods() {
   const [replyText, setReplyText] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Inline document editor overlay
+  const [editorDoc, setEditorDoc] = useState<PodDoc | null>(null);
+  const [editorContent, setEditorContent] = useState('');
+  const [editorSaving, setEditorSaving] = useState(false);
+  const [editorDirty, setEditorDirty] = useState(false);
+
   // Focus Sessions (Pomodoro)
   const [sessions, setSessions] = useState<StudySession[]>([]);
   const [selectedSession, setSelectedSession] = useState<StudySession | null>(null);
@@ -322,11 +328,12 @@ export default function StudyPods() {
     } catch { /* ignore */ }
   }, []);
 
+  // Always load documents when a pod is selected (needed for chat doc cards)
   useEffect(() => {
-    if (selectedPod && activeTab === 'documents') {
+    if (selectedPod) {
       loadDocuments(selectedPod.id);
     }
-  }, [selectedPod, activeTab, loadDocuments]);
+  }, [selectedPod, loadDocuments]);
 
   /* ─── Focus Sessions functions ─── */
   const loadSessions = useCallback(async (podId: string) => {
@@ -577,6 +584,106 @@ export default function StudyPods() {
       loadDocument(documentId);
     } catch { /* ignore */ }
   };
+
+  /* ─── Inline editor functions ─── */
+  const openDocEditor = useCallback(async (docId: string) => {
+    try {
+      const r = await fetch(`/api/pod-documents?documentId=${docId}`);
+      const data = await r.json();
+      if (data.document) {
+        setEditorDoc(data.document);
+        setEditorContent(data.document.content || '');
+        setEditorDirty(false);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  const closeDocEditor = () => {
+    setEditorDoc(null);
+    setEditorContent('');
+    setEditorDirty(false);
+    setCommentText('');
+    setReplyingTo(null);
+    setReplyText('');
+  };
+
+  const saveDocContent = async () => {
+    if (!editorDoc || !editorDirty) return;
+    setEditorSaving(true);
+    try {
+      const r = await fetch('/api/pod-documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update', documentId: editorDoc.id, content: editorContent }),
+      });
+      if (r.ok) {
+        setEditorDirty(false);
+        // Refresh the doc to get latest comments
+        openDocEditor(editorDoc.id);
+      }
+    } catch { /* ignore */ }
+    setEditorSaving(false);
+  };
+
+  // Poll comments while editor is open
+  useEffect(() => {
+    if (!editorDoc) return;
+    const interval = setInterval(async () => {
+      try {
+        const r = await fetch(`/api/pod-documents?documentId=${editorDoc.id}`);
+        const data = await r.json();
+        if (data.document) {
+          setEditorDoc(prev => prev ? { ...prev, comments: data.document.comments } : null);
+          // If content changed externally and we haven't modified it
+          if (!editorDirty && data.document.content !== editorContent) {
+            setEditorContent(data.document.content || '');
+          }
+        }
+      } catch { /* ignore */ }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [editorDoc?.id, editorDirty, editorContent, openDocEditor]);
+
+  const addEditorComment = async (parentId?: string) => {
+    if (!editorDoc) return;
+    const text = parentId ? replyText : commentText;
+    if (!text.trim()) return;
+    try {
+      const r = await fetch('/api/pod-documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'comment',
+          documentId: editorDoc.id,
+          content: text,
+          parentId: parentId || null,
+        }),
+      });
+      if (r.ok) {
+        if (parentId) { setReplyText(''); setReplyingTo(null); }
+        else setCommentText('');
+        openDocEditor(editorDoc.id);
+      }
+    } catch { /* ignore */ }
+  };
+
+  const deleteEditorComment = async (commentId: string) => {
+    if (!editorDoc) return;
+    try {
+      await fetch('/api/pod-documents', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commentId }),
+      });
+      openDocEditor(editorDoc.id);
+    } catch { /* ignore */ }
+  };
+
+  // Find document by ID from the documents list (for chat card rendering)
+  const getDocForMessage = useCallback((msg: PodMessage): PodDoc | undefined => {
+    if (msg.type !== 'essay_share' || !msg.essayId) return undefined;
+    return documents.find(d => d.id === msg.essayId);
+  }, [documents]);
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
@@ -836,7 +943,7 @@ export default function StudyPods() {
 
           {/* ═══════════════ CHAT AREA ═══════════════ */}
           {selectedPod ? (
-            <div className={`flex flex-col h-full bg-white ${mobileShowChat ? 'flex' : 'hidden lg:flex'}`}>
+            <div className={`relative flex flex-col h-full bg-white ${mobileShowChat ? 'flex' : 'hidden lg:flex'}`}>
               {/* ─── Chat header ─── */}
               <div className="px-4 lg:px-5 py-3 border-b border-slate-100 bg-white">
                 <div className="flex items-center justify-between gap-3">
@@ -923,7 +1030,7 @@ export default function StudyPods() {
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    Documents
+                    Files
                     {documents.length > 0 && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent/10 text-accent font-bold">{documents.length}</span>
                     )}
@@ -949,330 +1056,76 @@ export default function StudyPods() {
                 </div>
               </div>
 
-              {/* ═══════════════ DOCUMENTS TAB ═══════════════ */}
+              {/* ═══════════════ DOCUMENTS TAB (History view) ═══════════════ */}
               {activeTab === 'documents' && (
                 <div className="flex-1 flex flex-col overflow-hidden">
-                  {selectedDoc ? (
-                    /* ─── Document detail view ─── */
-                    <div className="flex-1 flex flex-col overflow-hidden">
-                      {/* Doc header */}
-                      <div className="px-4 lg:px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <button
-                            onClick={() => setSelectedDoc(null)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-primary hover:bg-white transition-all flex-shrink-0"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-                          </button>
-                          <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${getFileColor(selectedDoc.fileType)} flex items-center justify-center flex-shrink-0`}>
-                            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={getFileIcon(selectedDoc.fileType)} />
-                            </svg>
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-bold text-primary truncate">{selectedDoc.fileName}</p>
-                            <p className="text-[10px] text-slate-400">
-                              {selectedDoc.uploader.name} &middot; {formatFileSize(selectedDoc.fileSize)} &middot; {new Date(selectedDoc.createdAt).toLocaleDateString()}
-                            </p>
-                          </div>
-                        </div>
-                        {selectedDoc.uploaderId === currentUserId && (
-                          <button
-                            onClick={() => deleteDocument(selectedDoc.id)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"
-                            title="Delete document"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        )}
+                  <div className="flex-1 overflow-y-auto">
+                    {/* Info banner */}
+                    <div className="px-4 lg:px-5 py-3 border-b border-slate-100 bg-accent/5">
+                      <div className="flex items-center gap-2 text-xs text-accent">
+                        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>Upload documents using the <strong>📎 button in chat</strong>. Click any document below to open, edit, and comment.</span>
                       </div>
+                    </div>
 
-                      {/* Document content & comments */}
-                      <div className="flex-1 overflow-y-auto px-4 lg:px-5 py-4 space-y-6">
-                        {/* Inline document preview */}
-                        <div className="rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
-                          {selectedDoc.fileType === 'image' && selectedDoc.fileData && (
-                            <div className="p-4 flex justify-center">
-                              <img
-                                src={selectedDoc.fileData}
-                                alt={selectedDoc.fileName}
-                                className="max-w-full max-h-96 rounded-lg shadow-sm"
-                              />
-                            </div>
-                          )}
-                          {selectedDoc.fileType === 'pdf' && selectedDoc.fileData && (
-                            <div className="w-full h-96">
-                              <iframe
-                                src={selectedDoc.fileData}
-                                className="w-full h-full border-0"
-                                title={selectedDoc.fileName}
-                              />
-                            </div>
-                          )}
-                          {selectedDoc.fileType === 'txt' && (
-                            <div className="p-4">
-                              <pre className="text-sm text-slate-700 whitespace-pre-wrap font-sans leading-relaxed">
-                                {selectedDoc.content || 'No text content available'}
-                              </pre>
-                            </div>
-                          )}
-                          {(selectedDoc.fileType === 'doc' || selectedDoc.fileType === 'docx') && (
-                            <div className="p-6 text-center">
-                              <div className="w-12 h-12 mx-auto rounded-xl bg-blue-100 flex items-center justify-center mb-3">
-                                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={getFileIcon('doc')} />
+                    {/* Document list */}
+                    <div className="px-4 lg:px-5 py-4">
+                      {docLoading ? (
+                        <div className="text-center py-8 text-sm text-slate-400 animate-pulse">Loading documents...</div>
+                      ) : documents.length === 0 ? (
+                        <div className="text-center py-12">
+                          <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center mb-4">
+                            <svg className="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          </div>
+                          <h4 className="text-sm font-bold text-primary mb-1">No Documents Yet</h4>
+                          <p className="text-xs text-slate-400 max-w-xs mx-auto">
+                            Share documents using the 📎 button in the chat tab. They will appear here for easy access.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="grid gap-2">
+                          {documents.map(doc => (
+                            <button
+                              key={doc.id}
+                              onClick={() => openDocEditor(doc.id)}
+                              className="w-full text-left p-3 rounded-xl border border-slate-100 hover:border-accent/20 hover:bg-accent/5 transition-all group flex items-center gap-3"
+                            >
+                              <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${getFileColor(doc.fileType)} flex items-center justify-center flex-shrink-0`}>
+                                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={getFileIcon(doc.fileType)} />
                                 </svg>
                               </div>
-                              <p className="text-sm font-medium text-slate-600 mb-1">{selectedDoc.fileName}</p>
-                              <p className="text-xs text-slate-400">Word documents can be downloaded to view</p>
-                              {selectedDoc.fileData && (
-                                <a
-                                  href={selectedDoc.fileData}
-                                  download={selectedDoc.fileName}
-                                  className="inline-flex items-center gap-1.5 mt-3 px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-                                >
-                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-semibold text-primary truncate group-hover:text-accent transition-colors">{doc.fileName}</p>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <span className="text-[10px] text-slate-400">{doc.uploader.name}</span>
+                                  <span className="text-[10px] text-slate-300">&middot;</span>
+                                  <span className="text-[10px] text-slate-400">{formatFileSize(doc.fileSize)}</span>
+                                  <span className="text-[10px] text-slate-300">&middot;</span>
+                                  <span className="text-[10px] text-slate-400">{formatTime(doc.createdAt)}</span>
+                                </div>
+                              </div>
+                              {doc._count && doc._count.comments > 0 && (
+                                <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-accent/10 text-accent flex-shrink-0">
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                                   </svg>
-                                  Download
-                                </a>
+                                  <span className="text-[10px] font-semibold">{doc._count.comments}</span>
+                                </div>
                               )}
-                            </div>
-                          )}
+                              <svg className="w-4 h-4 text-slate-300 group-hover:text-accent flex-shrink-0 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </button>
+                          ))}
                         </div>
-
-                        {/* Comments section */}
-                        <div>
-                          <h4 className="text-sm font-bold text-primary mb-3 flex items-center gap-2">
-                            <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-                            </svg>
-                            Comments
-                            {selectedDoc.comments && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold">
-                                {selectedDoc.comments.length}
-                              </span>
-                            )}
-                          </h4>
-
-                          {/* Add comment */}
-                          <div className="flex gap-2 mb-4">
-                            <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${getAvatarColor(currentUserName)} flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0`}>
-                              {getInitials(currentUserName)}
-                            </div>
-                            <div className="flex-1 flex gap-2">
-                              <input
-                                type="text"
-                                value={commentText}
-                                onChange={e => setCommentText(e.target.value)}
-                                onKeyDown={e => { if (e.key === 'Enter') addComment(selectedDoc.id); }}
-                                placeholder="Add a comment..."
-                                className="flex-1 px-3 py-2 text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
-                              />
-                              <button
-                                onClick={() => addComment(selectedDoc.id)}
-                                disabled={!commentText.trim()}
-                                className="px-3 py-2 text-xs font-semibold text-white bg-accent rounded-lg hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                              >
-                                Post
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Comment list */}
-                          {selectedDoc.comments && selectedDoc.comments.length > 0 ? (
-                            <div className="space-y-3">
-                              {selectedDoc.comments.map(comment => (
-                                <div key={comment.id} className="group">
-                                  <div className="flex gap-2">
-                                    <div className={`w-7 h-7 rounded-md bg-gradient-to-br ${getAvatarColor(comment.user.name)} flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0 mt-0.5`}>
-                                      {getInitials(comment.user.name)}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-baseline gap-2 mb-0.5">
-                                        <span className="text-xs font-bold text-primary">{comment.user.name}</span>
-                                        <span className="text-[10px] text-slate-300">{formatTime(comment.createdAt)}</span>
-                                        {comment.userId === currentUserId && (
-                                          <button
-                                            onClick={() => deleteComment(comment.id, selectedDoc.id)}
-                                            className="text-[10px] text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                                          >
-                                            Delete
-                                          </button>
-                                        )}
-                                      </div>
-                                      <p className="text-sm text-slate-700 leading-relaxed">{comment.content}</p>
-                                      {comment.section && (
-                                        <span className="inline-block mt-1 text-[10px] px-2 py-0.5 rounded bg-amber-50 text-amber-600 font-medium">
-                                          Re: {comment.section}
-                                        </span>
-                                      )}
-
-                                      {/* Reply button */}
-                                      <button
-                                        onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
-                                        className="mt-1 text-[11px] text-slate-400 hover:text-accent font-medium transition-colors"
-                                      >
-                                        Reply
-                                      </button>
-
-                                      {/* Reply input */}
-                                      {replyingTo === comment.id && (
-                                        <div className="flex gap-2 mt-2">
-                                          <input
-                                            type="text"
-                                            value={replyText}
-                                            onChange={e => setReplyText(e.target.value)}
-                                            onKeyDown={e => { if (e.key === 'Enter') addComment(selectedDoc.id, comment.id); }}
-                                            placeholder="Write a reply..."
-                                            className="flex-1 px-2.5 py-1.5 text-xs rounded-md border border-slate-200 focus:outline-none focus:ring-2 focus:ring-accent/30"
-                                            autoFocus
-                                          />
-                                          <button
-                                            onClick={() => addComment(selectedDoc.id, comment.id)}
-                                            disabled={!replyText.trim()}
-                                            className="px-2.5 py-1.5 text-[11px] font-semibold text-white bg-accent rounded-md hover:bg-accent/90 disabled:opacity-40 transition-colors"
-                                          >
-                                            Reply
-                                          </button>
-                                        </div>
-                                      )}
-
-                                      {/* Threaded replies */}
-                                      {comment.replies && comment.replies.length > 0 && (
-                                        <div className="mt-2 ml-2 pl-3 border-l-2 border-slate-100 space-y-2">
-                                          {comment.replies.map(reply => (
-                                            <div key={reply.id} className="group/reply flex gap-2">
-                                              <div className={`w-5 h-5 rounded bg-gradient-to-br ${getAvatarColor(reply.user.name)} flex items-center justify-center text-white text-[8px] font-bold flex-shrink-0 mt-0.5`}>
-                                                {getInitials(reply.user.name)}
-                                              </div>
-                                              <div className="min-w-0">
-                                                <div className="flex items-baseline gap-2">
-                                                  <span className="text-[11px] font-bold text-primary">{reply.user.name}</span>
-                                                  <span className="text-[9px] text-slate-300">{formatTime(reply.createdAt)}</span>
-                                                  {reply.userId === currentUserId && (
-                                                    <button
-                                                      onClick={() => deleteComment(reply.id, selectedDoc.id)}
-                                                      className="text-[9px] text-slate-300 hover:text-red-500 opacity-0 group-hover/reply:opacity-100 transition-all"
-                                                    >
-                                                      Delete
-                                                    </button>
-                                                  )}
-                                                </div>
-                                                <p className="text-xs text-slate-600 leading-relaxed">{reply.content}</p>
-                                              </div>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="text-xs text-slate-400 text-center py-4">No comments yet. Be the first to share your thoughts!</p>
-                          )}
-                        </div>
-                      </div>
+                      )}
                     </div>
-                  ) : (
-                    /* ─── Document list view ─── */
-                    <div className="flex-1 overflow-y-auto">
-                      {/* Upload bar */}
-                      <div className="px-4 lg:px-5 py-3 border-b border-slate-100 bg-slate-50/30">
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          onChange={handleFileUpload}
-                          accept=".pdf,.txt,.doc,.docx,.png,.jpg,.jpeg,.gif"
-                          className="hidden"
-                        />
-                        <button
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={uploading}
-                          className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-slate-200 rounded-xl text-sm font-medium text-slate-500 hover:text-accent hover:border-accent/40 hover:bg-accent/5 transition-all disabled:opacity-50"
-                        >
-                          {uploading ? (
-                            <>
-                              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                              </svg>
-                              Uploading...
-                            </>
-                          ) : (
-                            <>
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                              </svg>
-                              Upload Document
-                              <span className="text-[10px] text-slate-400">(PDF, TXT, DOC, Images &middot; Max 5MB)</span>
-                            </>
-                          )}
-                        </button>
-                        {error && <p className="text-xs text-red-500 mt-2 text-center">{error}</p>}
-                      </div>
-
-                      {/* Document grid */}
-                      <div className="px-4 lg:px-5 py-4">
-                        {docLoading ? (
-                          <div className="text-center py-8 text-sm text-slate-400 animate-pulse">Loading documents...</div>
-                        ) : documents.length === 0 ? (
-                          <div className="text-center py-12">
-                            <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center mb-4">
-                              <svg className="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                              </svg>
-                            </div>
-                            <h4 className="text-sm font-bold text-primary mb-1">No Documents Yet</h4>
-                            <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                              Upload essays, notes, or resources. Pod members can view and comment on shared documents.
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="grid gap-2">
-                            {documents.map(doc => (
-                              <button
-                                key={doc.id}
-                                onClick={() => loadDocument(doc.id)}
-                                className="w-full text-left p-3 rounded-xl border border-slate-100 hover:border-accent/20 hover:bg-accent/5 transition-all group flex items-center gap-3"
-                              >
-                                <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${getFileColor(doc.fileType)} flex items-center justify-center flex-shrink-0`}>
-                                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={getFileIcon(doc.fileType)} />
-                                  </svg>
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-sm font-semibold text-primary truncate group-hover:text-accent transition-colors">{doc.fileName}</p>
-                                  <div className="flex items-center gap-2 mt-0.5">
-                                    <span className="text-[10px] text-slate-400">{doc.uploader.name}</span>
-                                    <span className="text-[10px] text-slate-300">&middot;</span>
-                                    <span className="text-[10px] text-slate-400">{formatFileSize(doc.fileSize)}</span>
-                                    <span className="text-[10px] text-slate-300">&middot;</span>
-                                    <span className="text-[10px] text-slate-400">{formatTime(doc.createdAt)}</span>
-                                  </div>
-                                </div>
-                                {doc._count && doc._count.comments > 0 && (
-                                  <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-slate-100 text-slate-500 flex-shrink-0">
-                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-                                    </svg>
-                                    <span className="text-[10px] font-semibold">{doc._count.comments}</span>
-                                  </div>
-                                )}
-                                <svg className="w-4 h-4 text-slate-300 group-hover:text-accent flex-shrink-0 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                </svg>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                  </div>
                 </div>
               )}
 
@@ -1679,13 +1532,53 @@ export default function StudyPods() {
                                 </div>
                               )}
                               <div className="text-sm text-slate-700 leading-relaxed break-words">
-                                {msg.type === 'essay_share' && (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-accent/10 text-accent text-[11px] font-bold mr-2 mb-1">
-                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                                    Shared Essay
-                                  </span>
-                                )}
-                                {msg.content}
+                                {(() => {
+                                  const linkedDoc = getDocForMessage(msg);
+                                  if (linkedDoc) {
+                                    return (
+                                      <button
+                                        onClick={() => openDocEditor(linkedDoc.id)}
+                                        className="w-full max-w-sm mt-1 flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl hover:border-accent/30 hover:shadow-md transition-all text-left group/card"
+                                      >
+                                        <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${getFileColor(linkedDoc.fileType)} flex items-center justify-center flex-shrink-0`}>
+                                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={getFileIcon(linkedDoc.fileType)} />
+                                          </svg>
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                          <p className="text-sm font-semibold text-primary truncate group-hover/card:text-accent transition-colors">{linkedDoc.fileName}</p>
+                                          <div className="flex items-center gap-2 mt-0.5">
+                                            <span className="text-[10px] text-slate-400 uppercase font-bold">{linkedDoc.fileType}</span>
+                                            <span className="text-[10px] text-slate-300">&middot;</span>
+                                            <span className="text-[10px] text-slate-400">{formatFileSize(linkedDoc.fileSize)}</span>
+                                            {linkedDoc._count && linkedDoc._count.comments > 0 && (
+                                              <>
+                                                <span className="text-[10px] text-slate-300">&middot;</span>
+                                                <span className="text-[10px] text-accent font-semibold">{linkedDoc._count.comments} comment{linkedDoc._count.comments !== 1 ? 's' : ''}</span>
+                                              </>
+                                            )}
+                                          </div>
+                                        </div>
+                                        <div className="flex-shrink-0 text-[10px] text-slate-400 group-hover/card:text-accent font-semibold transition-colors">
+                                          Open
+                                        </div>
+                                      </button>
+                                    );
+                                  }
+                                  // Fallback for older messages without linked doc
+                                  if (msg.type === 'essay_share') {
+                                    return (
+                                      <>
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-accent/10 text-accent text-[11px] font-bold mr-2 mb-1">
+                                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                          Shared Document
+                                        </span>
+                                        {msg.content}
+                                      </>
+                                    );
+                                  }
+                                  return msg.content;
+                                })()}
                               </div>
                             </div>
                           </div>
@@ -1699,10 +1592,32 @@ export default function StudyPods() {
 
               {/* ─── Message input bar (Slack-style) ─── */}
               <div className="px-4 lg:px-5 pb-4 lg:pb-5 pt-1 flex-shrink-0">
+                {/* Hidden file input for chat uploads */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  onChange={handleFileUpload}
+                  accept=".pdf,.txt,.doc,.docx,.png,.jpg,.jpeg,.gif"
+                  className="hidden"
+                />
+                {uploading && (
+                  <div className="flex items-center gap-2 px-3 py-2 mb-2 bg-accent/5 border border-accent/20 rounded-lg text-xs text-accent font-medium">
+                    <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Uploading file...
+                  </div>
+                )}
                 <div className="flex items-end gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2 focus-within:ring-2 focus-within:ring-accent/30 focus-within:border-accent transition-all shadow-sm">
-                  {/* Attachment placeholder */}
-                  <button className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors flex-shrink-0" title="Attach file">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 4v16m8-8H4" /></svg>
+                  {/* Attachment button — triggers file upload */}
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-accent hover:bg-accent/5 transition-colors flex-shrink-0 disabled:opacity-40"
+                    title="Upload a document"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
                   </button>
                   <input
                     ref={inputRef}
@@ -1732,9 +1647,284 @@ export default function StudyPods() {
                     </svg>
                   </button>
                 </div>
-                <p className="text-[10px] text-slate-300 mt-1.5 px-1">Press <kbd className="px-1 py-0.5 bg-slate-100 rounded text-[9px] font-mono">Enter</kbd> to send</p>
+                <p className="text-[10px] text-slate-300 mt-1.5 px-1">Press <kbd className="px-1 py-0.5 bg-slate-100 rounded text-[9px] font-mono">Enter</kbd> to send &middot; Click <span className="text-slate-400">📎</span> to share a document</p>
               </div>
               </>}
+
+              {/* ═══════════════ DOCUMENT EDITOR OVERLAY ═══════════════ */}
+              {editorDoc && (
+                <div className="absolute inset-0 z-50 flex flex-col bg-white">
+                  {/* Editor header */}
+                  <div className="px-4 lg:px-5 py-3 border-b border-slate-100 bg-white flex items-center justify-between gap-3 flex-shrink-0">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <button
+                        onClick={closeDocEditor}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-primary hover:bg-slate-50 transition-all flex-shrink-0"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                      <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${getFileColor(editorDoc.fileType)} flex items-center justify-center flex-shrink-0`}>
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={getFileIcon(editorDoc.fileType)} />
+                        </svg>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-primary truncate">{editorDoc.fileName}</p>
+                        <p className="text-[10px] text-slate-400">
+                          {editorDoc.uploader.name} &middot; {formatFileSize(editorDoc.fileSize)}
+                          {editorDirty && <span className="ml-2 text-amber-500 font-semibold">Unsaved changes</span>}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {/* Live indicator */}
+                      <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-full">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-[10px] font-semibold text-emerald-700">Live</span>
+                      </div>
+                      {(editorDoc.fileType === 'txt' || editorDoc.content) && editorDirty && (
+                        <button
+                          onClick={saveDocContent}
+                          disabled={editorSaving}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-accent rounded-lg hover:bg-accent/90 disabled:opacity-50 transition-colors"
+                        >
+                          {editorSaving ? (
+                            <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            </svg>
+                          ) : (
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                          Save
+                        </button>
+                      )}
+                      {editorDoc.fileData && (
+                        <a
+                          href={editorDoc.fileData}
+                          download={editorDoc.fileName}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-primary hover:bg-slate-50 transition-all"
+                          title="Download"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                        </a>
+                      )}
+                      {editorDoc.uploaderId === currentUserId && (
+                        <button
+                          onClick={() => { deleteDocument(editorDoc.id); closeDocEditor(); }}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"
+                          title="Delete document"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Editor body — split view: content + comments */}
+                  <div className="flex-1 flex overflow-hidden">
+                    {/* Left: Document content/editor */}
+                    <div className="flex-1 overflow-y-auto border-r border-slate-100">
+                      {editorDoc.fileType === 'txt' || (editorDoc.content && !editorDoc.fileData) ? (
+                        /* Editable text content */
+                        <div className="p-4 lg:p-6">
+                          <div className="flex items-center gap-2 mb-3">
+                            <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            <span className="text-xs font-semibold text-accent">Collaborative editing — changes are visible to all pod members</span>
+                          </div>
+                          <textarea
+                            value={editorContent}
+                            onChange={e => { setEditorContent(e.target.value); setEditorDirty(true); }}
+                            className="w-full min-h-[400px] p-4 text-sm text-slate-700 leading-relaxed bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent resize-y font-sans"
+                            placeholder="Start writing or paste your content here..."
+                          />
+                        </div>
+                      ) : editorDoc.fileType === 'image' && editorDoc.fileData ? (
+                        <div className="p-6 flex justify-center items-start">
+                          <img src={editorDoc.fileData} alt={editorDoc.fileName} className="max-w-full max-h-[600px] rounded-xl shadow-sm" />
+                        </div>
+                      ) : editorDoc.fileType === 'pdf' && editorDoc.fileData ? (
+                        <iframe src={editorDoc.fileData} className="w-full h-full border-0" title={editorDoc.fileName} />
+                      ) : (
+                        <div className="p-8 text-center">
+                          <div className={`w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br ${getFileColor(editorDoc.fileType)} flex items-center justify-center mb-4`}>
+                            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={getFileIcon(editorDoc.fileType)} />
+                            </svg>
+                          </div>
+                          <p className="text-sm font-medium text-slate-600 mb-1">{editorDoc.fileName}</p>
+                          <p className="text-xs text-slate-400 mb-4">This file type can be downloaded to view</p>
+                          {editorDoc.fileData && (
+                            <a
+                              href={editorDoc.fileData}
+                              download={editorDoc.fileName}
+                              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-accent rounded-lg hover:bg-accent/90 transition-colors"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                              </svg>
+                              Download
+                            </a>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Right: Comments panel */}
+                    <div className="w-80 lg:w-96 flex flex-col bg-slate-50/30 overflow-hidden">
+                      <div className="px-4 py-3 border-b border-slate-100 bg-white">
+                        <h4 className="text-sm font-bold text-primary flex items-center gap-2">
+                          <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                          </svg>
+                          Comments
+                          {editorDoc.comments && editorDoc.comments.length > 0 && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent/10 text-accent font-bold">
+                              {editorDoc.comments.length}
+                            </span>
+                          )}
+                          <span className="ml-auto flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="text-[9px] text-emerald-600 font-medium">Auto-refreshing</span>
+                          </span>
+                        </h4>
+                      </div>
+
+                      {/* Comment input */}
+                      <div className="px-4 py-3 border-b border-slate-100 bg-white">
+                        <div className="flex gap-2">
+                          <div className={`w-7 h-7 rounded-md bg-gradient-to-br ${getAvatarColor(currentUserName)} flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0`}>
+                            {getInitials(currentUserName)}
+                          </div>
+                          <div className="flex-1 flex gap-1.5">
+                            <input
+                              type="text"
+                              value={commentText}
+                              onChange={e => setCommentText(e.target.value)}
+                              onKeyDown={e => { if (e.key === 'Enter') addEditorComment(); }}
+                              placeholder="Add feedback..."
+                              className="flex-1 px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
+                            />
+                            <button
+                              onClick={() => addEditorComment()}
+                              disabled={!commentText.trim()}
+                              className="px-2.5 py-1.5 text-[11px] font-semibold text-white bg-accent rounded-lg hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            >
+                              Post
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Comments list */}
+                      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+                        {editorDoc.comments && editorDoc.comments.length > 0 ? (
+                          editorDoc.comments.map(comment => (
+                            <div key={comment.id} className="group">
+                              <div className="flex gap-2">
+                                <div className={`w-6 h-6 rounded-md bg-gradient-to-br ${getAvatarColor(comment.user.name)} flex items-center justify-center text-white text-[8px] font-bold flex-shrink-0 mt-0.5`}>
+                                  {getInitials(comment.user.name)}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-baseline gap-2 mb-0.5">
+                                    <span className="text-[11px] font-bold text-primary">{comment.user.name}</span>
+                                    <span className="text-[9px] text-slate-300">{formatTime(comment.createdAt)}</span>
+                                    {comment.userId === currentUserId && (
+                                      <button
+                                        onClick={() => deleteEditorComment(comment.id)}
+                                        className="text-[9px] text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                                      >
+                                        Delete
+                                      </button>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-slate-700 leading-relaxed">{comment.content}</p>
+
+                                  {/* Reply button */}
+                                  <button
+                                    onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
+                                    className="mt-1 text-[10px] text-slate-400 hover:text-accent font-medium transition-colors"
+                                  >
+                                    Reply
+                                  </button>
+
+                                  {/* Reply input */}
+                                  {replyingTo === comment.id && (
+                                    <div className="flex gap-1.5 mt-2">
+                                      <input
+                                        type="text"
+                                        value={replyText}
+                                        onChange={e => setReplyText(e.target.value)}
+                                        onKeyDown={e => { if (e.key === 'Enter') addEditorComment(comment.id); }}
+                                        placeholder="Reply..."
+                                        className="flex-1 px-2 py-1 text-[11px] rounded-md border border-slate-200 focus:outline-none focus:ring-2 focus:ring-accent/30"
+                                        autoFocus
+                                      />
+                                      <button
+                                        onClick={() => addEditorComment(comment.id)}
+                                        disabled={!replyText.trim()}
+                                        className="px-2 py-1 text-[10px] font-semibold text-white bg-accent rounded-md hover:bg-accent/90 disabled:opacity-40 transition-colors"
+                                      >
+                                        Reply
+                                      </button>
+                                    </div>
+                                  )}
+
+                                  {/* Threaded replies */}
+                                  {comment.replies && comment.replies.length > 0 && (
+                                    <div className="mt-2 ml-1 pl-2.5 border-l-2 border-slate-100 space-y-2">
+                                      {comment.replies.map(reply => (
+                                        <div key={reply.id} className="group/reply flex gap-1.5">
+                                          <div className={`w-5 h-5 rounded bg-gradient-to-br ${getAvatarColor(reply.user.name)} flex items-center justify-center text-white text-[7px] font-bold flex-shrink-0 mt-0.5`}>
+                                            {getInitials(reply.user.name)}
+                                          </div>
+                                          <div className="min-w-0">
+                                            <div className="flex items-baseline gap-1.5">
+                                              <span className="text-[10px] font-bold text-primary">{reply.user.name}</span>
+                                              <span className="text-[8px] text-slate-300">{formatTime(reply.createdAt)}</span>
+                                              {reply.userId === currentUserId && (
+                                                <button
+                                                  onClick={() => deleteEditorComment(reply.id)}
+                                                  className="text-[8px] text-slate-300 hover:text-red-500 opacity-0 group-hover/reply:opacity-100 transition-all"
+                                                >
+                                                  Delete
+                                                </button>
+                                              )}
+                                            </div>
+                                            <p className="text-[11px] text-slate-600 leading-relaxed">{reply.content}</p>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-center py-8">
+                            <div className="w-12 h-12 mx-auto rounded-xl bg-slate-100 flex items-center justify-center mb-3">
+                              <svg className="w-6 h-6 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                              </svg>
+                            </div>
+                            <p className="text-xs text-slate-500 font-medium">No comments yet</p>
+                            <p className="text-[10px] text-slate-400 mt-1">Be the first to give feedback on this document</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             /* ─── Empty state — no pod selected ─── */

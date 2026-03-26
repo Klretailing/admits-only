@@ -37,7 +37,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Get comments for a document
     if (action === 'comments' && documentId) {
       const comments = await (prisma as any).documentComment.findMany({
-        where: { documentId: documentId as string },
+        where: { documentId: documentId as string, parentId: null },
         include: {
           user: { select: { id: true, name: true } },
           replies: {
@@ -45,7 +45,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             orderBy: { createdAt: 'asc' as const },
           },
         },
-        where: { documentId: documentId as string, parentId: null },
         orderBy: { createdAt: 'desc' as const },
       });
       return res.json({ comments });
@@ -128,13 +127,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         },
       });
 
-      // Also post a message to the pod chat about the upload
+      // Also post a message to the pod chat about the upload (store docId in essayId)
       await (prisma as any).podMessage.create({
         data: {
           podId,
           userId: user.id,
           content: `Uploaded a document: ${fileName}`,
           type: 'essay_share',
+          essayId: doc.id,
         },
       });
 
@@ -172,6 +172,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
 
       return res.json({ comment });
+    }
+
+    // Update document content (inline editing)
+    if (action === 'update') {
+      const { documentId, content: newContent } = req.body;
+      if (!documentId) return res.status(400).json({ error: 'Document ID is required' });
+
+      const doc = await (prisma as any).podDocument.findUnique({
+        where: { id: documentId },
+        select: { podId: true, uploaderId: true },
+      });
+      if (!doc) return res.status(404).json({ error: 'Document not found' });
+
+      // Verify membership
+      const membership = await (prisma as any).podMember.findUnique({
+        where: { podId_userId: { podId: doc.podId, userId: user.id } },
+      });
+      if (!membership) return res.status(403).json({ error: 'Not a member of this pod' });
+
+      const updated = await (prisma as any).podDocument.update({
+        where: { id: documentId },
+        data: { content: newContent || '' },
+        include: { uploader: { select: { id: true, name: true } } },
+      });
+
+      return res.json({ document: updated });
     }
 
     return res.status(400).json({ error: 'Invalid action' });
