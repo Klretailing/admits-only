@@ -28,6 +28,7 @@ function NewsletterForm() {
   }, [searchParams]);
   const [phone, setPhone] = useState("");
   const [grade, setGrade] = useState("");
+  const [region, setRegion] = useState("");
   const [district, setDistrict] = useState("");
   const [interest, setInterest] = useState("");
   const [consentEmail, setConsentEmail] = useState(false);
@@ -60,6 +61,7 @@ function NewsletterForm() {
     }
 
     if (!grade) errs.grade = "Please select a grade.";
+    if (!region) errs.region = "Please select your region.";
     if (!district) errs.district = "Please select your district.";
     if (!interest) errs.interest = "Please select an interest.";
     if (!consentEmail)
@@ -83,6 +85,7 @@ function NewsletterForm() {
       email: email.trim(),
       phone: phone.trim(),
       grade,
+      region,
       district,
       interest,
       consentNewsletter: consentEmail,
@@ -132,7 +135,7 @@ function NewsletterForm() {
               Weekly
             </div>
             <div className={s.leftTagline}>
-              The Bay Area&rsquo;s most useful education newsletter —
+              Northern California&rsquo;s most useful education newsletter —
               internships, volunteer events, college insights, and EdTech news,
               every week. Free forever.
             </div>
@@ -146,11 +149,11 @@ function NewsletterForm() {
                 </div>
                 <div className={s.benefitText}>
                   <div className={s.benefitTitle}>
-                    Real Bay Area Internships
+                    Real Local Internships
                   </div>
                   <div className={s.benefitDesc}>
-                    Paid opportunities at Berkeley Lab, Stanford, UCSF — sourced
-                    weekly with live deadlines
+                    Paid opportunities at top universities, labs, and companies
+                    in your area — sourced weekly with live deadlines
                   </div>
                 </div>
               </li>
@@ -165,7 +168,7 @@ function NewsletterForm() {
                     Volunteer &amp; Community Events
                   </div>
                   <div className={s.benefitDesc}>
-                    Fresh from Eventbrite and HandsOn Bay Area every week —
+                    Fresh from Eventbrite and local organizations every week —
                     events that matter for admissions
                   </div>
                 </div>
@@ -197,8 +200,8 @@ function NewsletterForm() {
                     College Admissions Intelligence
                   </div>
                   <div className={s.benefitDesc}>
-                    Data, deadlines, and strategy — written for Bay Area
-                    families navigating UC, CSU, and beyond
+                    Data, deadlines, and strategy — written for Northern
+                    California families navigating UC, CSU, and beyond
                   </div>
                 </div>
               </li>
@@ -239,7 +242,7 @@ function NewsletterForm() {
             </div>
             <div className={s.spText}>
               <strong className={s.spTextStrong}>
-                Join Bay Area families
+                Join Northern California families
               </strong>{" "}
               getting the most useful education newsletter in the region — free
               every week.
@@ -380,8 +383,39 @@ function NewsletterForm() {
                   </div>
                 </div>
 
-                {/* Child Info Row */}
+                {/* Region + Grade Row */}
                 <div className={s.formRow}>
+                  <div className={s.formGroupHalf}>
+                    <label className={s.label} htmlFor="region">
+                      Your Region{" "}
+                      <span className={s.required}>*</span>
+                    </label>
+                    <select
+                      className={`${s.select} ${errors.region ? s.inputError : ""}`}
+                      id="region"
+                      name="region"
+                      value={region}
+                      onChange={(e) => {
+                        setRegion(e.target.value);
+                        setDistrict("");
+                        clearError("region");
+                        clearError("district");
+                      }}
+                    >
+                      <option value="" disabled>
+                        Select your region
+                      </option>
+                      <option value="bay_area">Bay Area</option>
+                      <option value="sacramento_central_valley">Sacramento / Central Valley</option>
+                    </select>
+                    <div
+                      className={
+                        errors.region ? s.fieldErrorVisible : s.fieldError
+                      }
+                    >
+                      {errors.region}
+                    </div>
+                  </div>
                   <div className={s.formGroupHalf}>
                     <label className={s.label} htmlFor="grade">
                       Child&rsquo;s Current Grade{" "}
@@ -429,42 +463,64 @@ function NewsletterForm() {
                       {errors.grade}
                     </div>
                   </div>
-                  <div className={s.formGroupHalf}>
-                    <label className={s.label} htmlFor="district">
-                      School District / City{" "}
-                      <span className={s.required}>*</span>
-                    </label>
-                    <select
-                      className={`${s.select} ${errors.district ? s.inputError : ""}`}
-                      id="district"
-                      name="district"
-                      value={district}
-                      onChange={(e) => {
-                        setDistrict(e.target.value);
-                        clearError("district");
-                      }}
-                    >
-                      <option value="" disabled>
-                        Select district
-                      </option>
-                      <option value="SFUSD">San Francisco USD</option>
-                      <option value="OUSD">Oakland USD</option>
-                      <option value="PAUSD">Palo Alto USD</option>
-                      <option value="SAUSD">San Jose USD</option>
-                      <option value="WCCUSD">West Contra Costa USD</option>
-                      <option value="FUHSD">Fremont USD</option>
-                      <option value="MVWSD">Mountain View USD</option>
-                      <option value="other">Other Bay Area</option>
-                    </select>
-                    <div
-                      className={
-                        errors.district
-                          ? s.fieldErrorVisible
-                          : s.fieldError
-                      }
-                    >
-                      {errors.district}
-                    </div>
+                </div>
+
+                {/* District — options depend on selected region */}
+                <div className={s.formGroup}>
+                  <label className={s.label} htmlFor="district">
+                    School District / City{" "}
+                    <span className={s.required}>*</span>
+                  </label>
+                  <select
+                    className={`${s.select} ${errors.district ? s.inputError : ""}`}
+                    id="district"
+                    name="district"
+                    value={district}
+                    disabled={!region}
+                    onChange={(e) => {
+                      setDistrict(e.target.value);
+                      clearError("district");
+                    }}
+                  >
+                    <option value="" disabled>
+                      {region ? "Select district" : "Select a region first"}
+                    </option>
+                    {region === "bay_area" && (
+                      <>
+                        <option value="SFUSD">San Francisco USD</option>
+                        <option value="OUSD">Oakland USD</option>
+                        <option value="PAUSD">Palo Alto USD</option>
+                        <option value="SJUSD">San Jose USD</option>
+                        <option value="WCCUSD">West Contra Costa USD</option>
+                        <option value="FUSD">Fremont USD</option>
+                        <option value="MVWSD">Mountain View USD</option>
+                        <option value="other_bay_area">Other Bay Area</option>
+                      </>
+                    )}
+                    {region === "sacramento_central_valley" && (
+                      <>
+                        <option value="SCUSD">Sacramento City USD</option>
+                        <option value="EGUSD">Elk Grove USD</option>
+                        <option value="SJUSD_SJ">San Juan USD</option>
+                        <option value="TRUSD">Twin Rivers USD</option>
+                        <option value="NUSD">Natomas USD</option>
+                        <option value="WUSD">Woodland Joint USD</option>
+                        <option value="DJUSD">Davis Joint USD</option>
+                        <option value="LUSD">Lodi USD</option>
+                        <option value="SUSD">Stockton USD</option>
+                        <option value="MUSD">Modesto City Schools</option>
+                        <option value="other_sac_cv">Other Sacramento / Central Valley</option>
+                      </>
+                    )}
+                  </select>
+                  <div
+                    className={
+                      errors.district
+                        ? s.fieldErrorVisible
+                        : s.fieldError
+                    }
+                  >
+                    {errors.district}
                   </div>
                 </div>
 
