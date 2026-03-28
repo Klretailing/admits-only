@@ -382,6 +382,32 @@ export async function ensureSchema() {
       );
     `);
 
+    // ─── Essay Library (monetizable successful admissions essays) ───
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "essay_documents" (
+        "id"             TEXT NOT NULL,
+        "title"          TEXT NOT NULL,
+        "collegeName"    TEXT NOT NULL DEFAULT '',
+        "prompt"         TEXT NOT NULL DEFAULT '',
+        "content"        TEXT NOT NULL DEFAULT '',
+        "fileData"       TEXT NOT NULL DEFAULT '',
+        "fileType"       TEXT NOT NULL DEFAULT 'text',
+        "studentGpa"     TEXT NOT NULL DEFAULT '',
+        "studentSat"     TEXT NOT NULL DEFAULT '',
+        "studentState"   TEXT NOT NULL DEFAULT '',
+        "studentECs"     TEXT NOT NULL DEFAULT '',
+        "studentAwards"  TEXT NOT NULL DEFAULT '',
+        "isFree"         BOOLEAN NOT NULL DEFAULT true,
+        "priceInCents"   INTEGER NOT NULL DEFAULT 0,
+        "published"      BOOLEAN NOT NULL DEFAULT true,
+        "uploadedById"   TEXT NOT NULL,
+        "createdAt"      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt"      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "essay_documents_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "essay_documents_uploadedById_fkey" FOREIGN KEY ("uploadedById") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+
     globalForPrisma.schemaReady = true;
   } catch (e) {
     // Tables likely already exist — mark as ready

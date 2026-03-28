@@ -41,6 +41,9 @@ model User {
   createdSessions    PodStudySession[]    @relation("SessionCreator")
   sessionParticipations SessionParticipant[]
 
+  // Essay library
+  uploadedEssayDocs  EssayDocument[]      @relation("EssayDocumentUploader")
+
   @@map("users")
 }
 
@@ -387,4 +390,33 @@ model SessionParticipant {
 
   @@unique([sessionId, userId])
   @@map("session_participants")
+}
+
+// ─── Essay Library (Monetizable successful admissions essays) ───
+
+model EssayDocument {
+  id              String   @id @default(cuid())
+  title           String
+  collegeName     String   @default("")
+  prompt          String   @default("") // the essay prompt
+  content         String   @default("") // the essay text
+  fileData        String   @default("") // base64 file data for PDF uploads
+  fileType        String   @default("text") // text | pdf
+  // Student profile context
+  studentGpa      String   @default("")
+  studentSat      String   @default("")
+  studentState    String   @default("")
+  studentECs      String   @default("") // comma-separated extracurriculars
+  studentAwards   String   @default("") // comma-separated awards
+  // Access control
+  isFree          Boolean  @default(true) // free for now, monetize later
+  priceInCents    Int      @default(0) // future: price in cents for Stripe
+  published       Boolean  @default(true)
+  uploadedById    String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  uploadedBy User @relation("EssayDocumentUploader", fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  @@map("essay_documents")
 }
