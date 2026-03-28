@@ -185,14 +185,13 @@ interface Persona {
   title: string;
   color: string;
   avatarBg: string;
+  emoji: string;
 }
 
 const PERSONAS: Persona[] = [
-  { name: 'Coach Jordan', title: 'Student Success Coach', color: 'text-blue-700', avatarBg: 'from-blue-400 to-blue-600' },
-  { name: 'Dr. Mehta', title: 'Former Ivy Admissions Reader', color: 'text-purple-700', avatarBg: 'from-purple-400 to-purple-600' },
-  { name: 'Sophia Chen', title: 'Stanford Junior, Peer Mentor', color: 'text-pink-700', avatarBg: 'from-pink-400 to-pink-600' },
-  { name: 'Prof. Williams', title: 'Research Director, MIT', color: 'text-cyan-700', avatarBg: 'from-cyan-400 to-cyan-600' },
-  { name: 'Ms. Torres', title: 'College Counselor (15 yrs)', color: 'text-amber-700', avatarBg: 'from-amber-400 to-amber-600' },
+  { name: 'Dr. Mehta', title: 'Former Ivy Admissions Reader', color: 'text-violet-700', avatarBg: 'from-violet-500 to-purple-600', emoji: 'DM' },
+  { name: 'Coach Jordan', title: 'Student Success Strategist', color: 'text-sky-700', avatarBg: 'from-sky-500 to-blue-600', emoji: 'CJ' },
+  { name: 'Ms. Torres', title: 'College Counselor (15 yrs)', color: 'text-rose-700', avatarBg: 'from-rose-500 to-pink-600', emoji: 'MT' },
 ];
 
 interface PersonaSuggestion {
@@ -200,74 +199,109 @@ interface PersonaSuggestion {
   suggestion: string;
 }
 
-function generatePersonaSuggestions(ecs: Extracurricular[]): PersonaSuggestion[] {
+interface ProfileContext {
+  gpa: string;
+  gpaScale: '4.0' | '5.0';
+  satMath: string;
+  satRW: string;
+  ecs: Extracurricular[];
+}
+
+function generatePersonaSuggestions(ctx: ProfileContext): PersonaSuggestion[] {
+  const { gpa, gpaScale, satMath, satRW, ecs } = ctx;
   const suggestions: PersonaSuggestion[] = [];
   const buckets = new Set(ecs.map(ec => normalizeBucket(ec.category)));
   const avgYears = ecs.length > 0 ? ecs.reduce((s, e) => s + e.years, 0) / ecs.length : 0;
+  const avgHours = ecs.length > 0 ? ecs.reduce((s, e) => s + e.hoursPerWeek, 0) / ecs.length : 0;
   const hasLeadership = ecs.some(ec => /(?:president|founder|captain|leader|chair|director|head|editor|chief)/i.test(ec.role));
   const hasResearch = buckets.has('Research');
   const hasVolunteering = buckets.has('Volunteering');
   const hasSport = buckets.has('Sport');
   const hasInternship = buckets.has('Internship');
   const ecCount = ecs.length;
+  const gpaNum = parseFloat(gpa) || 0;
+  const normalizedGpa = gpaScale === '5.0' ? gpaNum * 0.8 : gpaNum;
+  const totalSAT = (parseInt(satMath) || 0) + (parseInt(satRW) || 0);
+  const longTermECs = ecs.filter(ec => ec.years >= 3);
+  const highCommitECs = ecs.filter(ec => ec.hoursPerWeek >= 10);
+  const leadershipECs = ecs.filter(ec => /(?:president|founder|captain|leader|chair|director|head|editor|chief)/i.test(ec.role));
 
-  // Coach Jordan
-  if (ecCount === 0) {
-    suggestions.push({ persona: PERSONAS[0], suggestion: "Start by listing any activities you do regularly — even informal ones count. Tutoring a neighbor, managing a social media page, or organizing pickup games all show initiative. Let's build from there." });
-  } else if (!hasSport && buckets.size < 3) {
-    suggestions.push({ persona: PERSONAS[0], suggestion: "Consider adding a physical activity or sport — it shows discipline and teamwork. Even intramural or recreational sports count. Colleges want to see you can balance academics with a full life." });
-  } else if (hasSport && buckets.size < 3) {
-    suggestions.push({ persona: PERSONAS[0], suggestion: "Athletic commitment is great, but show some range. Add a community service activity or join a club related to your academic interests. It shows you're more than just an athlete." });
-  } else {
-    suggestions.push({ persona: PERSONAS[0], suggestion: "Good balance so far. Now think about which 2-3 activities you want to be your 'headline' — the ones that tell your story. Deepen those with leadership roles or tangible projects." });
-  }
-
-  // Dr. Mehta
-  if (!hasLeadership && ecCount >= 3) {
-    suggestions.push({ persona: PERSONAS[1], suggestion: "I notice no leadership titles yet. Admissions committees look for progression — have you moved from member to officer in any activity? Seek out a leadership role. Even 'project lead' or 'team captain' shows initiative." });
-  } else if (hasLeadership && !hasVolunteering) {
-    suggestions.push({ persona: PERSONAS[1], suggestion: "Leadership is strong, but I'm not seeing community engagement. Top applicants demonstrate they use their skills to serve others. Even 5 hours/month of volunteering adds an important dimension." });
-  } else if (buckets.size >= 5 && hasLeadership) {
-    suggestions.push({ persona: PERSONAS[1], suggestion: "Excellent range and leadership. Now focus on deepening your 'spike' — the one area that makes you unforgettable. Admissions officers remember the student who went deep, not the one who did everything." });
-  } else if (ecCount < 3) {
-    suggestions.push({ persona: PERSONAS[1], suggestion: "Most competitive applicants list 8-10 activities. Aim for at least 5 meaningful ones. Think beyond traditional clubs — personal projects, self-taught skills, and family responsibilities all count." });
-  } else {
-    suggestions.push({ persona: PERSONAS[1], suggestion: "Solid foundation. The differentiator at top schools is impact — not just participation, but tangible outcomes. For each activity, ask: 'What changed because I was there?'" });
-  }
-
-  // Sophia Chen
-  if (ecCount === 0) {
-    suggestions.push({ persona: PERSONAS[2], suggestion: "Don't stress — I started building my profile sophomore year. The key is picking things you genuinely enjoy. Forced activities show through in interviews. What do you do when you're NOT studying?" });
-  } else if (avgYears < 2) {
-    suggestions.push({ persona: PERSONAS[2], suggestion: "Real talk: admissions can tell when you joined everything junior year. If you're newer to these activities, that's okay — but commit now and show growth by senior year. Continuity matters more than quantity." });
-  } else if (!hasResearch && !hasInternship) {
-    suggestions.push({ persona: PERSONAS[2], suggestion: "Have you considered cold-emailing professors or startups for a research or internship spot? I emailed 12 professors before one said yes, and that experience became my personal statement. Worth the effort." });
-  } else {
-    suggestions.push({ persona: PERSONAS[2], suggestion: "Solid profile. Start thinking about your 'narrative' — what story do your activities tell together? When I applied, my activities all connected to education equity, and that thread made my app memorable." });
-  }
-
-  // Prof. Williams
-  if (hasResearch) {
-    const researchEcs = ecs.filter(ec => normalizeBucket(ec.category) === 'Research');
-    const avgResYears = researchEcs.reduce((s, e) => s + e.years, 0) / researchEcs.length;
-    if (avgResYears >= 2) {
-      suggestions.push({ persona: PERSONAS[3], suggestion: "Sustained research commitment — excellent. Have you considered submitting to a journal or presenting at a conference? Even a poster at a regional symposium demonstrates scholarly initiative." });
+  // Dr. Mehta — Admissions strategy, holistic view, what top schools want
+  {
+    let suggestion = '';
+    if (ecCount === 0 && gpaNum === 0 && totalSAT === 0) {
+      suggestion = "Your profile is a blank canvas — which is actually an opportunity. Start by entering your GPA and test scores so I can assess where you stand. Then we'll build your extracurricular narrative strategically.";
+    } else if (normalizedGpa >= 3.8 && totalSAT >= 1450 && ecCount >= 5 && hasLeadership) {
+      const spike = longTermECs.length > 0 ? longTermECs[0].category.toLowerCase() : 'your strongest area';
+      suggestion = `Strong academic foundation (${gpaNum} GPA, ${totalSAT} SAT) with ${ecCount} activities and leadership. At top schools, you're in the competitive pool. The differentiator now is your "spike" — double down on ${spike}. Ask yourself: what would make an admissions officer remember you at 11pm after reading 40 apps?`;
+    } else if (normalizedGpa >= 3.8 && totalSAT >= 1450 && !hasLeadership) {
+      suggestion = `Your numbers are strong (${gpaNum} GPA, ${totalSAT} SAT), but I don't see leadership progression. At schools like Harvard or Stanford, 75% of admits held a titled leadership position. Seek out officer roles — even "project lead" in ${ecs.length > 0 ? ecs[0].name : 'a club'} would help.`;
+    } else if (normalizedGpa >= 3.5 && totalSAT >= 1300 && ecCount < 4) {
+      suggestion = `Your academics are solid (${gpaNum} GPA), but ${ecCount} activit${ecCount === 1 ? 'y is' : 'ies are'} below the competitive threshold. Most admitted students at T30 schools list 7-10. Don't pad — find 2-3 activities aligned with what you'd study. Personal projects, freelance work, and family responsibilities all count.`;
+    } else if (normalizedGpa < 3.5 && ecCount >= 4 && hasLeadership) {
+      suggestion = `Your extracurricular profile shows real initiative — ${leadershipECs.length} leadership role${leadershipECs.length > 1 ? 's' : ''} and ${ecCount} activities. To compensate for a ${gpaNum} GPA, your activities need to tell a compelling story of impact. Quantify everything: members recruited, funds raised, people served.`;
+    } else if (totalSAT > 0 && totalSAT < 1200 && normalizedGpa >= 3.5) {
+      suggestion = `Your GPA (${gpaNum}) is working in your favor, but a ${totalSAT} SAT could hold you back at test-required schools. Consider test-optional applications, or target a 100+ point improvement through focused prep on your weaker section (${parseInt(satMath) < parseInt(satRW) ? 'Math' : 'Reading & Writing'}).`;
+    } else if (ecCount >= 3 && avgYears < 1.5) {
+      suggestion = `I see ${ecCount} activities, but the average commitment is ${avgYears.toFixed(1)} years. Admissions readers look for sustained involvement — it signals genuine passion vs. resume padding. Prioritize 3-4 activities you'll stick with through senior year over adding new ones.`;
+    } else if (ecCount === 0) {
+      suggestion = "Most competitive applicants list 8-10 meaningful activities. Start with what you already do outside of class — tutoring, creative projects, family responsibilities, part-time work. Then add 2-3 structured activities aligned with your academic interests.";
     } else {
-      suggestions.push({ persona: PERSONAS[3], suggestion: "You've started research, which is great. Aim for 2+ years of continuous involvement. Ask your mentor about co-authoring a paper or presenting findings. That progression from learner to contributor is key." });
+      const missingBuckets = EC_BUCKETS.filter(b => !buckets.has(b.key)).slice(0, 2).map(b => b.label.toLowerCase());
+      suggestion = `Solid foundation with ${ecCount} activities across ${buckets.size} categories. For a stronger application, consider adding ${missingBuckets.join(' or ')}. The key question for each activity: "What changed because I was there?" — tangible outcomes beat participation every time.`;
     }
-  } else {
-    suggestions.push({ persona: PERSONAS[3], suggestion: "I don't see research experience. Consider reaching out to university faculty for a mentored project. Programs like RSI, SSTP, or local university summer programs are excellent starting points for any field." });
+    suggestions.push({ persona: PERSONAS[0], suggestion });
   }
 
-  // Ms. Torres
-  if (ecCount >= 5 && buckets.size >= 4) {
-    suggestions.push({ persona: PERSONAS[4], suggestion: "Your profile is shaping up nicely. Now be strategic: identify your top 3 activities and make sure their descriptions tell a story of growth. Admissions readers spend ~8 minutes per application — your list needs to pop." });
-  } else if (!hasVolunteering && !hasInternship) {
-    suggestions.push({ persona: PERSONAS[4], suggestion: "I'd recommend adding either volunteering or an internship before application season. These are the two categories that most commonly appear in admitted students' profiles at top 20 schools." });
-  } else if (ecCount <= 2) {
-    suggestions.push({ persona: PERSONAS[4], suggestion: "Let's build out your activity list. Start with what you're already doing informally — helping at a family business, tutoring, organizing events. Then add 2-3 structured activities aligned with your intended major." });
-  } else {
-    suggestions.push({ persona: PERSONAS[4], suggestion: "Each activity should serve one of three purposes: show leadership, show passion, or show impact. If an activity doesn't do any of those, consider replacing it with one that does." });
+  // Coach Jordan — Practical strategy, balance, actionable next steps
+  {
+    let suggestion = '';
+    if (ecCount === 0) {
+      suggestion = "Let's start simple: what do you do when you're not studying? Gaming communities, social media, helping at home — these all contain seeds of activities admissions officers value. List 3 things you enjoy, and I'll help turn them into strong extracurriculars.";
+    } else if (buckets.size === 1 && ecCount >= 2) {
+      const onlyBucket = Array.from(buckets)[0];
+      suggestion = `All ${ecCount} of your activities fall under ${onlyBucket}. That shows passion, but admissions officers want to see range. Add one community-facing activity (volunteering, mentoring) and one intellectual pursuit (research, academic club) to show you're multidimensional.`;
+    } else if (hasSport && !hasVolunteering && !hasResearch) {
+      const sportECs = ecs.filter(ec => normalizeBucket(ec.category) === 'Sport');
+      suggestion = `Your athletic commitment (${sportECs.map(e => e.name).join(', ')}) shows discipline. Now complement it: a volunteering activity shows character, and a research or academic pursuit shows intellectual curiosity. This "athlete + scholar + citizen" triangle is compelling.`;
+    } else if (highCommitECs.length >= 2 && longTermECs.length >= 2) {
+      suggestion = `Impressive commitment: ${highCommitECs.length} activities at 10+ hrs/week and ${longTermECs.length} at 3+ years. You're showing depth. Now identify your top 2 "headline" activities — the ones you'd discuss in an interview. Make sure their descriptions highlight specific achievements, not just responsibilities.`;
+    } else if (avgHours < 5 && ecCount >= 3) {
+      suggestion = `You have ${ecCount} activities averaging ${avgHours.toFixed(1)} hrs/week each. That's light — aim for at least 2 activities at 8-10 hrs/week. Colleges prefer 4 deep commitments over 8 shallow ones. Consider dropping your least impactful activity and redirecting that time.`;
+    } else if (!hasSport && buckets.size < 3) {
+      suggestion = `With ${buckets.size} categor${buckets.size === 1 ? 'y' : 'ies'} covered, you need more range. A physical activity (even intramural sports) shows balance. A club or volunteering role adds another dimension. Target 4-5 categories total for a well-rounded profile.`;
+    } else {
+      const topEC = ecs.reduce((best, ec) => ec.years * ec.hoursPerWeek > best.years * best.hoursPerWeek ? ec : best, ecs[0]);
+      suggestion = `Good balance with ${buckets.size} activity categories. Your deepest commitment is ${topEC.name} (${topEC.years} yrs, ${topEC.hoursPerWeek} hrs/wk) — make this the star of your application. Next step: ensure each activity description starts with an action verb and includes a measurable outcome.`;
+    }
+    suggestions.push({ persona: PERSONAS[1], suggestion });
+  }
+
+  // Ms. Torres — Long-term counselor perspective, strategic positioning, deadlines
+  {
+    let suggestion = '';
+    if (ecCount === 0 && gpaNum === 0) {
+      suggestion = "We're starting from scratch, and that's perfectly fine — I've guided hundreds of students from this exact point to strong applications. Priority one: enter your academic stats. Priority two: list everything you do outside class, even informally. We'll build your strategy from there.";
+    } else if (ecCount >= 5 && buckets.size >= 4 && hasLeadership && normalizedGpa >= 3.7) {
+      suggestion = `You're in a strong position with ${ecCount} activities, leadership, and a ${gpaNum} GPA. At this stage, I'd focus on narrative coherence — do your activities tell one story? The strongest applications have a thread connecting everything. Think: "What's my theme?" and let that guide your essays.`;
+    } else if (!hasVolunteering && !hasInternship) {
+      suggestion = `I notice you're missing both volunteering and professional experience. These are the two categories that appear most frequently in admitted students' profiles at T20 schools. Even a summer commitment — a 6-week internship or weekend volunteering — fills this gap meaningfully.`;
+    } else if (ecCount <= 2 && (gpaNum > 0 || totalSAT > 0)) {
+      const statsNote = gpaNum > 0 ? `Your ${gpaNum} GPA shows academic ability` : `Your ${totalSAT} SAT shows academic potential`;
+      suggestion = `${statsNote}, but ${ecCount} activit${ecCount === 1 ? 'y' : 'ies'} won't cut it — even at test-optional schools. Start with what you already do: helping at a family business, tutoring siblings, running a social media account. Then add 2-3 structured activities by semester's end.`;
+    } else if (hasResearch && hasLeadership && hasVolunteering) {
+      suggestion = `Research, leadership, and community service — you're hitting the key markers. Now be strategic about descriptions: admissions readers spend ~8 minutes per app. Lead with your most impressive metric in each description. Numbers stick: "raised $5K" is more memorable than "organized fundraisers."`;
+    } else if (avgYears >= 3 && ecCount >= 3) {
+      suggestion = `${longTermECs.length} of your ${ecCount} activities show 3+ years of commitment — that's exactly what admissions offices want to see. This signals genuine passion. Make sure your activity descriptions show growth: member → officer → leader, or beginner → advanced → mentor.`;
+    } else {
+      const nextSteps: string[] = [];
+      if (!hasLeadership) nextSteps.push('seek a leadership title in your strongest activity');
+      if (buckets.size < 4) nextSteps.push(`expand from ${buckets.size} to 4+ activity categories`);
+      if (avgYears < 2) nextSteps.push('commit to current activities for at least 2 years');
+      if (ecCount < 5) nextSteps.push(`add ${5 - ecCount} more meaningful activities`);
+      suggestion = `Good progress. Your strategic priorities: ${nextSteps.slice(0, 3).join('; ')}. Each improvement compounds — a stronger profile means more options and better scholarship potential.`;
+    }
+    suggestions.push({ persona: PERSONAS[2], suggestion });
   }
 
   return suggestions;
@@ -281,8 +315,8 @@ function generatePersonaSuggestions(ecs: Extracurricular[]): PersonaSuggestion[]
 /* ──────────────────────── SCATTERPLOT ──────────────────────── */
 
 function Scatterplot({ userGpa, userSat }: { userGpa: number; userSat: number }) {
-  const W = 520, H = 360;
-  const PAD = { top: 24, right: 34, bottom: 50, left: 58 };
+  const W = 520, H = 380;
+  const PAD = { top: 28, right: 34, bottom: 54, left: 58 };
   const plotW = W - PAD.left - PAD.right;
   const plotH = H - PAD.top - PAD.bottom;
   const xMin = 2.5, xMax = 4.2, yMin = 800, yMax = 1600;
@@ -293,45 +327,57 @@ function Scatterplot({ userGpa, userSat }: { userGpa: number; userSat: number })
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full max-w-[540px]">
       <defs>
-        <linearGradient id="zone-red" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#fee2e2" stopOpacity="0.7" /><stop offset="100%" stopColor="#fecaca" stopOpacity="0.3" /></linearGradient>
-        <linearGradient id="zone-amber" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#fef3c7" stopOpacity="0.7" /><stop offset="100%" stopColor="#fde68a" stopOpacity="0.3" /></linearGradient>
-        <linearGradient id="zone-green" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#d1fae5" stopOpacity="0.7" /><stop offset="100%" stopColor="#a7f3d0" stopOpacity="0.3" /></linearGradient>
-        <radialGradient id="user-glow" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="#6366f1" stopOpacity="0.4" /><stop offset="70%" stopColor="#6366f1" stopOpacity="0.1" /><stop offset="100%" stopColor="#6366f1" stopOpacity="0" /></radialGradient>
-        <filter id="dot-shadow" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#6366f1" floodOpacity="0.3" /></filter>
-        <filter id="zone-shadow" x="-2%" y="-2%" width="104%" height="104%"><feDropShadow dx="0" dy="1" stdDeviation="3" floodColor="#000" floodOpacity="0.06" /></filter>
-        <radialGradient id="comp-dot" cx="30%" cy="30%" r="70%"><stop offset="0%" stopColor="#c7d2fe" /><stop offset="100%" stopColor="#a5b4fc" /></radialGradient>
-        <radialGradient id="user-dot-grad" cx="30%" cy="30%" r="70%"><stop offset="0%" stopColor="#818cf8" /><stop offset="100%" stopColor="#4f46e5" /></radialGradient>
+        <linearGradient id="chart-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#0f172a" /><stop offset="100%" stopColor="#1e1b4b" /></linearGradient>
+        <linearGradient id="zone-red" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#ef4444" stopOpacity="0.15" /><stop offset="100%" stopColor="#f87171" stopOpacity="0.08" /></linearGradient>
+        <linearGradient id="zone-amber" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#f59e0b" stopOpacity="0.15" /><stop offset="100%" stopColor="#fbbf24" stopOpacity="0.08" /></linearGradient>
+        <linearGradient id="zone-green" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity="0.2" /><stop offset="100%" stopColor="#34d399" stopOpacity="0.08" /></linearGradient>
+        <radialGradient id="user-glow" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="#a78bfa" stopOpacity="0.6" /><stop offset="50%" stopColor="#8b5cf6" stopOpacity="0.2" /><stop offset="100%" stopColor="#6366f1" stopOpacity="0" /></radialGradient>
+        <filter id="dot-shadow" x="-100%" y="-100%" width="300%" height="300%"><feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#a78bfa" floodOpacity="0.6" /></filter>
+        <radialGradient id="comp-dot" cx="30%" cy="30%" r="70%"><stop offset="0%" stopColor="#818cf8" stopOpacity="0.5" /><stop offset="100%" stopColor="#6366f1" stopOpacity="0.25" /></radialGradient>
+        <radialGradient id="user-dot-grad" cx="30%" cy="30%" r="70%"><stop offset="0%" stopColor="#c4b5fd" /><stop offset="100%" stopColor="#7c3aed" /></radialGradient>
+        <linearGradient id="grid-line" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#334155" stopOpacity="0.3" /><stop offset="50%" stopColor="#475569" stopOpacity="0.15" /><stop offset="100%" stopColor="#334155" stopOpacity="0.3" /></linearGradient>
       </defs>
-      <rect x="0" y="0" width={W} height={H} rx="16" fill="white" />
-      <rect x={toX(xMin)} y={toY(1150)} width={toX(3.3) - toX(xMin)} height={toY(yMin) - toY(1150)} fill="url(#zone-red)" rx="8" filter="url(#zone-shadow)" />
-      <text x={toX(xMin) + 8} y={toY(1150) + 16} className="text-[9px] font-bold" fill="#dc2626" opacity="0.7">Needs Improvement</text>
-      <rect x={toX(3.3)} y={toY(1350)} width={toX(3.7) - toX(3.3)} height={toY(1150) - toY(1350)} fill="url(#zone-amber)" rx="8" filter="url(#zone-shadow)" />
-      <text x={toX(3.3) + 8} y={toY(1350) + 16} className="text-[9px] font-bold" fill="#d97706" opacity="0.7">Developing</text>
-      <rect x={toX(3.7)} y={toY(yMax)} width={toX(xMax) - toX(3.7)} height={toY(1350) - toY(yMax)} fill="url(#zone-green)" rx="8" filter="url(#zone-shadow)" />
-      <text x={toX(3.7) + 8} y={toY(yMax) + 16} className="text-[9px] font-bold" fill="#059669" opacity="0.7">Competitive</text>
-      {[3.0, 3.5, 4.0].map((g) => (<line key={`gx-${g}`} x1={toX(g)} y1={PAD.top} x2={toX(g)} y2={PAD.top + plotH} stroke="#e2e8f0" strokeWidth="0.5" strokeDasharray="4 4" />))}
-      {[1000, 1200, 1400].map((s) => (<line key={`gy-${s}`} x1={PAD.left} y1={toY(s)} x2={PAD.left + plotW} y2={toY(s)} stroke="#e2e8f0" strokeWidth="0.5" strokeDasharray="4 4" />))}
-      <line x1={PAD.left} y1={PAD.top + plotH} x2={PAD.left + plotW} y2={PAD.top + plotH} stroke="#cbd5e1" strokeWidth="1.5" />
-      <line x1={PAD.left} y1={PAD.top} x2={PAD.left} y2={PAD.top + plotH} stroke="#cbd5e1" strokeWidth="1.5" />
+      <rect x="0" y="0" width={W} height={H} rx="20" fill="url(#chart-bg)" />
+      {/* Subtle grid pattern */}
+      {[3.0, 3.5, 4.0].map((g) => (<line key={`gx-${g}`} x1={toX(g)} y1={PAD.top} x2={toX(g)} y2={PAD.top + plotH} stroke="#475569" strokeWidth="0.5" strokeDasharray="3 6" opacity="0.3" />))}
+      {[1000, 1200, 1400].map((s) => (<line key={`gy-${s}`} x1={PAD.left} y1={toY(s)} x2={PAD.left + plotW} y2={toY(s)} stroke="#475569" strokeWidth="0.5" strokeDasharray="3 6" opacity="0.3" />))}
+      {/* Zone backgrounds */}
+      <rect x={toX(xMin)} y={toY(1150)} width={toX(3.3) - toX(xMin)} height={toY(yMin) - toY(1150)} fill="url(#zone-red)" rx="8" />
+      <rect x={toX(xMin)} y={toY(1150)} width={toX(3.3) - toX(xMin)} height={toY(yMin) - toY(1150)} fill="none" stroke="#ef4444" strokeWidth="0.5" strokeOpacity="0.2" rx="8" />
+      <text x={toX(xMin) + 8} y={toY(1150) + 16} className="text-[9px] font-bold" fill="#f87171" opacity="0.8">Building</text>
+      <rect x={toX(3.3)} y={toY(1350)} width={toX(3.7) - toX(3.3)} height={toY(1150) - toY(1350)} fill="url(#zone-amber)" rx="8" />
+      <rect x={toX(3.3)} y={toY(1350)} width={toX(3.7) - toX(3.3)} height={toY(1150) - toY(1350)} fill="none" stroke="#f59e0b" strokeWidth="0.5" strokeOpacity="0.2" rx="8" />
+      <text x={toX(3.3) + 8} y={toY(1350) + 16} className="text-[9px] font-bold" fill="#fbbf24" opacity="0.8">Developing</text>
+      <rect x={toX(3.7)} y={toY(yMax)} width={toX(xMax) - toX(3.7)} height={toY(1350) - toY(yMax)} fill="url(#zone-green)" rx="8" />
+      <rect x={toX(3.7)} y={toY(yMax)} width={toX(xMax) - toX(3.7)} height={toY(1350) - toY(yMax)} fill="none" stroke="#10b981" strokeWidth="0.5" strokeOpacity="0.2" rx="8" />
+      <text x={toX(3.7) + 8} y={toY(yMax) + 16} className="text-[9px] font-bold" fill="#34d399" opacity="0.8">Competitive</text>
+      {/* Axes */}
+      <line x1={PAD.left} y1={PAD.top + plotH} x2={PAD.left + plotW} y2={PAD.top + plotH} stroke="#64748b" strokeWidth="1" opacity="0.4" />
+      <line x1={PAD.left} y1={PAD.top} x2={PAD.left} y2={PAD.top + plotH} stroke="#64748b" strokeWidth="1" opacity="0.4" />
+      {/* Axis labels */}
       {[2.5, 3.0, 3.5, 4.0].map((g) => (<text key={`xl-${g}`} x={toX(g)} y={PAD.top + plotH + 20} textAnchor="middle" className="text-[10px] font-medium" fill="#94a3b8">{g.toFixed(1)}</text>))}
-      <text x={PAD.left + plotW / 2} y={H - 6} textAnchor="middle" className="text-[11px] font-bold" fill="#6366f1">GPA</text>
+      <text x={PAD.left + plotW / 2} y={H - 8} textAnchor="middle" className="text-[11px] font-bold" fill="#a78bfa">GPA</text>
       {[800, 1000, 1200, 1400, 1600].map((s) => (<text key={`yl-${s}`} x={PAD.left - 10} y={toY(s) + 4} textAnchor="end" className="text-[10px] font-medium" fill="#94a3b8">{s}</text>))}
-      <text x={14} y={PAD.top + plotH / 2} textAnchor="middle" className="text-[11px] font-bold" fill="#6366f1" transform={`rotate(-90, 14, ${PAD.top + plotH / 2})`}>SAT Score</text>
-      {comparativeData.map((d, i) => (<g key={i}><circle cx={toX(d.gpa)} cy={toY(d.sat)} r="5" fill="url(#comp-dot)" opacity="0.6" /><circle cx={toX(d.gpa)} cy={toY(d.sat)} r="5" fill="none" stroke="#818cf8" strokeWidth="0.5" opacity="0.3" /></g>))}
+      <text x={14} y={PAD.top + plotH / 2} textAnchor="middle" className="text-[11px] font-bold" fill="#a78bfa" transform={`rotate(-90, 14, ${PAD.top + plotH / 2})`}>SAT Score</text>
+      {/* Comparative dots */}
+      {comparativeData.map((d, i) => (<circle key={i} cx={toX(d.gpa)} cy={toY(d.sat)} r="4.5" fill="url(#comp-dot)" />))}
+      {/* User position */}
       {hasUser && (
         <g>
-          <circle cx={toX(userGpa)} cy={toY(userSat)} r="20" fill="url(#user-glow)" />
-          <circle cx={toX(userGpa)} cy={toY(userSat)} r="8" fill="url(#user-dot-grad)" filter="url(#dot-shadow)" />
-          <circle cx={toX(userGpa)} cy={toY(userSat)} r="8" fill="none" stroke="white" strokeWidth="2.5" />
-          <circle cx={toX(userGpa) - 2} cy={toY(userSat) - 2} r="2" fill="white" opacity="0.5" />
-          <text x={toX(userGpa) + 14} y={toY(userSat) + 4} className="text-[11px] font-extrabold" fill="#4f46e5">You</text>
+          <circle cx={toX(userGpa)} cy={toY(userSat)} r="28" fill="url(#user-glow)" />
+          <circle cx={toX(userGpa)} cy={toY(userSat)} r="9" fill="url(#user-dot-grad)" filter="url(#dot-shadow)" />
+          <circle cx={toX(userGpa)} cy={toY(userSat)} r="9" fill="none" stroke="white" strokeWidth="2" opacity="0.9" />
+          <circle cx={toX(userGpa) - 2} cy={toY(userSat) - 2} r="2.5" fill="white" opacity="0.4" />
+          <rect x={toX(userGpa) + 14} y={toY(userSat) - 11} width="32" height="22" rx="6" fill="#7c3aed" opacity="0.9" />
+          <text x={toX(userGpa) + 30} y={toY(userSat) + 4} textAnchor="middle" className="text-[10px] font-extrabold" fill="white">You</text>
         </g>
       )}
-      <g transform={`translate(${PAD.left + plotW - 140}, ${PAD.top + 4})`}>
-        <rect x="0" y="0" width="138" height="58" rx="10" fill="white" stroke="#e2e8f0" filter="url(#zone-shadow)" />
-        <circle cx="14" cy="14" r="5" fill="#a7f3d0" stroke="#059669" strokeWidth="1" /><text x="26" y="18" className="text-[9px] font-semibold" fill="#374151">Competitive</text>
-        <circle cx="14" cy="30" r="5" fill="#fde68a" stroke="#d97706" strokeWidth="1" /><text x="26" y="34" className="text-[9px] font-semibold" fill="#374151">Developing</text>
-        <circle cx="14" cy="46" r="5" fill="#fecaca" stroke="#dc2626" strokeWidth="1" /><text x="26" y="50" className="text-[9px] font-semibold" fill="#374151">Needs Improvement</text>
+      {/* Legend */}
+      <g transform={`translate(${PAD.left + plotW - 130}, ${PAD.top + 8})`}>
+        <rect x="0" y="0" width="128" height="64" rx="12" fill="#1e293b" fillOpacity="0.8" stroke="#334155" strokeWidth="0.5" />
+        <circle cx="14" cy="16" r="5" fill="#34d399" fillOpacity="0.6" /><text x="26" y="20" className="text-[9px] font-semibold" fill="#94a3b8">Competitive</text>
+        <circle cx="14" cy="32" r="5" fill="#fbbf24" fillOpacity="0.6" /><text x="26" y="36" className="text-[9px] font-semibold" fill="#94a3b8">Developing</text>
+        <circle cx="14" cy="48" r="5" fill="#f87171" fillOpacity="0.6" /><text x="26" y="52" className="text-[9px] font-semibold" fill="#94a3b8">Building</text>
       </g>
     </svg>
   );
@@ -339,22 +385,32 @@ function Scatterplot({ userGpa, userSat }: { userGpa: number; userSat: number })
 
 /* ──────────────────────── SCORE RING ──────────────────────── */
 
-function ScoreRing({ score, label, size = 100, color = '#6366f1' }: { score: number; label: string; size?: number; color?: string }) {
-  const r = (size - 12) / 2;
+function ScoreRing({ score, label, size = 100, color = '#6366f1', glowColor }: { score: number; label: string; size?: number; color?: string; glowColor?: string }) {
+  const r = (size - 14) / 2;
   const c = Math.PI * 2 * r;
   const offset = c - (score / 100) * c;
+  const glow = glowColor || color;
+  const tier = score >= 80 ? 'Excellent' : score >= 60 ? 'Strong' : score >= 40 ? 'Building' : 'Start Here';
+  const tierColor = score >= 80 ? '#34d399' : score >= 60 ? '#a78bfa' : score >= 40 ? '#fbbf24' : '#94a3b8';
   return (
-    <div className="flex flex-col items-center gap-1.5">
+    <div className="flex flex-col items-center gap-2">
       <div className="relative" style={{ width: size, height: size }}>
         <svg width={size} height={size} className="-rotate-90">
-          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#f1f5f9" strokeWidth="8" />
-          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth="8" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset} className="transition-all duration-1000" style={{ filter: `drop-shadow(0 0 6px ${color}40)` }} />
+          <defs>
+            <linearGradient id={`ring-grad-${label.replace(/\s/g, '')}`} x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor={color} />
+              <stop offset="100%" stopColor={glow} />
+            </linearGradient>
+          </defs>
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#1e293b" strokeWidth="6" opacity="0.15" />
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={`url(#ring-grad-${label.replace(/\s/g, '')})`} strokeWidth="7" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset} className="transition-all duration-1000" style={{ filter: `drop-shadow(0 0 8px ${glow}50)` }} />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl font-extrabold font-display text-primary">{score}</span>
+          <span className="text-2xl font-extrabold font-display" style={{ color }}>{score}</span>
+          <span className="text-[8px] font-bold uppercase tracking-widest" style={{ color: tierColor }}>{tier}</span>
         </div>
       </div>
-      <p className="text-xs font-semibold text-slate-500 text-center">{label}</p>
+      <p className="text-xs font-bold text-slate-400 text-center tracking-wide">{label}</p>
     </div>
   );
 }
@@ -494,7 +550,13 @@ export default function StudentProfile() {
   const results = useMemo(() => computeHolisticScore(profile), [profile]);
   const diversity = useMemo(() => computeDiversityScore(profile.extracurriculars), [profile.extracurriculars]);
   const depth = useMemo(() => computeDepthScore(profile.extracurriculars), [profile.extracurriculars]);
-  const personaSuggestions = useMemo(() => generatePersonaSuggestions(profile.extracurriculars), [profile.extracurriculars]);
+  const personaSuggestions = useMemo(() => generatePersonaSuggestions({
+    gpa: profile.gpa,
+    gpaScale: profile.gpaScale,
+    satMath: profile.satMath,
+    satRW: profile.satRW,
+    ecs: profile.extracurriculars,
+  }), [profile]);
 
   // Group ECs by bucket
   const ecsByBucket = useMemo(() => {
@@ -786,26 +848,29 @@ export default function StudentProfile() {
 
             {/* ─── EC SCOREBOARD (always visible when there are ECs) ─── */}
             {profile.extracurriculars.length > 0 && (
-              <div className="bg-white rounded-2xl border border-slate-100 p-6">
-                <h3 className="text-lg font-bold font-display text-primary mb-5">Activity Scoreboard</h3>
+              <div className="relative overflow-hidden rounded-2xl border border-indigo-500/10 bg-gradient-to-br from-slate-900 via-indigo-950 to-purple-950 p-6">
+                {/* Ambient glow effect */}
+                <div className="absolute top-0 right-0 w-40 h-40 bg-violet-500/10 rounded-full blur-3xl" />
+                <div className="absolute bottom-0 left-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-3xl" />
+                <h3 className="relative text-lg font-bold font-display text-white mb-5">Activity Scoreboard</h3>
 
-                <div className="flex items-center justify-around gap-4 mb-6">
-                  <ScoreRing score={diversity.score} label="Diversity" size={95} color="#8b5cf6" />
-                  <ScoreRing score={depth.score} label="Depth" size={95} color="#06b6d4" />
-                  <ScoreRing score={results.ecScore} label="Overall EC" size={95} color="#10b981" />
+                <div className="relative flex items-center justify-around gap-4 mb-6">
+                  <ScoreRing score={diversity.score} label="Diversity" size={95} color="#a78bfa" glowColor="#c4b5fd" />
+                  <ScoreRing score={depth.score} label="Depth" size={95} color="#22d3ee" glowColor="#67e8f9" />
+                  <ScoreRing score={results.ecScore} label="Overall EC" size={95} color="#34d399" glowColor="#6ee7b7" />
                 </div>
 
                 {/* Category coverage bar */}
-                <div className="mb-4">
+                <div className="relative mb-4">
                   <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Category Coverage ({diversity.filledBuckets}/{diversity.totalBuckets})</p>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1.5">
                     {EC_BUCKETS.map(b => {
                       const filled = ecsByBucket[b.key]?.length > 0;
                       return (
                         <div key={b.key} className="flex-1 group relative">
-                          <div className={`h-3 rounded-full transition-all ${filled ? `bg-gradient-to-r ${b.gradient}` : 'bg-slate-100'}`} />
-                          <div className="absolute -top-8 left-1/2 -translate-x-1/2 hidden group-hover:block">
-                            <span className="text-[9px] bg-slate-800 text-white px-2 py-0.5 rounded whitespace-nowrap">{b.label}</span>
+                          <div className={`h-3 rounded-full transition-all ${filled ? `bg-gradient-to-r ${b.gradient} shadow-sm` : 'bg-white/5'}`} style={filled ? { boxShadow: `0 0 8px ${b.ring}40` } : {}} />
+                          <div className="absolute -top-8 left-1/2 -translate-x-1/2 hidden group-hover:block z-10">
+                            <span className="text-[9px] bg-white text-slate-800 px-2 py-0.5 rounded shadow-lg whitespace-nowrap">{b.label}</span>
                           </div>
                         </div>
                       );
@@ -814,24 +879,24 @@ export default function StudentProfile() {
                 </div>
 
                 {/* Feedback */}
-                <div className="space-y-2">
-                  <div className="p-3 rounded-lg bg-purple-50 border border-purple-100">
-                    <p className="text-[10px] font-semibold text-purple-600 uppercase tracking-wider">Diversity</p>
-                    <p className="text-xs text-purple-800 mt-0.5">{diversity.feedback}</p>
+                <div className="relative space-y-2">
+                  <div className="p-3 rounded-xl bg-violet-500/10 border border-violet-500/20 backdrop-blur-sm">
+                    <p className="text-[10px] font-semibold text-violet-400 uppercase tracking-wider">Diversity</p>
+                    <p className="text-xs text-violet-200 mt-0.5">{diversity.feedback}</p>
                   </div>
-                  <div className="p-3 rounded-lg bg-cyan-50 border border-cyan-100">
-                    <p className="text-[10px] font-semibold text-cyan-600 uppercase tracking-wider">Depth</p>
-                    <p className="text-xs text-cyan-800 mt-0.5">{depth.feedback}</p>
+                  <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/20 backdrop-blur-sm">
+                    <p className="text-[10px] font-semibold text-cyan-400 uppercase tracking-wider">Depth</p>
+                    <p className="text-xs text-cyan-200 mt-0.5">{depth.feedback}</p>
                   </div>
                 </div>
 
                 {/* Missing categories */}
                 {diversity.missing.length > 0 && diversity.missing.length <= 4 && (
-                  <div className="mt-3 p-3 rounded-lg bg-amber-50 border border-amber-100">
-                    <p className="text-[10px] font-semibold text-amber-600 uppercase tracking-wider mb-1">Consider adding</p>
+                  <div className="relative mt-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                    <p className="text-[10px] font-semibold text-amber-400 uppercase tracking-wider mb-1.5">Consider adding</p>
                     <div className="flex flex-wrap gap-1.5">
                       {diversity.missing.map(cat => (
-                        <span key={cat} className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-medium rounded-full">{cat}</span>
+                        <span key={cat} className="px-2.5 py-0.5 bg-amber-500/15 text-amber-300 text-[10px] font-medium rounded-full border border-amber-500/20">{cat}</span>
                       ))}
                     </div>
                   </div>
@@ -840,83 +905,90 @@ export default function StudentProfile() {
             )}
 
             {/* ─── PERSONALIZED SUGGESTIONS ─── */}
-            {profile.extracurriculars.length >= 0 && (
-              <div className="bg-white rounded-2xl border border-slate-100 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold font-display text-primary">Personalized Suggestions</h3>
-                  <button
-                    onClick={() => setShowPersonas(!showPersonas)}
-                    className="text-[10px] text-slate-400 hover:text-slate-600 font-medium"
-                  >
-                    {showPersonas ? 'Hide' : 'Show'}
-                  </button>
+            <div className="relative overflow-hidden rounded-2xl border border-violet-500/10 bg-gradient-to-br from-white via-violet-50/30 to-indigo-50/50 p-6">
+              <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-br from-violet-200/20 to-transparent rounded-full blur-3xl" />
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h3 className="text-lg font-bold font-display text-primary">Expert Guidance</h3>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Personalized advice based on your current profile</p>
                 </div>
-
-                {showPersonas && (
-                  <div className="space-y-3">
-                    {personaSuggestions.map((ps, i) => (
-                      <div key={i} className="p-4 rounded-xl bg-surface border border-slate-100 hover:border-slate-200 transition-all">
-                        <div className="flex items-center gap-2.5 mb-2">
-                          <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${ps.persona.avatarBg} flex items-center justify-center text-white font-bold text-xs flex-shrink-0`}>
-                            {ps.persona.name.split(' ').map(w => w[0]).join('')}
-                          </div>
-                          <div>
-                            <p className={`text-xs font-bold ${ps.persona.color}`}>{ps.persona.name}</p>
-                            <p className="text-[10px] text-slate-400">{ps.persona.title}</p>
-                          </div>
-                        </div>
-                        <p className="text-xs text-slate-600 leading-relaxed">{ps.suggestion}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <button
+                  onClick={() => setShowPersonas(!showPersonas)}
+                  className="text-[10px] text-violet-500 hover:text-violet-700 font-semibold px-2.5 py-1 rounded-lg hover:bg-violet-50 transition-colors"
+                >
+                  {showPersonas ? 'Collapse' : 'Expand'}
+                </button>
               </div>
-            )}
+
+              {showPersonas && (
+                <div className="relative space-y-3">
+                  {personaSuggestions.map((ps, i) => (
+                    <div key={i} className="group p-4 rounded-xl bg-white/80 backdrop-blur-sm border border-slate-100 hover:border-violet-200 hover:shadow-lg hover:shadow-violet-100/50 transition-all duration-300">
+                      <div className="flex items-center gap-3 mb-2.5">
+                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${ps.persona.avatarBg} flex items-center justify-center text-white font-bold text-xs flex-shrink-0 shadow-lg`} style={{ boxShadow: `0 4px 14px -2px ${ps.persona.avatarBg.includes('violet') ? '#8b5cf640' : ps.persona.avatarBg.includes('sky') ? '#0ea5e940' : '#f43f5e40'}` }}>
+                          {ps.persona.emoji}
+                        </div>
+                        <div>
+                          <p className={`text-sm font-bold ${ps.persona.color}`}>{ps.persona.name}</p>
+                          <p className="text-[10px] text-slate-400 font-medium">{ps.persona.title}</p>
+                        </div>
+                      </div>
+                      <p className="text-xs text-slate-600 leading-relaxed pl-[52px]">{ps.suggestion}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* ─── HOLISTIC EVALUATION ─── */}
             {!scored ? (
-              <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center">
-                <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-accent/10 to-purple-100 flex items-center justify-center mb-4">
-                  <svg className="w-8 h-8 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+              <div className="relative overflow-hidden rounded-2xl border border-indigo-500/10 bg-gradient-to-br from-slate-900 via-indigo-950 to-purple-950 p-8 text-center">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(139,92,246,0.12),transparent_70%)]" />
+                <div className="relative">
+                  <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-violet-500/20 to-indigo-500/20 border border-violet-500/20 flex items-center justify-center mb-4">
+                    <svg className="w-8 h-8 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                  </div>
+                  <h3 className="text-lg font-bold font-display text-white">Your Evaluation Awaits</h3>
+                  <p className="text-sm text-slate-400 mt-2 max-w-xs mx-auto">Fill in your GPA, SAT scores, and extracurriculars, then click &ldquo;Evaluate My Profile&rdquo; to see your holistic score.</p>
                 </div>
-                <h3 className="text-lg font-bold font-display text-primary">Your Evaluation Awaits</h3>
-                <p className="text-sm text-slate-500 mt-2 max-w-xs mx-auto">Fill in your GPA, SAT scores, and extracurriculars, then click &ldquo;Evaluate My Profile&rdquo; to see your holistic score.</p>
               </div>
             ) : (
               <>
-                <div className="bg-white rounded-2xl border border-slate-100 p-6">
-                  <h3 className="text-lg font-bold font-display text-primary mb-5">Holistic Evaluation</h3>
-                  <div className="flex items-center justify-around gap-4">
-                    <ScoreRing score={results.holistic} label="Overall Score" size={110} />
-                    <ScoreRing score={results.percentile} label="Percentile" size={110} color="#10b981" />
+                <div className="relative overflow-hidden rounded-2xl border border-indigo-500/10 bg-gradient-to-br from-slate-900 via-indigo-950 to-purple-950 p-6">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(139,92,246,0.15),transparent_60%)]" />
+                  <div className="absolute top-0 right-0 w-48 h-48 bg-violet-500/5 rounded-full blur-3xl" />
+                  <h3 className="relative text-lg font-bold font-display text-white mb-5">Holistic Evaluation</h3>
+                  <div className="relative flex items-center justify-around gap-4">
+                    <ScoreRing score={results.holistic} label="Overall Score" size={115} color="#a78bfa" glowColor="#c4b5fd" />
+                    <ScoreRing score={results.percentile} label="Percentile" size={115} color="#34d399" glowColor="#6ee7b7" />
                   </div>
 
-                  <div className="mt-6 p-4 rounded-xl bg-surface border border-slate-100">
+                  <div className="relative mt-6 p-4 rounded-xl bg-white/5 border border-white/10 backdrop-blur-sm">
                     <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Score Breakdown</p>
                     <div className="space-y-3">
                       {[
-                        { label: 'GPA', score: results.gpaScore, weight: '35%', color: 'bg-accent' },
-                        { label: 'SAT', score: results.satScore, weight: '30%', color: 'bg-purple-500' },
-                        { label: 'Extracurriculars', score: results.ecScore, weight: '35%', color: 'bg-emerald-500' },
+                        { label: 'GPA', score: results.gpaScore, weight: '35%', gradient: 'from-violet-500 to-indigo-500', glow: '#8b5cf6' },
+                        { label: 'SAT', score: results.satScore, weight: '30%', gradient: 'from-fuchsia-500 to-purple-500', glow: '#d946ef' },
+                        { label: 'Extracurriculars', score: results.ecScore, weight: '35%', gradient: 'from-emerald-400 to-teal-500', glow: '#34d399' },
                       ].map(item => (
                         <div key={item.label}>
-                          <div className="flex justify-between text-sm mb-1">
-                            <span className="font-medium text-primary">{item.label} <span className="text-slate-400 text-xs">({item.weight})</span></span>
-                            <span className="font-bold text-primary">{item.score}/100</span>
+                          <div className="flex justify-between text-sm mb-1.5">
+                            <span className="font-medium text-slate-300">{item.label} <span className="text-slate-500 text-xs">({item.weight})</span></span>
+                            <span className="font-bold text-white">{item.score}<span className="text-slate-500 text-xs">/100</span></span>
                           </div>
-                          <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                            <div className={`h-full ${item.color} rounded-full transition-all duration-700`} style={{ width: `${item.score}%` }} />
+                          <div className="h-2.5 bg-white/5 rounded-full overflow-hidden">
+                            <div className={`h-full bg-gradient-to-r ${item.gradient} rounded-full transition-all duration-700`} style={{ width: `${item.score}%`, boxShadow: `0 0 12px ${item.glow}30` }} />
                           </div>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-accent/5 to-purple-50 border border-accent/10">
-                    <p className="text-sm font-semibold text-primary">
-                      You&apos;re in the <span className="text-accent">{results.percentile}th percentile</span> compared to {comparativeData.length} students on the platform.
+                  <div className="relative mt-4 p-4 rounded-xl bg-gradient-to-r from-violet-500/10 to-indigo-500/10 border border-violet-500/20">
+                    <p className="text-sm font-semibold text-white">
+                      You&apos;re in the <span className="text-violet-300 font-extrabold">{results.percentile}th percentile</span> compared to {comparativeData.length} students on the platform.
                     </p>
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className="text-xs text-slate-400 mt-1">
                       {results.percentile >= 80 ? 'Excellent position for top-tier universities.' :
                        results.percentile >= 60 ? 'Strong profile with room for strategic improvement.' :
                        results.percentile >= 40 ? 'Solid foundation — focus on extracurriculars and test prep.' :
@@ -925,15 +997,15 @@ export default function StudentProfile() {
                   </div>
 
                   {results.ecFeedback && (
-                    <div className="mt-4 p-4 rounded-xl bg-emerald-50 border border-emerald-100">
-                      <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-1">AI Extracurricular Assessment</p>
-                      <p className="text-sm text-emerald-800">{results.ecFeedback}</p>
+                    <div className="relative mt-4 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                      <p className="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-1">AI Extracurricular Assessment</p>
+                      <p className="text-sm text-emerald-200">{results.ecFeedback}</p>
                     </div>
                   )}
                 </div>
 
-                <div className="bg-white rounded-2xl border border-slate-100 p-6">
-                  <h3 className="text-lg font-bold font-display text-primary mb-1">Where You Stand</h3>
+                <div className="relative overflow-hidden rounded-2xl border border-indigo-500/10 bg-gradient-to-br from-slate-900 to-indigo-950 p-6">
+                  <h3 className="text-lg font-bold font-display text-white mb-1">Where You Stand</h3>
                   <p className="text-xs text-slate-400 mb-4">Your position vs. other AdmitsOnly students.</p>
                   <Scatterplot userGpa={results.normalizedGpa} userSat={results.totalSAT} />
                 </div>

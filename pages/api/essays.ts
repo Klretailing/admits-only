@@ -35,73 +35,221 @@ function extractKeywords(text: string): Set<string> {
   return new Set(words.filter(w => w.length > 3 && !STOP_WORDS.has(w)));
 }
 
-/* ──── 1. VOICE & AUTHENTICITY ──── */
+/* ──── 1. VOICE & AUTHENTICITY (AI DETECTION) ──── */
 
-const AI_PATTERNS = [
+// --- Tier 1: High-confidence AI vocabulary (words/phrases rarely used by students) ---
+const AI_VOCAB_STRONG = [
+  /\bdelve\b/gi, /\btapestry\b/gi, /\bplethora\b/gi, /\bmyriad\b/gi,
+  /\bparadigm\b/gi, /\bsynergy\b/gi, /\bseamless(?:ly)?\b/gi,
+  /\bundeniably\b/gi, /\binextricably\b/gi, /\bpivotal\b/gi,
+  /\bfoster(?:s|ed|ing)?\b/gi, /\bhone(?:s|d)?\b/gi,
+  /\bnavigate (?:the )?(?:complex|intricat)\w*/gi,
+  /\bembark on (?:a|this) journey\b/gi,
+  /\brealm\b/gi, /\blandscape\b/gi, /\bunveils?\b/gi,
+  /\bculminat(?:e[ds]?|ing)\b/gi, /\bcommenc(?:e[ds]?|ing)\b/gi,
+  /\bfacilitat(?:e[ds]?|ing)\b/gi, /\butiliz(?:e[ds]?|ing)\b/gi,
+  /\boptimiz(?:e[ds]?|ing)\b/gi, /\bleverage[ds]?\b/gi,
+  /\bholistic\b/gi, /\bmultifaceted\b/gi, /\boverarch(?:ing)?\b/gi,
+  /\btransformative\b/gi, /\bprofound(?:ly)?\b/gi,
+  /\binvaluable\b/gi, /\bintricacies\b/gi, /\binterwoven\b/gi,
+  /\beverchanging\b/gi, /\bever-evolving\b/gi,
+  /\bexemplif(?:y|ies|ied)\b/gi, /\bshed(?:s|ding)? light\b/gi,
+  /\bresonate[ds]? (?:deeply |profoundly )?with\b/gi,
+  /\bplay(?:s|ed)? a (?:pivotal|crucial|vital|key|significant) role\b/gi,
+  /\bignite(?:s|d)? (?:a |my )passion\b/gi,
+  /\bcatalyst\b/gi, /\bempowered?\b/gi, /\binstilled\b/gi,
+  /\bdemystif(?:y|ied|ies)\b/gi, /\bencapsulate[ds]?\b/gi,
+];
+
+// --- Tier 2: Common AI transitional/structural phrases ---
+const AI_PHRASES = [
   /\bin conclusion\b/gi, /\bfurthermore\b/gi, /\bmoreover\b/gi,
   /\bit is worth noting\b/gi, /\bit is important to note\b/gi,
-  /\bin today'?s (?:world|society|day and age)\b/gi, /\bas a matter of fact\b/gi,
-  /\bdelve\b/gi, /\btapestry\b/gi, /\bundeniably\b/gi, /\bleverage\b/gi,
-  /\bparadigm\b/gi, /\bsynergy\b/gi, /\bplethora\b/gi, /\bmyriad of\b/gi,
-  /\bseamless(?:ly)?\b/gi, /\bembark on (?:a|this) journey\b/gi,
-  /\bthis essay (?:will|aims to)\b/gi, /\boverall[,]? (?:it can be|we can)\b/gi,
-  /\bfacilitate\b/gi, /\butilize\b/gi, /\boptimize\b/gi,
-  /\bin (?:essence|summary)\b/gi, /\bwithout a doubt\b/gi,
-];
-
-const AI_STRUCTURAL = [
-  /^(?:In |The |This |It is |One of |There (?:is|are) )/m,
-  /\b(?:firstly|secondly|thirdly|lastly)\b/gi,
+  /\bin today'?s (?:world|society|day and age|fast-paced)\b/gi,
+  /\bas a matter of fact\b/gi, /\bwithout a doubt\b/gi,
+  /\bin (?:essence|summary)\b/gi, /\bnot only .{5,50} but also\b/gi,
+  /\bthis essay (?:will|aims to)\b/gi,
+  /\boverall[,]? (?:it can be|we can|this)\b/gi,
+  /\b(?:firstly|secondly|thirdly|lastly|to begin with)\b/gi,
   /\b(?:on the other hand|that being said|having said that)\b/gi,
+  /\bit (?:is|becomes) (?:evident|clear|apparent|obvious) that\b/gi,
+  /\b(?:one|it) cannot (?:deny|overstate|underestimate)\b/gi,
+  /\b(?:in light of|in the context of|with regard to)\b/gi,
+  /\bthis (?:experience|moment|journey|endeavor) (?:taught|showed|allowed)\b/gi,
+  /\bas I (?:reflect|look back|ponder|consider)\b/gi,
+  /\bmoving forward\b/gi, /\bin (?:this|the) (?:realm|landscape|arena)\b/gi,
+  /\ba (?:testament|reflection) (?:to|of)\b/gi,
+  /\b(?:serves|served) as a (?:reminder|testament|catalyst)\b/gi,
+  /\b(?:the )?(?:beauty|power|importance|essence|significance) of\b/gi,
 ];
 
-// Markers of authentic personal voice
+// --- Tier 3: AI-typical sentence openers (penalized at paragraph level) ---
+const AI_OPENERS = [
+  /^(?:In |The |This |It is |One of |There (?:is|are) |Having |Through |By |With |As (?:a|I|the|we) |From )/m,
+];
+
+// --- Markers of authentic personal voice (humans write these, AI almost never does) ---
 const PERSONAL_VOICE_MARKERS = [
   /\bI remember\b/gi, /\bI noticed\b/gi, /\bI couldn'?t\b/gi,
-  /\bmy (?:mom|dad|mother|father|sister|brother|friend|coach|teacher)\b/gi,
+  /\bmy (?:mom|dad|mother|father|sister|brother|friend|coach|teacher|grandm)/gi,
   /\bI (?:looked|stared|watched|listened|heard|felt|smelled|tasted)\b/gi,
   /\bI whispered\b/gi, /\bI laughed\b/gi, /\bI froze\b/gi,
+  /\bI cried\b/gi, /\bI panicked\b/gi, /\bI ran\b/gi,
   /"[^"]{5,}"/g, // dialogue
   /\b\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)\b/gi, // specific times
+  /\bkinda\b/gi, /\bgonna\b/gi, /\bwanna\b/gi, /\blike,?\s/gi, // informal speech
+  /\b(?:ugh|hmm|huh|wow|oops|yikes|lol|omg)\b/gi, // interjections
+  /\bI (?:almost|literally|totally|honestly|basically) /gi,
+  /\bmy heart\b/gi, /\bmy stomach\b/gi, /\bmy hands\b/gi, /\bmy voice\b/gi,
+  /\b(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) (?:morning|afternoon|evening|night)\b/gi,
+  /(?:\d{1,2}(?:st|nd|rd|th) grade)/gi, // "7th grade"
+  /\b(?:freshman|sophomore|junior|senior) year\b/gi,
+];
+
+// --- Hedging patterns typical of AI (overly balanced, non-committal) ---
+const AI_HEDGING = [
+  /\bwhile .{10,60},? (?:it is|it's|we must|one must|it remains)\b/gi,
+  /\b(?:can be|could be|might be) (?:seen as|viewed as|considered)\b/gi,
+  /\bstrike(?:s|ing)? a balance\b/gi,
+  /\bboth .{5,30} and .{5,30} (?:are|is|play|serve)\b/gi,
+  /\bon (?:one|the one) hand .{10,80} on the other\b/gi,
 ];
 
 function analyzeVoice(text: string, sentences: string[], wordCount: number): number {
-  let score = 85; // start with high baseline
+  // Start at 70 (neutral) — evidence moves it up or down
+  let score = 70;
 
-  // AI pattern penalties
-  let aiFlags = 0;
-  for (const pat of AI_PATTERNS) { const m = text.match(pat); if (m) aiFlags += m.length; }
-  for (const pat of AI_STRUCTURAL) { const m = text.match(pat); if (m) aiFlags += m.length * 0.5; }
-  const flagDensity = aiFlags / Math.max(wordCount / 100, 1);
-  score -= Math.min(flagDensity * 15, 50);
+  // ─── AI Vocabulary (Strong signal, high-confidence) ───
+  let strongVocabFlags = 0;
+  for (const pat of AI_VOCAB_STRONG) { const m = text.match(pat); if (m) strongVocabFlags += m.length; }
+  const strongDensity = strongVocabFlags / Math.max(wordCount / 100, 1);
+  // Each strong AI word is a significant signal
+  score -= Math.min(strongDensity * 20, 40);
+  // Bonus penalty for high absolute count (even in long essays)
+  if (strongVocabFlags >= 5) score -= 10;
+  if (strongVocabFlags >= 8) score -= 10;
 
-  // Sentence length uniformity (AI → uniform)
-  if (sentences.length >= 4) {
-    const lengths = sentences.map(s => s.trim().split(/\s+/).length);
-    const mean = lengths.reduce((a, b) => a + b, 0) / lengths.length;
-    const variance = lengths.reduce((sum, l) => sum + Math.pow(l - mean, 2), 0) / lengths.length;
-    const cv = Math.sqrt(variance) / Math.max(mean, 1);
-    if (cv < 0.2) score -= 15; // very uniform → likely AI
-    else if (cv < 0.3) score -= 5;
-    else if (cv > 0.5) score += 5; // varied → likely human
+  // ─── AI Phrases (Medium signal) ───
+  let phraseFlags = 0;
+  for (const pat of AI_PHRASES) { const m = text.match(pat); if (m) phraseFlags += m.length; }
+  const phraseDensity = phraseFlags / Math.max(wordCount / 100, 1);
+  score -= Math.min(phraseDensity * 12, 30);
+
+  // ─── AI Hedging (Medium signal) ───
+  let hedgeFlags = 0;
+  for (const pat of AI_HEDGING) { const m = text.match(pat); if (m) hedgeFlags += m.length; }
+  score -= Math.min(hedgeFlags * 5, 15);
+
+  // ─── Sentence start repetition (AI loves starting with same words) ───
+  if (sentences.length >= 5) {
+    const starters = sentences.map(s => {
+      const words = s.trim().split(/\s+/);
+      return words.slice(0, 2).join(' ').toLowerCase().replace(/[^a-z ]/g, '');
+    }).filter(s => s.length > 0);
+    const starterCounts: Record<string, number> = {};
+    for (const s of starters) { starterCounts[s] = (starterCounts[s] || 0) + 1; }
+    const maxRepeat = Math.max(...Object.values(starterCounts));
+    const repeatRatio = maxRepeat / starters.length;
+    if (repeatRatio > 0.3) score -= 12; // >30% sentences start same way
+    else if (repeatRatio > 0.2) score -= 6;
+
+    // Count sentences starting with "I" vs other patterns (AI tends to avoid "I" or use it uniformly)
+    const iStarters = starters.filter(s => s.startsWith('i ')).length;
+    const iRatio = iStarters / starters.length;
+    // AI rarely uses "I" as starter, or uses it very uniformly
+    if (iRatio === 0 && wordCount > 200) score -= 8; // no "I" in personal essay = suspicious
   }
 
-  // Personal voice bonuses
+  // ─── Paragraph-level opener analysis ───
+  const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+  if (paragraphs.length >= 3) {
+    let genericOpeners = 0;
+    for (const p of paragraphs) {
+      for (const pat of AI_OPENERS) { if (pat.test(p.trim())) genericOpeners++; }
+    }
+    const openerRatio = genericOpeners / paragraphs.length;
+    if (openerRatio >= 0.8) score -= 12;
+    else if (openerRatio >= 0.6) score -= 6;
+  }
+
+  // ─── Sentence length uniformity (AI → very uniform sentence lengths) ───
+  if (sentences.length >= 5) {
+    const lengths = sentences.map(s => s.trim().split(/\s+/).length).filter(l => l > 2);
+    if (lengths.length >= 4) {
+      const mean = lengths.reduce((a, b) => a + b, 0) / lengths.length;
+      const variance = lengths.reduce((sum, l) => sum + Math.pow(l - mean, 2), 0) / lengths.length;
+      const cv = Math.sqrt(variance) / Math.max(mean, 1);
+      if (cv < 0.15) score -= 18; // extremely uniform = almost certainly AI
+      else if (cv < 0.25) score -= 10;
+      else if (cv < 0.35) score -= 4;
+      else if (cv > 0.55) score += 6; // high variation = likely human
+    }
+  }
+
+  // ─── Paragraph length uniformity ───
+  if (paragraphs.length >= 3) {
+    const pLengths = paragraphs.map(p => p.trim().split(/\s+/).length);
+    const pMean = pLengths.reduce((a, b) => a + b, 0) / pLengths.length;
+    const pVar = pLengths.reduce((sum, l) => sum + Math.pow(l - pMean, 2), 0) / pLengths.length;
+    const pCv = Math.sqrt(pVar) / Math.max(pMean, 1);
+    if (pCv < 0.1) score -= 12; // very uniform paragraphs
+    else if (pCv < 0.18) score -= 6;
+  }
+
+  // ─── Average sentence length (AI tends to write longer, more complex sentences) ───
+  if (sentences.length >= 3) {
+    const avgLen = sentences.reduce((sum, s) => sum + s.trim().split(/\s+/).length, 0) / sentences.length;
+    if (avgLen > 25) score -= 8; // AI writes long, complex sentences
+    else if (avgLen > 22) score -= 4;
+    // Very short average = more human-like
+    if (avgLen < 14 && avgLen > 5) score += 4;
+  }
+
+  // ─── Comma density (AI uses more complex punctuation) ───
+  const commaCount = (text.match(/,/g) || []).length;
+  const commaDensity = commaCount / Math.max(wordCount / 100, 1);
+  if (commaDensity > 8) score -= 6; // excessive comma use
+
+  // ─── Semicolon / em-dash overuse (AI loves these) ───
+  const semicolons = (text.match(/;/g) || []).length;
+  const emDashes = (text.match(/[—–]/g) || []).length;
+  if (semicolons >= 3) score -= 5;
+  if (emDashes >= 4) score -= 4;
+
+  // ─── Contraction analysis (humans use contractions, AI often doesn't) ───
+  const contractions = (text.match(/\b(?:I'm|I've|I'd|I'll|can't|won't|don't|didn't|couldn't|wouldn't|shouldn't|isn't|wasn't|weren't|haven't|hasn't|hadn't|it's|that's|there's|what's|who's|let's|we're|they're|you're|he's|she's)\b/gi) || []).length;
+  const contractionDensity = contractions / Math.max(wordCount / 100, 1);
+  if (contractionDensity < 0.3 && wordCount > 200) score -= 8; // no contractions = formal = likely AI
+  else if (contractionDensity >= 1.5) score += 6; // natural contractions = human
+
+  // ─── Personal voice bonuses (strong human signals) ───
   let personalMarkers = 0;
   for (const pat of PERSONAL_VOICE_MARKERS) {
     const m = text.match(pat);
     if (m) personalMarkers += m.length;
   }
-  score += Math.min(personalMarkers * 3, 15);
+  score += Math.min(personalMarkers * 4, 25);
 
-  // Paragraph uniformity check
-  const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
-  if (paragraphs.length >= 3) {
-    const pLengths = paragraphs.map(p => p.trim().split(/\s+/).length);
-    const pMean = pLengths.reduce((a, b) => a + b, 0) / pLengths.length;
-    const pVar = pLengths.reduce((sum, l) => sum + Math.pow(l - pMean, 2), 0) / pLengths.length;
-    if (Math.sqrt(pVar) / Math.max(pMean, 1) < 0.12) score -= 8;
-  }
+  // ─── Emotional irregularity (humans have emotional bursts, AI is steady) ───
+  const exclamations = (text.match(/!/g) || []).length;
+  const questions = (text.match(/\?/g) || []).length;
+  const ellipsis = (text.match(/\.{3}/g) || []).length;
+  const emotionalPunctuation = exclamations + questions + ellipsis;
+  if (emotionalPunctuation >= 2 && emotionalPunctuation <= 6) score += 5;
+  if (emotionalPunctuation === 0 && wordCount > 250) score -= 4; // no emotion = flat = AI-like
+
+  // ─── Vocabulary sophistication mismatch (AI writes with consistent high register) ───
+  // Count mix of casual + formal (humans naturally mix registers)
+  const casualWords = (text.match(/\b(?:cool|awesome|weird|stuff|things|kids|tons|huge|crazy|super|pretty much|kind of|sort of|messed up|freaked out|bummed|stoked|psyched)\b/gi) || []).length;
+  const formalWords = (text.match(/\b(?:furthermore|consequently|nevertheless|notwithstanding|henceforth|whereby|therein|aforementioned|subsequent|preceding|inherent|intrinsic|extrinsic|paradigmatic)\b/gi) || []).length;
+  // Mix of registers = human; all formal = AI
+  if (casualWords > 0 && formalWords === 0) score += 5;
+  if (formalWords >= 3 && casualWords === 0) score -= 8;
+
+  // ─── Composite threshold: if many signals align, apply compounding penalty ───
+  const totalAiSignals = strongVocabFlags + phraseFlags + hedgeFlags;
+  if (totalAiSignals >= 10) score -= 10; // compounding penalty for high AI signal count
+  if (totalAiSignals >= 15) score -= 10;
 
   return Math.max(0, Math.min(100, Math.round(score)));
 }
