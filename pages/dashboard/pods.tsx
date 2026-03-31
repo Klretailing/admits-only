@@ -183,10 +183,27 @@ export default function StudyPods() {
   const [timerDisplay, setTimerDisplay] = useState('');
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Message reactions
+  const [messageReactions, setMessageReactions] = useState<Record<string, Record<string, string[]>>>({});
+  const [showReactionPicker, setShowReactionPicker] = useState<string | null>(null);
+  const [hoveredMessage, setHoveredMessage] = useState<string | null>(null);
+
+  // Text selection commenting
+  const [selectedText, setSelectedText] = useState('');
+  const [showSelectionComment, setShowSelectionComment] = useState(false);
+  const [selectionCommentText, setSelectionCommentText] = useState('');
+  const textContentRef = useRef<HTMLDivElement>(null);
+
+  // Document modal zoom
+  const [docZoom, setDocZoom] = useState(100);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const currentUserId = (session?.user as any)?.id || '';
   const currentUserName = session?.user?.name || 'You';
+
+  // Quick reaction emojis
+  const QUICK_REACTIONS = ['👍', '❤️', '🔥', '👏', '💯', '😂', '🎯', '✨'];
 
   /* ─── Load pods ─── */
   const loadPods = useCallback(async () => {
@@ -679,6 +696,65 @@ export default function StudyPods() {
     } catch { /* ignore */ }
   };
 
+  // Close modal on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (editorDoc) closeDocEditor();
+        setShowReactionPicker(null);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [editorDoc]);
+
+  // Toggle reaction on a message
+  const toggleReaction = (messageId: string, emoji: string) => {
+    setMessageReactions(prev => {
+      const msgReactions = { ...(prev[messageId] || {}) };
+      const users = msgReactions[emoji] ? [...msgReactions[emoji]] : [];
+      const idx = users.indexOf(currentUserId);
+      if (idx >= 0) users.splice(idx, 1);
+      else users.push(currentUserId);
+      if (users.length === 0) delete msgReactions[emoji];
+      else msgReactions[emoji] = users;
+      return { ...prev, [messageId]: msgReactions };
+    });
+    setShowReactionPicker(null);
+  };
+
+  // Handle text selection for commenting
+  const handleTextSelection = () => {
+    const selection = window.getSelection();
+    if (selection && selection.toString().trim().length > 0) {
+      setSelectedText(selection.toString().trim());
+      setShowSelectionComment(true);
+    }
+  };
+
+  const submitSelectionComment = async () => {
+    if (!editorDoc || !selectionCommentText.trim()) return;
+    try {
+      const r = await fetch('/api/pod-documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'comment',
+          documentId: editorDoc.id,
+          content: selectionCommentText,
+          section: selectedText,
+          parentId: null,
+        }),
+      });
+      if (r.ok) {
+        setSelectionCommentText('');
+        setSelectedText('');
+        setShowSelectionComment(false);
+        openDocEditor(editorDoc.id);
+      }
+    } catch { /* ignore */ }
+  };
+
   // Find document by ID from the documents list (for chat card rendering)
   const getDocForMessage = useCallback((msg: PodMessage): PodDoc | undefined => {
     if (msg.type !== 'essay_share' || !msg.essayId) return undefined;
@@ -775,7 +851,7 @@ export default function StudyPods() {
       <Head><title>Study Pods | AdmitsOnly Dashboard</title></Head>
 
       <div className="h-[calc(100vh-12rem)] lg:h-[calc(100vh-7rem)]">
-        <div className="grid h-full lg:grid-cols-[300px_1fr] gap-0 bg-white rounded-2xl border border-slate-100 overflow-hidden">
+        <div className="grid h-full lg:grid-cols-[300px_1fr] gap-0 bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-sm">
 
           {/* ═══════════════ CHANNEL SIDEBAR ═══════════════ */}
           <div className={`border-r border-slate-100 flex flex-col bg-slate-50/30 ${mobileShowChat ? 'hidden lg:flex' : 'flex'}`}>
@@ -945,7 +1021,7 @@ export default function StudyPods() {
           {selectedPod ? (
             <div className={`relative flex flex-col h-full bg-white ${mobileShowChat ? 'flex' : 'hidden lg:flex'}`}>
               {/* ─── Chat header ─── */}
-              <div className="px-4 lg:px-5 py-3 border-b border-slate-100 bg-white">
+              <div className="px-4 lg:px-5 py-3 border-b border-slate-100 bg-gradient-to-r from-white to-slate-50/50">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
                     {/* Mobile back button */}
@@ -1005,12 +1081,12 @@ export default function StudyPods() {
                 </div>
 
                 {/* ─── Tab switcher: Chat | Documents ─── */}
-                <div className="flex gap-1 mt-3 bg-slate-100/60 rounded-lg p-0.5">
+                <div className="flex gap-1 mt-3 bg-slate-100/80 rounded-xl p-1">
                   <button
                     onClick={() => { setActiveTab('chat'); setSelectedDoc(null); }}
-                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all ${
                       activeTab === 'chat'
-                        ? 'bg-white text-primary shadow-sm'
+                        ? 'bg-white text-primary shadow-sm ring-1 ring-slate-200/50'
                         : 'text-slate-400 hover:text-slate-600'
                     }`}
                   >
@@ -1021,9 +1097,9 @@ export default function StudyPods() {
                   </button>
                   <button
                     onClick={() => setActiveTab('documents')}
-                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all ${
                       activeTab === 'documents'
-                        ? 'bg-white text-primary shadow-sm'
+                        ? 'bg-white text-primary shadow-sm ring-1 ring-slate-200/50'
                         : 'text-slate-400 hover:text-slate-600'
                     }`}
                   >
@@ -1037,9 +1113,9 @@ export default function StudyPods() {
                   </button>
                   <button
                     onClick={() => { setActiveTab('focus'); setSelectedSession(null); }}
-                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all ${
                       activeTab === 'focus'
-                        ? 'bg-white text-primary shadow-sm'
+                        ? 'bg-white text-primary shadow-sm ring-1 ring-slate-200/50'
                         : 'text-slate-400 hover:text-slate-600'
                     }`}
                   >
@@ -1470,18 +1546,32 @@ export default function StudyPods() {
               <div className="flex-1 overflow-y-auto px-4 lg:px-5 py-4" style={{ WebkitOverflowScrolling: 'touch' }}>
                 {messages.length === 0 ? (
                   <div className="h-full flex items-center justify-center">
-                    <div className="text-center max-w-xs">
-                      <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-accent/10 to-purple-100 flex items-center justify-center mb-4">
-                        <svg className="w-8 h-8 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="text-center max-w-sm">
+                      <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-accent/10 via-purple-100 to-indigo-50 flex items-center justify-center mb-5 shadow-sm">
+                        <svg className="w-10 h-10 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                         </svg>
                       </div>
-                      <h4 className="text-base font-bold text-primary mb-1">Welcome to {selectedPod.name}!</h4>
-                      <p className="text-sm text-slate-400">This is the beginning of your pod. Start the conversation — share essay ideas, ask for feedback, or just say hi.</p>
+                      <h4 className="text-lg font-bold text-primary mb-2">Welcome to {selectedPod.name}!</h4>
+                      <p className="text-sm text-slate-500 leading-relaxed mb-4">This is the beginning of your study pod. Share essay ideas, give feedback, or just say hi.</p>
+                      <div className="flex flex-wrap justify-center gap-2 mb-4">
+                        <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-purple-50 text-purple-600 rounded-full text-[11px] font-semibold">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                          Share docs
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-full text-[11px] font-semibold">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                          Focus together
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-50 text-amber-600 rounded-full text-[11px] font-semibold">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                          React & vibe
+                        </span>
+                      </div>
                       {/* Mobile invite code */}
                       <button
                         onClick={copyInviteCode}
-                        className="sm:hidden mt-4 flex items-center justify-center gap-2 mx-auto px-4 py-2 text-xs font-mono tracking-wider text-accent bg-accent/5 border border-accent/20 rounded-lg"
+                        className="sm:hidden mt-2 flex items-center justify-center gap-2 mx-auto px-4 py-2 text-xs font-mono tracking-wider text-accent bg-accent/5 border border-accent/20 rounded-lg"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
                         Invite: {selectedPod.inviteCode}
@@ -1499,19 +1589,62 @@ export default function StudyPods() {
                         <div key={msg.id}>
                           {/* Date separator */}
                           {showDateSep && (
-                            <div className="flex items-center gap-3 my-4">
-                              <div className="flex-1 h-px bg-slate-100" />
-                              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{getDateLabel(msg.createdAt)}</span>
-                              <div className="flex-1 h-px bg-slate-100" />
+                            <div className="flex items-center gap-4 my-5">
+                              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 py-1 bg-white border border-slate-100 rounded-full shadow-sm">{getDateLabel(msg.createdAt)}</span>
+                              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
                             </div>
                           )}
 
-                          {/* Message row — Discord style */}
-                          <div className={`flex gap-3 hover:bg-slate-50/50 rounded-lg px-2 py-0.5 transition-colors group ${msg.isGroupStart ? 'mt-3' : 'mt-0'}`}>
+                          {/* Message row — Discord/Slack style */}
+                          <div
+                            className={`relative flex gap-3 hover:bg-accent/[0.02] rounded-lg px-2 py-1 transition-all group ${msg.isGroupStart ? 'mt-4' : 'mt-0.5'}`}
+                            onMouseEnter={() => setHoveredMessage(msg.id)}
+                            onMouseLeave={() => { setHoveredMessage(null); if (showReactionPicker === msg.id) setShowReactionPicker(null); }}
+                          >
+                            {/* Quick action toolbar (Slack-style hover) */}
+                            {hoveredMessage === msg.id && (
+                              <div className="absolute -top-3 right-3 flex items-center gap-0.5 bg-white border border-slate-200 rounded-lg shadow-md px-1 py-0.5 z-10">
+                                <button
+                                  onClick={() => setShowReactionPicker(showReactionPicker === msg.id ? null : msg.id)}
+                                  className="p-1.5 rounded-md text-slate-400 hover:text-amber-500 hover:bg-amber-50 transition-all"
+                                  title="Add reaction"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                </button>
+                                <button
+                                  className="p-1.5 rounded-md text-slate-400 hover:text-accent hover:bg-accent/5 transition-all"
+                                  title="Reply"
+                                  onClick={() => { setMessageText(`@${msg.user.name} `); inputRef.current?.focus(); }}
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                                  </svg>
+                                </button>
+                              </div>
+                            )}
+
+                            {/* Reaction picker popup */}
+                            {showReactionPicker === msg.id && (
+                              <div className="absolute -top-12 right-3 flex items-center gap-1 bg-white border border-slate-200 rounded-xl shadow-lg px-2 py-1.5 z-20">
+                                {QUICK_REACTIONS.map(emoji => (
+                                  <button
+                                    key={emoji}
+                                    onClick={() => toggleReaction(msg.id, emoji)}
+                                    className="w-8 h-8 flex items-center justify-center rounded-lg text-base hover:bg-slate-100 hover:scale-125 transition-all"
+                                  >
+                                    {emoji}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+
                             {/* Avatar column */}
                             <div className="w-10 flex-shrink-0">
                               {msg.isGroupStart ? (
-                                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${getAvatarColor(msg.user.name)} flex items-center justify-center text-white text-sm font-bold shadow-sm`}>
+                                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${getAvatarColor(msg.user.name)} flex items-center justify-center text-white text-sm font-bold shadow-sm ring-2 ring-white`}>
                                   {getInitials(msg.user.name)}
                                 </div>
                               ) : (
@@ -1528,7 +1661,7 @@ export default function StudyPods() {
                                   <span className={`text-sm font-bold ${isMe ? 'text-accent' : 'text-primary'}`}>
                                     {isMe ? 'You' : msg.user.name}
                                   </span>
-                                  <span className="text-[10px] text-slate-300">{formatTimeFull(msg.createdAt)}</span>
+                                  <span className="text-[10px] text-slate-400 font-medium">{formatTimeFull(msg.createdAt)}</span>
                                 </div>
                               )}
                               <div className="text-sm text-slate-700 leading-relaxed break-words">
@@ -1538,15 +1671,15 @@ export default function StudyPods() {
                                     return (
                                       <button
                                         onClick={() => openDocEditor(linkedDoc.id)}
-                                        className="w-full max-w-sm mt-1 flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl hover:border-accent/30 hover:shadow-md transition-all text-left group/card"
+                                        className="w-full max-w-md mt-1 flex items-center gap-3 p-3.5 bg-gradient-to-br from-white to-slate-50/50 border border-slate-200 rounded-xl hover:border-accent/30 hover:shadow-lg transition-all text-left group/card"
                                       >
-                                        <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${getFileColor(linkedDoc.fileType)} flex items-center justify-center flex-shrink-0`}>
+                                        <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${getFileColor(linkedDoc.fileType)} flex items-center justify-center flex-shrink-0 shadow-sm`}>
                                           <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={getFileIcon(linkedDoc.fileType)} />
                                           </svg>
                                         </div>
                                         <div className="min-w-0 flex-1">
-                                          <p className="text-sm font-semibold text-primary truncate group-hover/card:text-accent transition-colors">{linkedDoc.fileName}</p>
+                                          <p className="text-sm font-bold text-primary truncate group-hover/card:text-accent transition-colors">{linkedDoc.fileName}</p>
                                           <div className="flex items-center gap-2 mt-0.5">
                                             <span className="text-[10px] text-slate-400 uppercase font-bold">{linkedDoc.fileType}</span>
                                             <span className="text-[10px] text-slate-300">&middot;</span>
@@ -1559,7 +1692,7 @@ export default function StudyPods() {
                                             )}
                                           </div>
                                         </div>
-                                        <div className="flex-shrink-0 text-[10px] text-slate-400 group-hover/card:text-accent font-semibold transition-colors">
+                                        <div className="flex-shrink-0 px-3 py-1.5 bg-accent/5 text-accent text-[11px] font-bold rounded-lg group-hover/card:bg-accent group-hover/card:text-white transition-all">
                                           Open
                                         </div>
                                       </button>
@@ -1580,6 +1713,26 @@ export default function StudyPods() {
                                   return msg.content;
                                 })()}
                               </div>
+
+                              {/* Reactions display */}
+                              {messageReactions[msg.id] && Object.keys(messageReactions[msg.id]).length > 0 && (
+                                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                  {Object.entries(messageReactions[msg.id]).map(([emoji, users]) => (
+                                    <button
+                                      key={emoji}
+                                      onClick={() => toggleReaction(msg.id, emoji)}
+                                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border transition-all ${
+                                        users.includes(currentUserId)
+                                          ? 'bg-accent/10 border-accent/30 text-accent'
+                                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-accent/20 hover:bg-accent/5'
+                                      }`}
+                                    >
+                                      <span>{emoji}</span>
+                                      <span className="font-semibold text-[10px]">{users.length}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -1590,8 +1743,8 @@ export default function StudyPods() {
                 )}
               </div>
 
-              {/* ─── Message input bar (Slack-style) ─── */}
-              <div className="px-4 lg:px-5 pb-4 lg:pb-5 pt-1 flex-shrink-0">
+              {/* ─── Message input bar (Premium Slack-style) ─── */}
+              <div className="px-4 lg:px-5 pb-4 lg:pb-5 pt-2 flex-shrink-0">
                 {/* Hidden file input for chat uploads */}
                 <input
                   ref={fileInputRef}
@@ -1601,21 +1754,30 @@ export default function StudyPods() {
                   className="hidden"
                 />
                 {uploading && (
-                  <div className="flex items-center gap-2 px-3 py-2 mb-2 bg-accent/5 border border-accent/20 rounded-lg text-xs text-accent font-medium">
-                    <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <div className="flex items-center gap-2.5 px-4 py-2.5 mb-3 bg-gradient-to-r from-accent/5 to-purple-50 border border-accent/20 rounded-xl text-xs text-accent font-semibold">
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                     </svg>
-                    Uploading file...
+                    Uploading file to pod...
                   </div>
                 )}
-                <div className="flex items-end gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2 focus-within:ring-2 focus-within:ring-accent/30 focus-within:border-accent transition-all shadow-sm">
-                  {/* Attachment button — triggers file upload */}
+                {error && (
+                  <div className="flex items-center gap-2 px-4 py-2 mb-2 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600 font-medium">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    {error}
+                    <button onClick={() => setError('')} className="ml-auto text-red-400 hover:text-red-600">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  </div>
+                )}
+                <div className="flex items-end gap-2 bg-white border border-slate-200 rounded-2xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-accent/20 focus-within:border-accent/40 transition-all shadow-sm hover:shadow-md">
+                  {/* Attachment button */}
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploading}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-accent hover:bg-accent/5 transition-colors flex-shrink-0 disabled:opacity-40"
-                    title="Upload a document"
+                    className="p-2 rounded-xl text-slate-400 hover:text-accent hover:bg-accent/5 transition-all flex-shrink-0 disabled:opacity-40"
+                    title="Share a document"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
                   </button>
@@ -1628,17 +1790,13 @@ export default function StudyPods() {
                     placeholder={`Message #${selectedPod.name.toLowerCase().replace(/\s+/g, '-')}...`}
                     className="flex-1 py-1.5 text-sm bg-transparent focus:outline-none placeholder-slate-400"
                   />
-                  {/* Emoji placeholder */}
-                  <button className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors flex-shrink-0" title="Add emoji">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                  </button>
                   {/* Send */}
                   <button
                     onClick={sendMessage}
                     disabled={!messageText.trim() || sending}
-                    className={`p-1.5 rounded-lg transition-all flex-shrink-0 ${
+                    className={`p-2 rounded-xl transition-all flex-shrink-0 ${
                       messageText.trim()
-                        ? 'text-white bg-accent hover:bg-accent/90 shadow-sm'
+                        ? 'text-white bg-gradient-to-r from-accent to-indigo-600 hover:from-accent/90 hover:to-indigo-700 shadow-md hover:shadow-lg scale-100 hover:scale-105'
                         : 'text-slate-300 cursor-not-allowed'
                     }`}
                   >
@@ -1647,279 +1805,408 @@ export default function StudyPods() {
                     </svg>
                   </button>
                 </div>
-                <p className="text-[10px] text-slate-300 mt-1.5 px-1">Press <kbd className="px-1 py-0.5 bg-slate-100 rounded text-[9px] font-mono">Enter</kbd> to send &middot; Click <span className="text-slate-400">📎</span> to share a document</p>
+                <div className="flex items-center justify-between mt-1.5 px-1">
+                  <p className="text-[10px] text-slate-300">
+                    <kbd className="px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-[9px] font-mono text-slate-400">Enter</kbd>
+                    <span className="ml-1">to send</span>
+                  </p>
+                  <div className="flex items-center gap-1.5 text-[10px] text-slate-300">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>{members.length} online</span>
+                  </div>
+                </div>
               </div>
               </>}
 
-              {/* ═══════════════ DOCUMENT EDITOR OVERLAY ═══════════════ */}
+              {/* ═══════════════ DOCUMENT MODAL ═══════════════ */}
               {editorDoc && (
-                <div className="absolute inset-0 z-50 flex flex-col bg-white">
-                  {/* Editor header */}
-                  <div className="px-4 lg:px-5 py-3 border-b border-slate-100 bg-white flex items-center justify-between gap-3 flex-shrink-0">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <button
-                        onClick={closeDocEditor}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-primary hover:bg-slate-50 transition-all flex-shrink-0"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                      </button>
-                      <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${getFileColor(editorDoc.fileType)} flex items-center justify-center flex-shrink-0`}>
-                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={getFileIcon(editorDoc.fileType)} />
-                        </svg>
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold text-primary truncate">{editorDoc.fileName}</p>
-                        <p className="text-[10px] text-slate-400">
-                          {editorDoc.uploader.name} &middot; {formatFileSize(editorDoc.fileSize)}
-                          {editorDirty && <span className="ml-2 text-amber-500 font-semibold">Unsaved changes</span>}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {/* Live indicator */}
-                      <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-full">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        <span className="text-[10px] font-semibold text-emerald-700">Live</span>
-                      </div>
-                      {(editorDoc.fileType === 'txt' || editorDoc.content) && editorDirty && (
-                        <button
-                          onClick={saveDocContent}
-                          disabled={editorSaving}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-accent rounded-lg hover:bg-accent/90 disabled:opacity-50 transition-colors"
-                        >
-                          {editorSaving ? (
-                            <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                            </svg>
-                          ) : (
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                          )}
-                          Save
-                        </button>
-                      )}
-                      {editorDoc.fileData && (
-                        <a
-                          href={editorDoc.fileData}
-                          download={editorDoc.fileName}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-primary hover:bg-slate-50 transition-all"
-                          title="Download"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                          </svg>
-                        </a>
-                      )}
-                      {editorDoc.uploaderId === currentUserId && (
-                        <button
-                          onClick={() => { deleteDocument(editorDoc.id); closeDocEditor(); }}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"
-                          title="Delete document"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center" onClick={closeDocEditor}>
+                  {/* Backdrop */}
+                  <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
 
-                  {/* Editor body — split view: content + comments */}
-                  <div className="flex-1 flex overflow-hidden">
-                    {/* Left: Document content/editor */}
-                    <div className="flex-1 overflow-y-auto border-r border-slate-100">
-                      {editorDoc.fileType === 'txt' || (editorDoc.content && !editorDoc.fileData) ? (
-                        /* Editable text content */
-                        <div className="p-4 lg:p-6">
-                          <div className="flex items-center gap-2 mb-3">
-                            <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                            <span className="text-xs font-semibold text-accent">Collaborative editing — changes are visible to all pod members</span>
-                          </div>
-                          <textarea
-                            value={editorContent}
-                            onChange={e => { setEditorContent(e.target.value); setEditorDirty(true); }}
-                            className="w-full min-h-[400px] p-4 text-sm text-slate-700 leading-relaxed bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent resize-y font-sans"
-                            placeholder="Start writing or paste your content here..."
-                          />
-                        </div>
-                      ) : editorDoc.fileType === 'image' && editorDoc.fileData ? (
-                        <div className="p-6 flex justify-center items-start">
-                          <img src={editorDoc.fileData} alt={editorDoc.fileName} className="max-w-full max-h-[600px] rounded-xl shadow-sm" />
-                        </div>
-                      ) : editorDoc.fileType === 'pdf' && editorDoc.fileData ? (
-                        <iframe src={editorDoc.fileData} className="w-full h-full border-0" title={editorDoc.fileName} />
-                      ) : (
-                        <div className="p-8 text-center">
-                          <div className={`w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br ${getFileColor(editorDoc.fileType)} flex items-center justify-center mb-4`}>
-                            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={getFileIcon(editorDoc.fileType)} />
-                            </svg>
-                          </div>
-                          <p className="text-sm font-medium text-slate-600 mb-1">{editorDoc.fileName}</p>
-                          <p className="text-xs text-slate-400 mb-4">This file type can be downloaded to view</p>
-                          {editorDoc.fileData && (
-                            <a
-                              href={editorDoc.fileData}
-                              download={editorDoc.fileName}
-                              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-accent rounded-lg hover:bg-accent/90 transition-colors"
-                            >
-                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                              </svg>
-                              Download
-                            </a>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Right: Comments panel */}
-                    <div className="w-80 lg:w-96 flex flex-col bg-slate-50/30 overflow-hidden">
-                      <div className="px-4 py-3 border-b border-slate-100 bg-white">
-                        <h4 className="text-sm font-bold text-primary flex items-center gap-2">
-                          <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                  {/* Modal container */}
+                  <div
+                    className="relative w-[95vw] h-[90vh] max-w-7xl bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    {/* Modal header */}
+                    <div className="px-5 py-3.5 border-b border-slate-100 bg-gradient-to-r from-white to-slate-50/80 flex items-center justify-between gap-3 flex-shrink-0">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${getFileColor(editorDoc.fileType)} flex items-center justify-center flex-shrink-0 shadow-sm`}>
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={getFileIcon(editorDoc.fileType)} />
                           </svg>
-                          Comments
-                          {editorDoc.comments && editorDoc.comments.length > 0 && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent/10 text-accent font-bold">
-                              {editorDoc.comments.length}
-                            </span>
-                          )}
-                          <span className="ml-auto flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            <span className="text-[9px] text-emerald-600 font-medium">Auto-refreshing</span>
-                          </span>
-                        </h4>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-base font-bold text-primary truncate">{editorDoc.fileName}</p>
+                          <p className="text-xs text-slate-400">
+                            Shared by {editorDoc.uploader.name} &middot; {formatFileSize(editorDoc.fileSize)}
+                            {editorDirty && <span className="ml-2 text-amber-500 font-semibold">Unsaved changes</span>}
+                          </p>
+                        </div>
                       </div>
-
-                      {/* Comment input */}
-                      <div className="px-4 py-3 border-b border-slate-100 bg-white">
-                        <div className="flex gap-2">
-                          <div className={`w-7 h-7 rounded-md bg-gradient-to-br ${getAvatarColor(currentUserName)} flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0`}>
-                            {getInitials(currentUserName)}
-                          </div>
-                          <div className="flex-1 flex gap-1.5">
-                            <input
-                              type="text"
-                              value={commentText}
-                              onChange={e => setCommentText(e.target.value)}
-                              onKeyDown={e => { if (e.key === 'Enter') addEditorComment(); }}
-                              placeholder="Add feedback..."
-                              className="flex-1 px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
-                            />
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {/* Live indicator */}
+                        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-full">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          <span className="text-[11px] font-semibold text-emerald-700">Live</span>
+                        </div>
+                        {/* Zoom controls for PDFs/images */}
+                        {(editorDoc.fileType === 'pdf' || editorDoc.fileType === 'image') && (
+                          <div className="hidden sm:flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
                             <button
-                              onClick={() => addEditorComment()}
-                              disabled={!commentText.trim()}
-                              className="px-2.5 py-1.5 text-[11px] font-semibold text-white bg-accent rounded-lg hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                              onClick={() => setDocZoom(z => Math.max(50, z - 25))}
+                              className="p-1.5 rounded-md text-slate-500 hover:text-primary hover:bg-white transition-all text-xs font-bold"
+                              title="Zoom out"
                             >
-                              Post
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" /></svg>
+                            </button>
+                            <span className="text-[11px] font-semibold text-slate-600 min-w-[3rem] text-center">{docZoom}%</span>
+                            <button
+                              onClick={() => setDocZoom(z => Math.min(200, z + 25))}
+                              className="p-1.5 rounded-md text-slate-500 hover:text-primary hover:bg-white transition-all text-xs font-bold"
+                              title="Zoom in"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                            </button>
+                            <button
+                              onClick={() => setDocZoom(100)}
+                              className="px-2 py-1.5 rounded-md text-[10px] font-semibold text-slate-500 hover:text-primary hover:bg-white transition-all"
+                            >
+                              Reset
                             </button>
                           </div>
-                        </div>
+                        )}
+                        {(editorDoc.fileType === 'txt' || editorDoc.content) && editorDirty && (
+                          <button
+                            onClick={saveDocContent}
+                            disabled={editorSaving}
+                            className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-accent rounded-lg hover:bg-accent/90 disabled:opacity-50 transition-colors shadow-sm"
+                          >
+                            {editorSaving ? (
+                              <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                              </svg>
+                            ) : (
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                            Save
+                          </button>
+                        )}
+                        {editorDoc.fileData && (
+                          <a
+                            href={editorDoc.fileData}
+                            download={editorDoc.fileName}
+                            className="p-2 rounded-lg text-slate-400 hover:text-primary hover:bg-slate-100 transition-all"
+                            title="Download"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                          </a>
+                        )}
+                        {editorDoc.uploaderId === currentUserId && (
+                          <button
+                            onClick={() => { deleteDocument(editorDoc.id); closeDocEditor(); }}
+                            className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"
+                            title="Delete document"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        )}
+                        {/* Close button */}
+                        <button
+                          onClick={closeDocEditor}
+                          className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all ml-1"
+                          title="Close (Esc)"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
                       </div>
+                    </div>
 
-                      {/* Comments list */}
-                      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-                        {editorDoc.comments && editorDoc.comments.length > 0 ? (
-                          editorDoc.comments.map(comment => (
-                            <div key={comment.id} className="group">
-                              <div className="flex gap-2">
-                                <div className={`w-6 h-6 rounded-md bg-gradient-to-br ${getAvatarColor(comment.user.name)} flex items-center justify-center text-white text-[8px] font-bold flex-shrink-0 mt-0.5`}>
-                                  {getInitials(comment.user.name)}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-baseline gap-2 mb-0.5">
-                                    <span className="text-[11px] font-bold text-primary">{comment.user.name}</span>
-                                    <span className="text-[9px] text-slate-300">{formatTime(comment.createdAt)}</span>
-                                    {comment.userId === currentUserId && (
-                                      <button
-                                        onClick={() => deleteEditorComment(comment.id)}
-                                        className="text-[9px] text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                                      >
-                                        Delete
-                                      </button>
-                                    )}
+                    {/* Tip bar for text selection */}
+                    {(editorDoc.fileType === 'txt' || editorDoc.content) && (
+                      <div className="px-5 py-2 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-100/50 flex items-center gap-2">
+                        <svg className="w-4 h-4 text-indigo-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="text-xs text-indigo-600">
+                          <strong>Tip:</strong> Select any text in the document to leave a comment on that specific section
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Modal body — split view: content + comments */}
+                    <div className="flex-1 flex overflow-hidden">
+                      {/* Left: Document content/editor */}
+                      <div className="flex-1 overflow-y-auto border-r border-slate-100 bg-slate-50/30" ref={textContentRef}>
+                        {editorDoc.fileType === 'txt' || (editorDoc.content && !editorDoc.fileData) ? (
+                          /* Editable text content with selection support */
+                          <div className="p-6 lg:p-8 max-w-4xl mx-auto">
+                            <div className="flex items-center gap-2 mb-4">
+                              <div className="flex items-center gap-2 px-3 py-1.5 bg-accent/5 border border-accent/10 rounded-lg">
+                                <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                                <span className="text-xs font-semibold text-accent">Collaborative Editor</span>
+                              </div>
+                            </div>
+                            <textarea
+                              value={editorContent}
+                              onChange={e => { setEditorContent(e.target.value); setEditorDirty(true); }}
+                              onMouseUp={handleTextSelection}
+                              className="w-full min-h-[500px] p-6 text-base text-slate-800 leading-[1.8] bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/40 resize-y font-sans shadow-sm"
+                              placeholder="Start writing or paste your content here..."
+                            />
+
+                            {/* Selection comment popup */}
+                            {showSelectionComment && selectedText && (
+                              <div className="mt-4 p-4 bg-white border-2 border-indigo-200 rounded-xl shadow-lg animate-in slide-in-from-top-2">
+                                <div className="flex items-start gap-3">
+                                  <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                    <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                                    </svg>
                                   </div>
-                                  <p className="text-xs text-slate-700 leading-relaxed">{comment.content}</p>
-
-                                  {/* Reply button */}
-                                  <button
-                                    onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
-                                    className="mt-1 text-[10px] text-slate-400 hover:text-accent font-medium transition-colors"
-                                  >
-                                    Reply
-                                  </button>
-
-                                  {/* Reply input */}
-                                  {replyingTo === comment.id && (
-                                    <div className="flex gap-1.5 mt-2">
+                                  <div className="flex-1">
+                                    <p className="text-xs font-bold text-indigo-700 mb-1.5">Comment on selection:</p>
+                                    <div className="px-3 py-2 bg-indigo-50/50 border border-indigo-100 rounded-lg mb-3">
+                                      <p className="text-xs text-indigo-600 italic line-clamp-2">&ldquo;{selectedText}&rdquo;</p>
+                                    </div>
+                                    <div className="flex gap-2">
                                       <input
                                         type="text"
-                                        value={replyText}
-                                        onChange={e => setReplyText(e.target.value)}
-                                        onKeyDown={e => { if (e.key === 'Enter') addEditorComment(comment.id); }}
-                                        placeholder="Reply..."
-                                        className="flex-1 px-2 py-1 text-[11px] rounded-md border border-slate-200 focus:outline-none focus:ring-2 focus:ring-accent/30"
+                                        value={selectionCommentText}
+                                        onChange={e => setSelectionCommentText(e.target.value)}
+                                        onKeyDown={e => { if (e.key === 'Enter') submitSelectionComment(); }}
+                                        placeholder="Your feedback on this section..."
+                                        className="flex-1 px-3 py-2 text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400"
                                         autoFocus
                                       />
                                       <button
-                                        onClick={() => addEditorComment(comment.id)}
-                                        disabled={!replyText.trim()}
-                                        className="px-2 py-1 text-[10px] font-semibold text-white bg-accent rounded-md hover:bg-accent/90 disabled:opacity-40 transition-colors"
+                                        onClick={submitSelectionComment}
+                                        disabled={!selectionCommentText.trim()}
+                                        className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-40 transition-colors shadow-sm"
                                       >
-                                        Reply
+                                        Post
+                                      </button>
+                                      <button
+                                        onClick={() => { setShowSelectionComment(false); setSelectedText(''); setSelectionCommentText(''); }}
+                                        className="px-3 py-2 text-xs font-semibold text-slate-500 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+                                      >
+                                        Cancel
                                       </button>
                                     </div>
-                                  )}
-
-                                  {/* Threaded replies */}
-                                  {comment.replies && comment.replies.length > 0 && (
-                                    <div className="mt-2 ml-1 pl-2.5 border-l-2 border-slate-100 space-y-2">
-                                      {comment.replies.map(reply => (
-                                        <div key={reply.id} className="group/reply flex gap-1.5">
-                                          <div className={`w-5 h-5 rounded bg-gradient-to-br ${getAvatarColor(reply.user.name)} flex items-center justify-center text-white text-[7px] font-bold flex-shrink-0 mt-0.5`}>
-                                            {getInitials(reply.user.name)}
-                                          </div>
-                                          <div className="min-w-0">
-                                            <div className="flex items-baseline gap-1.5">
-                                              <span className="text-[10px] font-bold text-primary">{reply.user.name}</span>
-                                              <span className="text-[8px] text-slate-300">{formatTime(reply.createdAt)}</span>
-                                              {reply.userId === currentUserId && (
-                                                <button
-                                                  onClick={() => deleteEditorComment(reply.id)}
-                                                  className="text-[8px] text-slate-300 hover:text-red-500 opacity-0 group-hover/reply:opacity-100 transition-all"
-                                                >
-                                                  Delete
-                                                </button>
-                                              )}
-                                            </div>
-                                            <p className="text-[11px] text-slate-600 leading-relaxed">{reply.content}</p>
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
+                                  </div>
                                 </div>
                               </div>
+                            )}
+                          </div>
+                        ) : editorDoc.fileType === 'image' && editorDoc.fileData ? (
+                          <div className="p-6 flex justify-center items-center min-h-full">
+                            <div className="relative">
+                              <img
+                                src={editorDoc.fileData}
+                                alt={editorDoc.fileName}
+                                className="rounded-xl shadow-lg transition-transform duration-200"
+                                style={{ transform: `scale(${docZoom / 100})`, transformOrigin: 'center center', maxWidth: '100%', maxHeight: '70vh' }}
+                              />
                             </div>
-                          ))
+                          </div>
+                        ) : editorDoc.fileType === 'pdf' && editorDoc.fileData ? (
+                          <div className="w-full h-full flex items-center justify-center bg-slate-100/50 p-4">
+                            <iframe
+                              src={`${editorDoc.fileData}#zoom=${docZoom}&view=FitH`}
+                              className="w-full h-full border-0 rounded-lg shadow-sm bg-white"
+                              title={editorDoc.fileName}
+                              style={{ minHeight: '100%' }}
+                            />
+                          </div>
                         ) : (
-                          <div className="text-center py-8">
-                            <div className="w-12 h-12 mx-auto rounded-xl bg-slate-100 flex items-center justify-center mb-3">
-                              <svg className="w-6 h-6 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                          <div className="p-12 text-center flex flex-col items-center justify-center h-full">
+                            <div className={`w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br ${getFileColor(editorDoc.fileType)} flex items-center justify-center mb-5 shadow-lg`}>
+                              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={getFileIcon(editorDoc.fileType)} />
                               </svg>
                             </div>
-                            <p className="text-xs text-slate-500 font-medium">No comments yet</p>
-                            <p className="text-[10px] text-slate-400 mt-1">Be the first to give feedback on this document</p>
+                            <p className="text-lg font-bold text-primary mb-2">{editorDoc.fileName}</p>
+                            <p className="text-sm text-slate-400 mb-6">This file type can be downloaded to view</p>
+                            {editorDoc.fileData && (
+                              <a
+                                href={editorDoc.fileData}
+                                download={editorDoc.fileName}
+                                className="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold text-white bg-accent rounded-xl hover:bg-accent/90 transition-colors shadow-md hover:shadow-lg"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                Download File
+                              </a>
+                            )}
                           </div>
                         )}
+                      </div>
+
+                      {/* Right: Comments panel */}
+                      <div className="w-80 lg:w-[26rem] flex flex-col bg-white overflow-hidden">
+                        <div className="px-5 py-3.5 border-b border-slate-100">
+                          <h4 className="text-sm font-bold text-primary flex items-center gap-2">
+                            <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                            </svg>
+                            Feedback
+                            {editorDoc.comments && editorDoc.comments.length > 0 && (
+                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-accent/10 text-accent font-bold">
+                                {editorDoc.comments.length}
+                              </span>
+                            )}
+                            <span className="ml-auto flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 rounded-full">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                              <span className="text-[10px] text-emerald-600 font-semibold">Live</span>
+                            </span>
+                          </h4>
+                        </div>
+
+                        {/* Comment input */}
+                        <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/50">
+                          <div className="flex gap-3">
+                            <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${getAvatarColor(currentUserName)} flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0 shadow-sm`}>
+                              {getInitials(currentUserName)}
+                            </div>
+                            <div className="flex-1 flex flex-col gap-2">
+                              <input
+                                type="text"
+                                value={commentText}
+                                onChange={e => setCommentText(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') addEditorComment(); }}
+                                placeholder="Leave feedback on this document..."
+                                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/40 bg-white"
+                              />
+                              {commentText.trim() && (
+                                <div className="flex justify-end">
+                                  <button
+                                    onClick={() => addEditorComment()}
+                                    className="px-4 py-1.5 text-xs font-semibold text-white bg-accent rounded-lg hover:bg-accent/90 transition-colors shadow-sm"
+                                  >
+                                    Post Comment
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Comments list */}
+                        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+                          {editorDoc.comments && editorDoc.comments.length > 0 ? (
+                            editorDoc.comments.map(comment => (
+                              <div key={comment.id} className="group bg-slate-50/80 rounded-xl p-3.5 hover:bg-slate-100/80 transition-colors">
+                                <div className="flex gap-3">
+                                  <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${getAvatarColor(comment.user.name)} flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0 mt-0.5 shadow-sm`}>
+                                    {getInitials(comment.user.name)}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className="text-xs font-bold text-primary">{comment.user.name}</span>
+                                      <span className="text-[10px] text-slate-400">{formatTime(comment.createdAt)}</span>
+                                      {comment.userId === currentUserId && (
+                                        <button
+                                          onClick={() => deleteEditorComment(comment.id)}
+                                          className="ml-auto text-[10px] text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                                        >
+                                          Delete
+                                        </button>
+                                      )}
+                                    </div>
+
+                                    {/* Show quoted section if present */}
+                                    {comment.section && (
+                                      <div className="mb-2 px-3 py-1.5 bg-indigo-50/70 border-l-3 border-indigo-300 rounded-r-md">
+                                        <p className="text-[11px] text-indigo-600 italic line-clamp-2">&ldquo;{comment.section}&rdquo;</p>
+                                      </div>
+                                    )}
+
+                                    <p className="text-sm text-slate-700 leading-relaxed">{comment.content}</p>
+
+                                    {/* Reply button */}
+                                    <button
+                                      onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
+                                      className="mt-2 text-[11px] text-slate-400 hover:text-accent font-semibold transition-colors"
+                                    >
+                                      Reply
+                                    </button>
+
+                                    {/* Reply input */}
+                                    {replyingTo === comment.id && (
+                                      <div className="flex gap-2 mt-2.5">
+                                        <input
+                                          type="text"
+                                          value={replyText}
+                                          onChange={e => setReplyText(e.target.value)}
+                                          onKeyDown={e => { if (e.key === 'Enter') addEditorComment(comment.id); }}
+                                          placeholder="Write a reply..."
+                                          className="flex-1 px-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-accent/20 bg-white"
+                                          autoFocus
+                                        />
+                                        <button
+                                          onClick={() => addEditorComment(comment.id)}
+                                          disabled={!replyText.trim()}
+                                          className="px-3 py-1.5 text-[11px] font-semibold text-white bg-accent rounded-lg hover:bg-accent/90 disabled:opacity-40 transition-colors"
+                                        >
+                                          Reply
+                                        </button>
+                                      </div>
+                                    )}
+
+                                    {/* Threaded replies */}
+                                    {comment.replies && comment.replies.length > 0 && (
+                                      <div className="mt-3 ml-1 pl-3 border-l-2 border-accent/20 space-y-2.5">
+                                        {comment.replies.map(reply => (
+                                          <div key={reply.id} className="group/reply flex gap-2">
+                                            <div className={`w-6 h-6 rounded-md bg-gradient-to-br ${getAvatarColor(reply.user.name)} flex items-center justify-center text-white text-[8px] font-bold flex-shrink-0 mt-0.5`}>
+                                              {getInitials(reply.user.name)}
+                                            </div>
+                                            <div className="min-w-0">
+                                              <div className="flex items-center gap-1.5">
+                                                <span className="text-[11px] font-bold text-primary">{reply.user.name}</span>
+                                                <span className="text-[9px] text-slate-400">{formatTime(reply.createdAt)}</span>
+                                                {reply.userId === currentUserId && (
+                                                  <button
+                                                    onClick={() => deleteEditorComment(reply.id)}
+                                                    className="text-[9px] text-slate-300 hover:text-red-500 opacity-0 group-hover/reply:opacity-100 transition-all"
+                                                  >
+                                                    Delete
+                                                  </button>
+                                                )}
+                                              </div>
+                                              <p className="text-xs text-slate-600 leading-relaxed mt-0.5">{reply.content}</p>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-center py-12">
+                              <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center mb-4">
+                                <svg className="w-7 h-7 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                                </svg>
+                              </div>
+                              <p className="text-sm font-bold text-slate-500">No feedback yet</p>
+                              <p className="text-xs text-slate-400 mt-1.5 max-w-[200px] mx-auto">Be the first to leave feedback on this document</p>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
