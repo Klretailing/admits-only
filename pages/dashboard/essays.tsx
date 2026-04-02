@@ -2526,9 +2526,12 @@ export default function Essays() {
                       return school ? <option key={`tracker-${school.id}`} value={school.id}>{school.name}</option> : null;
                     })}
                     {trackerSchools.length > 0 && <option disabled>── All Schools ──</option>}
-                    {SCHOOLS.map(s => (
-                      <option key={s.id} value={s.id}>{s.name}</option>
-                    ))}
+                    {(() => {
+                      const trackerIds = new Set(trackerSchools.map(name => findSchoolByName(name)?.id).filter(Boolean));
+                      return SCHOOLS.filter(s => !trackerIds.has(s.id)).map(s => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ));
+                    })()}
                   </select>
                 </div>
                 <div className="flex-1 sm:flex-initial sm:min-w-[200px]">

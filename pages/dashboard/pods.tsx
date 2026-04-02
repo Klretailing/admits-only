@@ -851,36 +851,36 @@ export default function StudyPods() {
       <Head><title>Study Pods | AdmitsOnly Dashboard</title></Head>
 
       <div className="h-[calc(100vh-12rem)] lg:h-[calc(100vh-7rem)]">
-        <div className="grid h-full lg:grid-cols-[300px_1fr] gap-0 bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-sm">
+        <div className="grid h-full lg:grid-cols-[280px_1fr] gap-0 bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
 
-          {/* ═══════════════ CHANNEL SIDEBAR ═══════════════ */}
-          <div className={`border-r border-slate-100 flex flex-col bg-slate-50/30 ${mobileShowChat ? 'hidden lg:flex' : 'flex'}`}>
+          {/* ═══════════════ CHANNEL SIDEBAR (Slack-style) ═══════════════ */}
+          <div className={`border-r border-[#3e1c58] flex flex-col bg-[#3F0E40] ${mobileShowChat ? 'hidden lg:flex' : 'flex'}`}>
             {/* Sidebar header */}
-            <div className="p-4 border-b border-slate-100 bg-white">
+            <div className="p-4 border-b border-[#522b5b]">
               <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-purple-600 flex items-center justify-center">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center">
                     <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                   </div>
                   <div>
-                    <h2 className="text-sm font-bold font-display text-primary">Study Pods</h2>
-                    <p className="text-[10px] text-slate-400">{pods.length} pod{pods.length !== 1 ? 's' : ''}</p>
+                    <h2 className="text-sm font-bold font-display text-white">Study Pods</h2>
+                    <p className="text-[10px] text-white/50">{pods.length} pod{pods.length !== 1 ? 's' : ''}</p>
                   </div>
                 </div>
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => { setShowCreate(true); setShowJoin(false); setError(''); }}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-accent rounded-lg hover:bg-accent/90 transition-colors"
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-white/15 rounded-lg hover:bg-white/25 transition-colors"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
                   Create
                 </button>
                 <button
                   onClick={() => { setShowJoin(true); setShowCreate(false); setError(''); }}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-accent border border-accent/30 rounded-lg hover:bg-accent/5 transition-colors"
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-white/80 border border-white/20 rounded-lg hover:bg-white/10 transition-colors"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" /></svg>
                   Join
@@ -890,13 +890,13 @@ export default function StudyPods() {
 
             {/* Create dialog */}
             {showCreate && (
-              <div className="p-4 border-b border-slate-100 bg-accent/5 space-y-2">
+              <div className="p-4 border-b border-[#522b5b] bg-[#4A154B] space-y-2">
                 <input
                   type="text"
                   value={newPodName}
                   onChange={e => setNewPodName(e.target.value)}
                   placeholder="Pod name (e.g. Essay Review Squad)"
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30"
+                  className="w-full px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-sm text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
                   autoFocus
                 />
                 <textarea
@@ -904,32 +904,32 @@ export default function StudyPods() {
                   onChange={e => setNewPodDesc(e.target.value)}
                   placeholder="Short description (optional)"
                   rows={2}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 resize-none"
+                  className="w-full px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-sm text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/30 resize-none"
                 />
-                {error && <p className="text-xs text-red-500">{error}</p>}
+                {error && <p className="text-xs text-red-300">{error}</p>}
                 <div className="flex gap-2 justify-end">
-                  <button onClick={() => setShowCreate(false)} className="px-3 py-1.5 text-xs text-slate-400 hover:text-slate-600 rounded-md hover:bg-slate-100 transition-colors">Cancel</button>
-                  <button onClick={createPod} className="px-3 py-1.5 text-xs font-semibold text-white bg-accent rounded-md hover:bg-accent/90 transition-colors">Create Pod</button>
+                  <button onClick={() => setShowCreate(false)} className="px-3 py-1.5 text-xs text-white/50 hover:text-white rounded-md hover:bg-white/10 transition-colors">Cancel</button>
+                  <button onClick={createPod} className="px-3 py-1.5 text-xs font-semibold text-[#3F0E40] bg-white rounded-md hover:bg-white/90 transition-colors">Create Pod</button>
                 </div>
               </div>
             )}
 
             {/* Join dialog */}
             {showJoin && (
-              <div className="p-4 border-b border-slate-100 bg-purple-50/50 space-y-2">
+              <div className="p-4 border-b border-[#522b5b] bg-[#4A154B] space-y-2">
                 <input
                   type="text"
                   value={joinCode}
                   onChange={e => setJoinCode(e.target.value.toUpperCase())}
                   placeholder="Enter invite code"
                   maxLength={8}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm font-mono tracking-wider text-center uppercase focus:outline-none focus:ring-2 focus:ring-purple-300"
+                  className="w-full px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-sm font-mono tracking-wider text-center uppercase text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
                   autoFocus
                 />
-                {error && <p className="text-xs text-red-500">{error}</p>}
+                {error && <p className="text-xs text-red-300">{error}</p>}
                 <div className="flex gap-2 justify-end">
-                  <button onClick={() => setShowJoin(false)} className="px-3 py-1.5 text-xs text-slate-400 hover:text-slate-600 rounded-md hover:bg-slate-100 transition-colors">Cancel</button>
-                  <button onClick={joinPod} className="px-3 py-1.5 text-xs font-semibold text-white bg-purple-600 rounded-md hover:bg-purple-700 transition-colors">Join Pod</button>
+                  <button onClick={() => setShowJoin(false)} className="px-3 py-1.5 text-xs text-white/50 hover:text-white rounded-md hover:bg-white/10 transition-colors">Cancel</button>
+                  <button onClick={joinPod} className="px-3 py-1.5 text-xs font-semibold text-[#3F0E40] bg-white rounded-md hover:bg-white/90 transition-colors">Join Pod</button>
                 </div>
               </div>
             )}
@@ -937,61 +937,50 @@ export default function StudyPods() {
             {/* Pod / channel list */}
             <div className="flex-1 overflow-y-auto px-2 py-2">
               {loading ? (
-                <div className="p-8 text-center text-sm text-slate-400 animate-pulse">Loading...</div>
+                <div className="p-8 text-center text-sm text-white/40 animate-pulse">Loading...</div>
               ) : pods.length === 0 ? (
                 <div className="p-6 text-center">
-                  <div className="w-14 h-14 mx-auto rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
-                    <svg className="w-7 h-7 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-14 h-14 mx-auto rounded-2xl bg-white/10 flex items-center justify-center mb-3">
+                    <svg className="w-7 h-7 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                   </div>
-                  <p className="text-sm font-medium text-slate-500 mb-1">No pods yet</p>
-                  <p className="text-xs text-slate-400">Create a pod or join one with an invite code to start collaborating.</p>
+                  <p className="text-sm font-medium text-white/70 mb-1">No pods yet</p>
+                  <p className="text-xs text-white/40">Create a pod or join one with an invite code.</p>
                 </div>
               ) : (
                 <>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1.5 mb-1">Your Pods</p>
+                  <p className="text-[10px] font-bold text-white/40 uppercase tracking-wider px-3 py-1.5 mb-1">Channels</p>
                   {pods.map(pod => {
                     const isActive = selectedPod?.id === pod.id;
                     return (
                       <button
                         key={pod.id}
                         onClick={() => selectPod(pod)}
-                        className={`w-full text-left p-3 rounded-xl mb-1 transition-all group ${
+                        className={`w-full text-left px-3 py-2.5 rounded-lg mb-0.5 transition-all group ${
                           isActive
-                            ? 'bg-accent/10 border border-accent/20'
-                            : 'hover:bg-white border border-transparent hover:border-slate-100 hover:shadow-sm'
+                            ? 'bg-[#1164A3] text-white'
+                            : 'text-white/70 hover:bg-white/10'
                         }`}
                       >
-                        <div className="flex items-center gap-3">
-                          {/* Pod avatar */}
-                          <div className="relative flex-shrink-0">
-                            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${getAvatarColor(pod.name)} flex items-center justify-center text-white text-sm font-bold shadow-sm`}>
-                              {pod.name[0]?.toUpperCase()}
-                            </div>
-                            {pod.memberCount > 1 && <OnlineIndicator />}
-                          </div>
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-base opacity-80">#</span>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-2">
-                              <p className={`text-sm font-semibold truncate ${isActive ? 'text-accent' : 'text-primary'}`}>{pod.name}</p>
+                              <p className={`text-sm font-medium truncate ${isActive ? 'text-white' : ''}`}>{pod.name.toLowerCase().replace(/\s+/g, '-')}</p>
                               {pod.lastMessage && (
-                                <span className="text-[10px] text-slate-300 flex-shrink-0">{formatTime(pod.lastMessage.createdAt)}</span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1.5 mt-0.5">
-                              <span className="text-[10px] text-slate-400">
-                                {pod.memberCount} member{pod.memberCount !== 1 ? 's' : ''}
-                              </span>
-                              {pod.myRole === 'admin' && (
-                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-accent/10 text-accent font-bold">Admin</span>
+                                <span className="text-[10px] text-white/30 flex-shrink-0">{formatTime(pod.lastMessage.createdAt)}</span>
                               )}
                             </div>
                             {pod.lastMessage && (
-                              <p className="text-[11px] text-slate-400 mt-1 truncate">
-                                <span className="font-medium text-slate-500">{pod.lastMessage.userName}:</span> {pod.lastMessage.content}
+                              <p className="text-[11px] text-white/40 mt-0.5 truncate">
+                                {pod.lastMessage.userName}: {pod.lastMessage.content}
                               </p>
                             )}
                           </div>
+                          {pod.memberCount > 1 && (
+                            <span className="text-[10px] text-white/30 flex-shrink-0">{pod.memberCount}</span>
+                          )}
                         </div>
                       </button>
                     );
@@ -1001,17 +990,17 @@ export default function StudyPods() {
             </div>
 
             {/* Sidebar footer — user info */}
-            <div className="p-3 border-t border-slate-100 bg-white">
+            <div className="p-3 border-t border-[#522b5b]">
               <div className="flex items-center gap-2">
                 <div className="relative">
                   <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${getAvatarColor(currentUserName)} flex items-center justify-center text-white text-xs font-bold`}>
                     {getInitials(currentUserName)}
                   </div>
-                  <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 border-2 border-white rounded-full" />
+                  <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 border-2 border-[#3F0E40] rounded-full" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold text-primary truncate">{currentUserName}</p>
-                  <p className="text-[10px] text-emerald-500">Online</p>
+                  <p className="text-xs font-semibold text-white truncate">{currentUserName}</p>
+                  <p className="text-[10px] text-emerald-400">Active</p>
                 </div>
               </div>
             </div>
@@ -1021,7 +1010,7 @@ export default function StudyPods() {
           {selectedPod ? (
             <div className={`relative flex flex-col h-full bg-white ${mobileShowChat ? 'flex' : 'hidden lg:flex'}`}>
               {/* ─── Chat header ─── */}
-              <div className="px-4 lg:px-5 py-3 border-b border-slate-100 bg-gradient-to-r from-white to-slate-50/50">
+              <div className="px-4 lg:px-5 py-3 border-b border-slate-200 bg-white">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
                     {/* Mobile back button */}
@@ -1080,48 +1069,39 @@ export default function StudyPods() {
                   </div>
                 </div>
 
-                {/* ─── Tab switcher: Chat | Documents ─── */}
-                <div className="flex gap-1 mt-3 bg-slate-100/80 rounded-xl p-1">
+                {/* ─── Tab switcher: Chat | Files | Focus ─── */}
+                <div className="flex gap-0 mt-3 border-b border-slate-200 -mx-4 lg:-mx-5 px-4 lg:px-5">
                   <button
                     onClick={() => { setActiveTab('chat'); setSelectedDoc(null); }}
-                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all ${
+                    className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold border-b-2 transition-all -mb-px ${
                       activeTab === 'chat'
-                        ? 'bg-white text-primary shadow-sm ring-1 ring-slate-200/50'
-                        : 'text-slate-400 hover:text-slate-600'
+                        ? 'border-[#1264a3] text-[#1264a3]'
+                        : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
                     }`}
                   >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
                     Chat
                   </button>
                   <button
                     onClick={() => setActiveTab('documents')}
-                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all ${
+                    className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold border-b-2 transition-all -mb-px ${
                       activeTab === 'documents'
-                        ? 'bg-white text-primary shadow-sm ring-1 ring-slate-200/50'
-                        : 'text-slate-400 hover:text-slate-600'
+                        ? 'border-[#1264a3] text-[#1264a3]'
+                        : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
                     }`}
                   >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
                     Files
                     {documents.length > 0 && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent/10 text-accent font-bold">{documents.length}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold">{documents.length}</span>
                     )}
                   </button>
                   <button
                     onClick={() => { setActiveTab('focus'); setSelectedSession(null); }}
-                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all ${
+                    className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold border-b-2 transition-all -mb-px ${
                       activeTab === 'focus'
-                        ? 'bg-white text-primary shadow-sm ring-1 ring-slate-200/50'
-                        : 'text-slate-400 hover:text-slate-600'
+                        ? 'border-[#1264a3] text-[#1264a3]'
+                        : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
                     }`}
                   >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
                     Focus
                     {sessions.filter(s => s.status !== 'completed').length > 0 && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold">
@@ -1771,7 +1751,7 @@ export default function StudyPods() {
                     </button>
                   </div>
                 )}
-                <div className="flex items-end gap-2 bg-white border border-slate-200 rounded-2xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-accent/20 focus-within:border-accent/40 transition-all shadow-sm hover:shadow-md">
+                <div className="flex items-end gap-2 bg-white border border-slate-300 rounded-lg px-3 py-2 focus-within:border-slate-500 focus-within:shadow-[0_0_0_4px_rgba(29,155,209,0.1)] transition-all">
                   {/* Attachment button */}
                   <button
                     onClick={() => fileInputRef.current?.click()}
@@ -1794,9 +1774,9 @@ export default function StudyPods() {
                   <button
                     onClick={sendMessage}
                     disabled={!messageText.trim() || sending}
-                    className={`p-2 rounded-xl transition-all flex-shrink-0 ${
+                    className={`p-2 rounded-lg transition-all flex-shrink-0 ${
                       messageText.trim()
-                        ? 'text-white bg-gradient-to-r from-accent to-indigo-600 hover:from-accent/90 hover:to-indigo-700 shadow-md hover:shadow-lg scale-100 hover:scale-105'
+                        ? 'text-white bg-[#007a5a] hover:bg-[#148567]'
                         : 'text-slate-300 cursor-not-allowed'
                     }`}
                   >
@@ -1945,25 +1925,103 @@ export default function StudyPods() {
                     {/* Modal body — split view: content + comments */}
                     <div className="flex-1 flex overflow-hidden">
                       {/* Left: Document content/editor */}
-                      <div className="flex-1 overflow-y-auto border-r border-slate-100 bg-slate-50/30" ref={textContentRef}>
+                      <div className="flex-1 overflow-y-auto border-r border-slate-100 bg-white" ref={textContentRef}>
                         {editorDoc.fileType === 'txt' || (editorDoc.content && !editorDoc.fileData) ? (
                           /* Editable text content with selection support */
                           <div className="p-6 lg:p-8 max-w-4xl mx-auto">
                             <div className="flex items-center gap-2 mb-4">
-                              <div className="flex items-center gap-2 px-3 py-1.5 bg-accent/5 border border-accent/10 rounded-lg">
-                                <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg">
+                                <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                 </svg>
-                                <span className="text-xs font-semibold text-accent">Collaborative Editor</span>
+                                <span className="text-xs font-semibold text-slate-600">Collaborative Editor</span>
                               </div>
+                              {editorDoc.comments && editorDoc.comments.filter(c => c.section).length > 0 && (
+                                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg">
+                                  <span className="w-3 h-3 rounded-sm bg-amber-200 border border-amber-300" />
+                                  <span className="text-xs font-medium text-amber-700">
+                                    {editorDoc.comments.filter(c => c.section).length} annotation{editorDoc.comments.filter(c => c.section).length !== 1 ? 's' : ''}
+                                  </span>
+                                </div>
+                              )}
                             </div>
-                            <textarea
-                              value={editorContent}
-                              onChange={e => { setEditorContent(e.target.value); setEditorDirty(true); }}
-                              onMouseUp={handleTextSelection}
-                              className="w-full min-h-[500px] p-6 text-base text-slate-800 leading-[1.8] bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/40 resize-y font-sans shadow-sm"
-                              placeholder="Start writing or paste your content here..."
-                            />
+
+                            {/* Document with inline annotation highlights */}
+                            {(() => {
+                              const sectionComments = editorDoc.comments?.filter(c => c.section) || [];
+                              const hasAnnotations = sectionComments.length > 0;
+
+                              if (hasAnnotations && editorContent) {
+                                // Render annotated view — highlights commented sections
+                                const annotationColors = ['bg-amber-100 border-amber-300', 'bg-blue-100 border-blue-300', 'bg-green-100 border-green-300', 'bg-pink-100 border-pink-300', 'bg-purple-100 border-purple-300'];
+                                let renderedContent = editorContent;
+                                const highlights: { text: string; color: string; commentUser: string; commentContent: string }[] = [];
+
+                                sectionComments.forEach((c, i) => {
+                                  if (renderedContent.includes(c.section)) {
+                                    highlights.push({
+                                      text: c.section,
+                                      color: annotationColors[i % annotationColors.length],
+                                      commentUser: c.user.name,
+                                      commentContent: c.content,
+                                    });
+                                  }
+                                });
+
+                                // Build annotated HTML
+                                let html = editorContent;
+                                highlights.forEach((h, i) => {
+                                  const escapedText = h.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                                  html = html.replace(
+                                    new RegExp(escapedText, 'g'),
+                                    `<mark class="${h.color} border-b-2 px-0.5 rounded-sm cursor-pointer" title="${h.commentUser}: ${h.commentContent.replace(/"/g, '&quot;')}">${h.text}</mark>`
+                                  );
+                                });
+
+                                return (
+                                  <>
+                                    <div
+                                      className="w-full min-h-[500px] p-6 text-base text-slate-800 leading-[1.8] bg-white border border-slate-200 rounded-xl font-sans shadow-sm whitespace-pre-wrap"
+                                      dangerouslySetInnerHTML={{ __html: html }}
+                                      onMouseUp={handleTextSelection}
+                                    />
+                                    <div className="mt-2 flex items-center justify-between">
+                                      <button
+                                        onClick={() => {
+                                          // Switch to edit mode by focusing the textarea
+                                          const ta = document.getElementById('doc-editor-textarea');
+                                          if (ta) { (ta as HTMLTextAreaElement).style.display = 'block'; ta.focus(); }
+                                        }}
+                                        className="text-xs text-slate-400 hover:text-accent font-medium flex items-center gap-1.5"
+                                      >
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                        </svg>
+                                        Switch to edit mode
+                                      </button>
+                                    </div>
+                                    <textarea
+                                      id="doc-editor-textarea"
+                                      value={editorContent}
+                                      onChange={e => { setEditorContent(e.target.value); setEditorDirty(true); }}
+                                      onMouseUp={handleTextSelection}
+                                      className="w-full min-h-[500px] p-6 text-base text-slate-800 leading-[1.8] bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/40 resize-y font-sans shadow-sm mt-2 hidden"
+                                      placeholder="Start writing or paste your content here..."
+                                    />
+                                  </>
+                                );
+                              }
+
+                              return (
+                                <textarea
+                                  value={editorContent}
+                                  onChange={e => { setEditorContent(e.target.value); setEditorDirty(true); }}
+                                  onMouseUp={handleTextSelection}
+                                  className="w-full min-h-[500px] p-6 text-base text-slate-800 leading-[1.8] bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/40 resize-y font-sans shadow-sm"
+                                  placeholder="Start writing or paste your content here..."
+                                />
+                              );
+                            })()}
 
                             {/* Selection comment popup */}
                             {showSelectionComment && selectedText && (
