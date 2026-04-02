@@ -1057,11 +1057,34 @@ export function getPromptTypeInfo(type: PromptType): PromptTypeInfo {
 
 export function findSchoolByName(name: string): SchoolData | undefined {
   const lower = name.toLowerCase().trim();
-  return SCHOOLS.find(s =>
-    s.name.toLowerCase().includes(lower) ||
-    s.id.includes(lower.replace(/\s+/g, '_')) ||
-    lower.includes(s.name.toLowerCase().split(' ')[0]) // match first word
+
+  // 1. Exact name match
+  const exact = SCHOOLS.find(s => s.name.toLowerCase() === lower);
+  if (exact) return exact;
+
+  // 2. Name contains input or input contains name (full name, not first word)
+  const containsMatch = SCHOOLS.find(s =>
+    s.name.toLowerCase().includes(lower) || lower.includes(s.name.toLowerCase())
   );
+  if (containsMatch) return containsMatch;
+
+  // 3. ID match
+  const idMatch = SCHOOLS.find(s =>
+    s.id === lower.replace(/\s+/g, '_') || s.id === lower.replace(/\s+/g, '')
+  );
+  if (idMatch) return idMatch;
+
+  // 4. Fuzzy: match on significant keywords (skip common words like "university", "of", "the")
+  const skipWords = new Set(['university', 'of', 'the', 'at', 'in', 'college', 'institute', 'school']);
+  const inputWords = lower.split(/\s+/).filter(w => w.length > 2 && !skipWords.has(w));
+  if (inputWords.length > 0) {
+    return SCHOOLS.find(s => {
+      const schoolLower = s.name.toLowerCase();
+      return inputWords.every(w => schoolLower.includes(w));
+    });
+  }
+
+  return undefined;
 }
 
 export function getSchoolPromptsByType(schoolId: string): Map<PromptType, SupplementalPrompt[]> {

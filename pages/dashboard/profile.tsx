@@ -607,15 +607,20 @@ export default function StudentProfile() {
   };
 
   const removeEC = (id: string) => {
+    if (!window.confirm('Remove this activity? This cannot be undone.')) return;
     setProfile(prev => ({ ...prev, extracurriculars: prev.extracurriculars.filter(ec => ec.id !== id) }));
     if (editingEcId === id) setEditingEcId(null);
   };
 
-  const updateECDescription = (id: string, description: string) => {
+  const updateEC = (id: string, updates: Partial<Extracurricular>) => {
     setProfile(prev => ({
       ...prev,
-      extracurriculars: prev.extracurriculars.map(ec => ec.id === id ? { ...ec, description } : ec),
+      extracurriculars: prev.extracurriculars.map(ec => ec.id === id ? { ...ec, ...updates } : ec),
     }));
+  };
+
+  const updateECDescription = (id: string, description: string) => {
+    updateEC(id, { description });
   };
 
   const startEditEC = (ec: Extracurricular) => {
@@ -627,6 +632,23 @@ export default function StudentProfile() {
     if (editingEcId) {
       updateECDescription(editingEcId, editDescription);
       setEditingEcId(null);
+    }
+  };
+
+  // Full edit mode for an activity
+  const [fullEditId, setFullEditId] = useState<string | null>(null);
+  const [fullEditData, setFullEditData] = useState<Extracurricular | null>(null);
+
+  const startFullEdit = (ec: Extracurricular) => {
+    setFullEditId(ec.id);
+    setFullEditData({ ...ec });
+  };
+
+  const saveFullEdit = () => {
+    if (fullEditId && fullEditData) {
+      updateEC(fullEditId, fullEditData);
+      setFullEditId(null);
+      setFullEditData(null);
     }
   };
 
@@ -735,52 +757,100 @@ export default function StudentProfile() {
                       {/* EC cards in this bucket */}
                       {ecs.map(ec => (
                         <div key={ec.id} className={`ml-2 p-4 rounded-xl bg-surface border ${bucket.border} group transition-all`}>
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <p className="text-sm font-semibold text-primary">{ec.name}</p>
+                          {fullEditId === ec.id && fullEditData ? (
+                            /* ── Full Edit Form ── */
+                            <div className="space-y-3">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <input type="text" value={fullEditData.name} onChange={e => setFullEditData({ ...fullEditData, name: e.target.value })} placeholder="Activity name" className="px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30" />
+                                <input type="text" value={fullEditData.role} onChange={e => setFullEditData({ ...fullEditData, role: e.target.value })} placeholder="Your role" className="px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30" />
                               </div>
-                              <p className="text-xs text-slate-600 font-medium">{ec.role}</p>
-
-                              {/* Description — editable */}
-                              {editingEcId === ec.id ? (
-                                <div className="mt-2">
-                                  <textarea
-                                    value={editDescription}
-                                    onChange={e => setEditDescription(e.target.value)}
-                                    rows={3}
-                                    className="w-full px-3 py-2 rounded-lg border border-accent/30 text-xs focus:outline-none focus:ring-2 focus:ring-accent/30 resize-none"
-                                    autoFocus
-                                  />
-                                  <DescriptionSuggestions
-                                    description={editDescription}
-                                    name={ec.name}
-                                    role={ec.role}
-                                    category={ec.category}
-                                    onApply={(d) => setEditDescription(d)}
-                                  />
-                                  <div className="flex gap-2 mt-2">
-                                    <button onClick={() => setEditingEcId(null)} className="text-[11px] text-slate-400 hover:text-slate-600">Cancel</button>
-                                    <button onClick={saveEditEC} className="text-[11px] text-accent font-semibold hover:text-accent/80">Save</button>
-                                  </div>
+                              <textarea
+                                value={fullEditData.description}
+                                onChange={e => setFullEditData({ ...fullEditData, description: e.target.value })}
+                                rows={3}
+                                placeholder="Describe your involvement..."
+                                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-accent/30 resize-none"
+                              />
+                              <DescriptionSuggestions
+                                description={fullEditData.description}
+                                name={fullEditData.name}
+                                role={fullEditData.role}
+                                category={fullEditData.category}
+                                onApply={d => setFullEditData({ ...fullEditData, description: d })}
+                              />
+                              <div className="grid grid-cols-3 gap-3">
+                                <select value={fullEditData.category} onChange={e => setFullEditData({ ...fullEditData, category: e.target.value })} className="px-3 py-2 rounded-lg border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-accent/30">
+                                  {EC_BUCKETS.map(b => (<option key={b.key} value={b.key}>{b.label}</option>))}
+                                </select>
+                                <div>
+                                  <input type="number" min="1" max="12" value={fullEditData.years || ''} onChange={e => setFullEditData({ ...fullEditData, years: e.target.value === '' ? 0 : Math.min(12, Math.max(0, parseInt(e.target.value) || 0)) })} placeholder="Years" className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30" />
+                                  <p className="text-[10px] text-slate-400 mt-0.5">Years</p>
                                 </div>
-                              ) : (
-                                <p className="text-xs text-slate-400 mt-1 line-clamp-2">{ec.description}</p>
-                              )}
-
-                              <div className="flex items-center gap-3 mt-1.5">
-                                <p className="text-[11px] text-slate-400">{ec.years} yr{ec.years !== 1 ? 's' : ''} &middot; {ec.hoursPerWeek} hrs/wk</p>
-                                {editingEcId !== ec.id && (
-                                  <button onClick={() => startEditEC(ec)} className="text-[10px] text-indigo-500 font-semibold hover:text-indigo-700 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    Improve description
-                                  </button>
-                                )}
+                                <div>
+                                  <input type="number" min="1" max="40" value={fullEditData.hoursPerWeek || ''} onChange={e => setFullEditData({ ...fullEditData, hoursPerWeek: e.target.value === '' ? 0 : Math.min(40, Math.max(0, parseInt(e.target.value) || 0)) })} placeholder="Hrs/wk" className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30" />
+                                  <p className="text-[10px] text-slate-400 mt-0.5">Hrs/week</p>
+                                </div>
+                              </div>
+                              <div className="flex gap-2 justify-end">
+                                <button onClick={() => { setFullEditId(null); setFullEditData(null); }} className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-700">Cancel</button>
+                                <button onClick={saveFullEdit} className="px-3 py-1.5 text-xs font-semibold text-white bg-accent rounded-lg hover:bg-accent/90 transition-colors">Save Changes</button>
                               </div>
                             </div>
-                            <button onClick={() => removeEC(ec.id)} className="text-slate-300 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                            </button>
-                          </div>
+                          ) : (
+                            /* ── Normal Display ── */
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <p className="text-sm font-semibold text-primary">{ec.name}</p>
+                                </div>
+                                <p className="text-xs text-slate-600 font-medium">{ec.role}</p>
+
+                                {/* Description — inline edit mode */}
+                                {editingEcId === ec.id ? (
+                                  <div className="mt-2">
+                                    <textarea
+                                      value={editDescription}
+                                      onChange={e => setEditDescription(e.target.value)}
+                                      rows={3}
+                                      className="w-full px-3 py-2 rounded-lg border border-accent/30 text-xs focus:outline-none focus:ring-2 focus:ring-accent/30 resize-none"
+                                      autoFocus
+                                    />
+                                    <DescriptionSuggestions
+                                      description={editDescription}
+                                      name={ec.name}
+                                      role={ec.role}
+                                      category={ec.category}
+                                      onApply={(d) => setEditDescription(d)}
+                                    />
+                                    <div className="flex gap-2 mt-2">
+                                      <button onClick={() => setEditingEcId(null)} className="text-[11px] text-slate-400 hover:text-slate-600">Cancel</button>
+                                      <button onClick={saveEditEC} className="text-[11px] text-accent font-semibold hover:text-accent/80">Save</button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <p className="text-xs text-slate-400 mt-1 line-clamp-2">{ec.description}</p>
+                                )}
+
+                                <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                                  <p className="text-[11px] text-slate-400">{ec.years} yr{ec.years !== 1 ? 's' : ''} &middot; {ec.hoursPerWeek} hrs/wk</p>
+                                  {editingEcId !== ec.id && (
+                                    <button onClick={() => startEditEC(ec)} className="text-[10px] text-indigo-500 font-semibold hover:text-indigo-700 transition-opacity">
+                                      Improve description
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                              {/* Always-visible action buttons */}
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button onClick={() => startFullEdit(ec)} className="p-1.5 text-slate-400 hover:text-accent hover:bg-accent/10 rounded-lg transition-colors" title="Edit activity">
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                </button>
+                                <button onClick={() => removeEC(ec.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Remove activity">
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>

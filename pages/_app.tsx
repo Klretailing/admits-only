@@ -7,12 +7,12 @@ import Layout from '../components/Layout'
 import { tracker } from '../lib/analytics'
 import { ThemeProvider } from '../lib/themeContext'
 
-// Pages that need auth (SessionProvider) and use their own layout
-const authPrefixes = ['/dashboard', '/educator', '/admin', '/auth/'];
+// Pages that use their own layout (no Layout wrapper)
+const customLayoutPrefixes = ['/dashboard', '/educator', '/admin', '/auth/'];
 
 export default function MyApp({ Component, pageProps: { session, ...pageProps } }: AppProps) {
   const router = useRouter();
-  const needsAuth = authPrefixes.some((p) => router.pathname.startsWith(p));
+  const usesCustomLayout = customLayoutPrefixes.some((p) => router.pathname.startsWith(p));
 
   // Internal analytics — tracks page views, clicks, and session time
   useEffect(() => {
@@ -25,18 +25,20 @@ export default function MyApp({ Component, pageProps: { session, ...pageProps } 
     };
   }, [router.events]);
 
-  // Public pages: no SessionProvider, wrapped in Layout
-  if (!needsAuth) {
+  // All pages get SessionProvider so auth state persists across navigation.
+  // Only public pages get the Layout wrapper.
+  if (!usesCustomLayout) {
     return (
       <ThemeProvider>
-        <Layout>
-          <Component {...pageProps} />
-        </Layout>
+        <SessionProvider session={session}>
+          <Layout>
+            <Component {...pageProps} />
+          </Layout>
+        </SessionProvider>
       </ThemeProvider>
     );
   }
 
-  // Auth/dashboard/admin pages: SessionProvider, no Layout wrapper
   return (
     <ThemeProvider>
       <SessionProvider session={session}>

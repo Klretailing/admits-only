@@ -15,13 +15,13 @@
     @apply bg-white text-slate-900 font-sans;
   }
 
-  /* Dark mode base overrides */
+  /* Dark mode base overrides — solid, high-contrast dark like Claude/Gmail */
   html.dark body {
-    @apply bg-[#0c0f1a] text-slate-200;
+    @apply bg-[#1a1a1a] text-[#e8eaed];
   }
 
   html.dark ::selection {
-    @apply bg-accent/30 text-white;
+    @apply bg-accent/40 text-white;
   }
 
   ::selection {
@@ -30,92 +30,157 @@
 }
 
 /* ─── Dark mode surface overrides ─── */
-/* These use specificity to restyle common Tailwind classes in dark mode
-   so individual pages get dark treatment without adding dark: to every element */
+/* Solid, opaque colors inspired by Claude/Gmail dark mode.
+   No translucency — every surface has a clear, intentional color. */
 
-html.dark .bg-surface { background-color: #0c0f1a !important; }
-html.dark .bg-white { background-color: #151929 !important; color: #e2e8f0; }
-html.dark .bg-slate-50\/50, html.dark .bg-slate-50 { background-color: #1a1f35 !important; }
-html.dark .bg-slate-100\/80 { background-color: rgba(30, 35, 55, 0.8) !important; }
-html.dark .bg-slate-100 { background-color: #1e2337 !important; }
+html.dark .bg-surface { background-color: #1a1a1a !important; }
+html.dark .bg-white { background-color: #292929 !important; color: #e8eaed; }
+html.dark .bg-slate-50\/50, html.dark .bg-slate-50 { background-color: #2d2d2d !important; }
+html.dark .bg-slate-100\/80 { background-color: #333333 !important; }
+html.dark .bg-slate-100 { background-color: #333333 !important; }
 
-/* Borders */
-html.dark .border-slate-100 { border-color: #1e2847 !important; }
-html.dark .border-slate-200 { border-color: #293556 !important; }
-html.dark .border-slate-200\/50 { border-color: rgba(41, 53, 86, 0.5) !important; }
+/* Borders — visible but not harsh */
+html.dark .border-slate-100 { border-color: #3d3d3d !important; }
+html.dark .border-slate-200 { border-color: #484848 !important; }
+html.dark .border-slate-200\/50 { border-color: #484848 !important; }
 
-/* Text — ensure all shades meet WCAG AA contrast on dark surfaces (#151929) */
-html.dark .text-primary { color: #f1f5f9 !important; }
-html.dark .text-slate-900 { color: #f1f5f9 !important; }
-html.dark .text-slate-800 { color: #e2e8f0 !important; }
-html.dark .text-slate-700 { color: #cbd5e1 !important; }
-html.dark .text-slate-600 { color: #b0bdd0 !important; }
-html.dark .text-slate-500 { color: #94a3b8 !important; }
-html.dark .text-slate-400 { color: #8494b0 !important; }
-html.dark .text-slate-300 { color: #94a3b8 !important; }
+/* Text — high contrast, clearly readable on dark surfaces */
+html.dark .text-primary { color: #e8eaed !important; }
+html.dark .text-slate-900 { color: #e8eaed !important; }
+html.dark .text-slate-800 { color: #dadce0 !important; }
+html.dark .text-slate-700 { color: #c4c7cc !important; }
+html.dark .text-slate-600 { color: #b0b3b8 !important; }
+html.dark .text-slate-500 { color: #9aa0a6 !important; }
+html.dark .text-slate-400 { color: #9aa0a6 !important; }
+html.dark .text-slate-300 { color: #9aa0a6 !important; }
 
 /* Inner element backgrounds — progress bars, dividers, etc. */
-html.dark .bg-slate-200 { background-color: #293556 !important; }
-html.dark .bg-slate-200\/50 { background-color: rgba(41, 53, 86, 0.5) !important; }
-html.dark .bg-slate-300 { background-color: #334266 !important; }
-html.dark .divide-slate-50 > :not([hidden]) ~ :not([hidden]) { border-color: #1e2337 !important; }
+html.dark .bg-slate-200 { background-color: #3d3d3d !important; }
+html.dark .bg-slate-200\/50 { background-color: #3d3d3d !important; }
+html.dark .bg-slate-300 { background-color: #484848 !important; }
+html.dark .divide-slate-50 > :not([hidden]) ~ :not([hidden]) { border-color: #3d3d3d !important; }
 
-/* Colored light backgrounds for icon containers / badges in dark mode */
-html.dark .bg-purple-100 { background-color: rgba(139, 92, 246, 0.15) !important; }
-html.dark .bg-emerald-100 { background-color: rgba(16, 185, 129, 0.15) !important; }
-html.dark .bg-amber-50 { background-color: rgba(245, 158, 11, 0.1) !important; }
-html.dark .bg-amber-100 { background-color: rgba(245, 158, 11, 0.15) !important; }
-html.dark .bg-red-100 { background-color: rgba(239, 68, 68, 0.15) !important; }
-html.dark .bg-blue-100 { background-color: rgba(59, 130, 246, 0.15) !important; }
-html.dark .bg-green-50 { background-color: rgba(16, 185, 129, 0.1) !important; }
-html.dark .bg-orange-50 { background-color: rgba(249, 115, 22, 0.1) !important; }
-html.dark .bg-blue-50 { background-color: rgba(59, 130, 246, 0.1) !important; }
+/* Colored backgrounds for icon containers / badges — solid, not translucent */
+html.dark .bg-purple-100 { background-color: #3b2d5e !important; color: #c4b5fd !important; }
+html.dark .bg-emerald-100 { background-color: #1a3a2a !important; color: #6ee7b7 !important; }
+html.dark .bg-amber-50 { background-color: #3d2e1a !important; color: #fcd34d !important; }
+html.dark .bg-amber-100 { background-color: #3d2e1a !important; color: #fcd34d !important; }
+html.dark .bg-red-100 { background-color: #3d1a1a !important; color: #fca5a5 !important; }
+html.dark .bg-blue-100 { background-color: #1a2a3d !important; color: #93c5fd !important; }
+html.dark .bg-green-50 { background-color: #1a3a2a !important; color: #6ee7b7 !important; }
+html.dark .bg-orange-50 { background-color: #3d2a1a !important; color: #fdba74 !important; }
+html.dark .bg-blue-50 { background-color: #1a2a3d !important; color: #93c5fd !important; }
+html.dark .bg-red-50 { background-color: #3d1a1a !important; color: #fca5a5 !important; }
+html.dark .bg-purple-50 { background-color: #2d1f4e !important; color: #c4b5fd !important; }
+html.dark .bg-violet-50 { background-color: #2d1f4e !important; color: #c4b5fd !important; }
+html.dark .bg-cyan-50 { background-color: #1a2d3d !important; color: #67e8f9 !important; }
+html.dark .bg-teal-50 { background-color: #1a3a2a !important; color: #5eead4 !important; }
+html.dark .bg-rose-50 { background-color: #3d1a2a !important; color: #fda4af !important; }
+html.dark .bg-pink-50 { background-color: #3d1a2a !important; color: #f9a8d4 !important; }
+html.dark .bg-indigo-50 { background-color: #1f2a4e !important; color: #a5b4fc !important; }
+html.dark .bg-emerald-50 { background-color: #1a3a2a !important; color: #6ee7b7 !important; }
 
-/* Status bar gradient backgrounds */
-html.dark .bg-gradient-to-r.from-accent\/\[0\.03\] { background: rgba(99, 102, 241, 0.06) !important; }
-html.dark .bg-gradient-to-r.from-emerald-500\/\[0\.03\] { background: rgba(16, 185, 129, 0.06) !important; }
-html.dark .bg-gradient-to-r.from-amber-500\/\[0\.03\] { background: rgba(245, 158, 11, 0.06) !important; }
+/* Accent/status backgrounds in dark mode — solid */
+html.dark .bg-accent\/10 { background-color: #2a2650 !important; }
+html.dark .bg-accent\/5 { background-color: #252240 !important; }
+
+/* Status bar gradient backgrounds — solid */
+html.dark .bg-gradient-to-r.from-accent\/\[0\.03\] { background: #252240 !important; }
+html.dark .bg-gradient-to-r.from-emerald-500\/\[0\.03\] { background: #1a2d24 !important; }
+html.dark .bg-gradient-to-r.from-amber-500\/\[0\.03\] { background: #2d2518 !important; }
 
 /* Ecosystem / testimonial cards in dark mode */
-html.dark .bg-gradient-to-br.from-slate-50 { background: #1a1f35 !important; }
+html.dark .bg-gradient-to-br.from-slate-50 { background: #2d2d2d !important; }
 
-/* Header & floating UI in dark mode */
-html.dark .bg-white\/80 { background-color: rgba(21, 25, 41, 0.85) !important; }
-html.dark .bg-white\/90 { background-color: rgba(21, 25, 41, 0.92) !important; }
-html.dark .bg-white\/70 { background-color: rgba(21, 25, 41, 0.7) !important; }
+/* Header & floating UI in dark mode — SOLID, not translucent */
+html.dark .bg-white\/80 { background-color: #292929 !important; }
+html.dark .bg-white\/90 { background-color: #292929 !important; }
+html.dark .bg-white\/70 { background-color: #292929 !important; }
 
 /* Hover states */
-html.dark .hover\:bg-slate-50:hover { background-color: #1e2337 !important; }
-html.dark .hover\:text-primary:hover { color: #f1f5f9 !important; }
-html.dark .hover\:border-slate-200:hover { border-color: #293556 !important; }
-html.dark .hover\:border-slate-300:hover { border-color: #334266 !important; }
+html.dark .hover\:bg-slate-50:hover { background-color: #333333 !important; }
+html.dark .hover\:text-primary:hover { color: #e8eaed !important; }
+html.dark .hover\:border-slate-200:hover { border-color: #484848 !important; }
+html.dark .hover\:border-slate-300:hover { border-color: #555555 !important; }
 
-/* Inputs & selects */
+/* Inputs & selects — solid dark backgrounds */
 html.dark select, html.dark input[type="text"], html.dark input[type="email"],
-html.dark input[type="password"], html.dark input[type="number"], html.dark textarea {
-  background-color: #1a1f35 !important;
-  border-color: #293556 !important;
-  color: #e2e8f0 !important;
+html.dark input[type="password"], html.dark input[type="number"], html.dark textarea,
+html.dark input[type="date"] {
+  background-color: #1a1a1a !important;
+  border-color: #484848 !important;
+  color: #e8eaed !important;
 }
 
 html.dark select option {
-  background-color: #1a1f35;
-  color: #e2e8f0;
+  background-color: #292929;
+  color: #e8eaed;
+}
+
+html.dark input::placeholder, html.dark textarea::placeholder {
+  color: #6b6b6b !important;
 }
 
 /* Focus rings */
-html.dark .focus\:ring-accent\/30:focus { --tw-ring-color: rgba(99, 102, 241, 0.25); }
+html.dark .focus\:ring-accent\/30:focus { --tw-ring-color: rgba(99, 102, 241, 0.35); }
 
-/* Shadows — soften in dark mode */
+/* Shadows — solid dark mode shadows */
 html.dark .shadow-sm, html.dark .shadow-md, html.dark .shadow-lg, html.dark .shadow-xl {
-  --tw-shadow-color: rgba(0, 0, 0, 0.3) !important;
+  --tw-shadow-color: rgba(0, 0, 0, 0.5) !important;
 }
 
-/* Scrollbar */
+/* Scrollbar — solid dark */
 html.dark ::-webkit-scrollbar { width: 6px; }
-html.dark ::-webkit-scrollbar-track { background: #0c0f1a; }
-html.dark ::-webkit-scrollbar-thumb { background: #293556; border-radius: 3px; }
-html.dark ::-webkit-scrollbar-thumb:hover { background: #334266; }
+html.dark ::-webkit-scrollbar-track { background: #1a1a1a; }
+html.dark ::-webkit-scrollbar-thumb { background: #484848; border-radius: 3px; }
+html.dark ::-webkit-scrollbar-thumb:hover { background: #555555; }
+
+/* Glass card in dark mode — solid, not glassy */
+html.dark .glass-card {
+  background-color: #292929 !important;
+  backdrop-filter: none !important;
+  border-color: #3d3d3d !important;
+}
+
+/* Gradient text stays visible in dark mode */
+html.dark .gradient-text {
+  background: linear-gradient(to right, #818cf8, #a78bfa, #c4b5fd) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+/* Dark mode link colors */
+html.dark a.text-accent { color: #818cf8 !important; }
+
+/* Card hover in dark mode */
+html.dark .dash-card-hover:hover {
+  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(99, 102, 241, 0.15) !important;
+}
+
+/* Ensure colored text on dark backgrounds remains readable */
+html.dark .text-blue-600 { color: #93c5fd !important; }
+html.dark .text-purple-600 { color: #c4b5fd !important; }
+html.dark .text-emerald-600 { color: #6ee7b7 !important; }
+html.dark .text-amber-600 { color: #fcd34d !important; }
+html.dark .text-red-500 { color: #fca5a5 !important; }
+html.dark .text-red-400 { color: #fca5a5 !important; }
+html.dark .text-amber-500 { color: #fcd34d !important; }
+html.dark .text-amber-700 { color: #fcd34d !important; }
+html.dark .text-red-600 { color: #fca5a5 !important; }
+html.dark .text-orange-500 { color: #fdba74 !important; }
+html.dark .text-blue-500 { color: #93c5fd !important; }
+html.dark .text-green-700 { color: #6ee7b7 !important; }
+html.dark .text-violet-600, html.dark .text-violet-700 { color: #c4b5fd !important; }
+html.dark .text-rose-700 { color: #fda4af !important; }
+html.dark .text-sky-700 { color: #7dd3fc !important; }
+html.dark .text-cyan-600 { color: #67e8f9 !important; }
+html.dark .text-pink-600, html.dark .text-pink-700 { color: #f9a8d4 !important; }
+html.dark .text-teal-600 { color: #5eead4 !important; }
+html.dark .text-indigo-600 { color: #a5b4fc !important; }
+html.dark .text-emerald-700 { color: #6ee7b7 !important; }
+html.dark .text-blue-700 { color: #93c5fd !important; }
+html.dark .text-orange-700 { color: #fdba74 !important; }
+html.dark .text-cyan-700 { color: #67e8f9 !important; }
 
 @layer components {
   .section-padding {
