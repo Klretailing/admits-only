@@ -33,7 +33,6 @@ function Logo() {
 
 const navLinks = [
   { href: '/services', label: 'Programs' },
-  { href: '/pricing', label: 'Pricing' },
   { href: '/about', label: 'About' },
   { href: '/faq', label: 'FAQ' },
   { href: '/newsletter', label: 'Newsletter' },
@@ -237,10 +236,10 @@ export default function Layout({ children }: LayoutProps) {
               <div>
                 <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-4">Programs</h4>
                 <ul className="space-y-3 text-sm text-slate-300">
-                  <li><Link href="/services" className="hover:text-white transition-colors">Scholarship-Ready Academy</Link></li>
-                  <li><Link href="/services" className="hover:text-white transition-colors">STEM Innovators Lab</Link></li>
-                  <li><Link href="/services" className="hover:text-white transition-colors">Humanities Studio</Link></li>
-                  <li><Link href="/services" className="hover:text-white transition-colors">Foundations for Growth</Link></li>
+                  <li><Link href="/services" className="hover:text-white transition-colors">Writing Curriculum</Link></li>
+                  <li><Link href="/services" className="hover:text-white transition-colors">SAT / ACT Preparation</Link></li>
+                  <li><Link href="/services" className="hover:text-white transition-colors">Career Guidance</Link></li>
+                  <li><Link href="/services" className="hover:text-white transition-colors">College Admissions</Link></li>
                 </ul>
               </div>
 
