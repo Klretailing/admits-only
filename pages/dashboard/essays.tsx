@@ -5,6 +5,7 @@ import Head from 'next/head';
 import DashboardLayout from '../../components/DashboardLayout';
 import { SCHOOLS, PROMPT_TYPES as SUPP_PROMPT_TYPES, getPromptTypeInfo, findSchoolByName, findReuseOpportunities, type SchoolData, type SupplementalPrompt, type ReuseMatch, type PromptType as SuppPromptType } from '../../lib/schoolData';
 import { analyzeSentences, computeStats, type AnalyzedSentence, type AnalysisStats } from '../../lib/sentenceAnalysis';
+import { checkGrammar, applyFix, type GrammarIssue } from '../../lib/grammarCheck';
 
 /* ══════════════════════════════════════════════════════════════════════
    TYPES
@@ -1694,6 +1695,651 @@ function MotifStoryboard({ analysis, expandedCard, setExpandedCard }: {
 }
 
 /* ══════════════════════════════════════════════════════════════════════
+   MOTIF WORKBENCH — drag-and-drop idea cards + activity import
+   ══════════════════════════════════════════════════════════════════════ */
+
+const MOTIF_TONE_CLASSES = [
+  { dot: 'bg-indigo-500',  chip: 'bg-indigo-50 text-indigo-700 border-indigo-100',  ring: 'ring-indigo-200',  border: 'border-indigo-200',  bgSoft: 'bg-indigo-50/60',  text: 'text-indigo-700',  iconBg: 'bg-indigo-500' },
+  { dot: 'bg-amber-500',   chip: 'bg-amber-50 text-amber-700 border-amber-100',     ring: 'ring-amber-200',   border: 'border-amber-200',   bgSoft: 'bg-amber-50/60',   text: 'text-amber-700',   iconBg: 'bg-amber-500' },
+  { dot: 'bg-emerald-500', chip: 'bg-emerald-50 text-emerald-700 border-emerald-100', ring: 'ring-emerald-200', border: 'border-emerald-200', bgSoft: 'bg-emerald-50/60', text: 'text-emerald-700', iconBg: 'bg-emerald-500' },
+  { dot: 'bg-rose-500',    chip: 'bg-rose-50 text-rose-700 border-rose-100',         ring: 'ring-rose-200',    border: 'border-rose-200',    bgSoft: 'bg-rose-50/60',    text: 'text-rose-700',    iconBg: 'bg-rose-500' },
+  { dot: 'bg-sky-500',     chip: 'bg-sky-50 text-sky-700 border-sky-100',            ring: 'ring-sky-200',     border: 'border-sky-200',     bgSoft: 'bg-sky-50/60',     text: 'text-sky-700',     iconBg: 'bg-sky-500' },
+  { dot: 'bg-purple-500',  chip: 'bg-purple-50 text-purple-700 border-purple-100',   ring: 'ring-purple-200',  border: 'border-purple-200',  bgSoft: 'bg-purple-50/60',  text: 'text-purple-700',  iconBg: 'bg-purple-500' },
+];
+
+interface MotifIdea { id: string; text: string; sourceId?: string; }
+
+function MotifWorkbench({
+  ideas, ecs, ecsLoading,
+  draggingIdeaId, setDraggingIdeaId,
+  addIdea, removeIdea, updateIdea, reorderIdeas,
+  newIdeaDraft, setNewIdeaDraft,
+  runMotifAnalysis, hasAnalysis,
+  savedBoards, loadBoard, activeBoardId,
+  boardTitle, setBoardTitle, saveMotifBoard, savingBoard, newBoard,
+}: {
+  ideas: MotifIdea[];
+  ecs: Extracurricular[];
+  ecsLoading: boolean;
+  draggingIdeaId: string | null;
+  setDraggingIdeaId: (id: string | null) => void;
+  addIdea: (text: string, sourceId?: string) => void;
+  removeIdea: (id: string) => void;
+  updateIdea: (id: string, text: string) => void;
+  reorderIdeas: (fromId: string, toId: string) => void;
+  newIdeaDraft: string;
+  setNewIdeaDraft: (s: string) => void;
+  runMotifAnalysis: () => void;
+  hasAnalysis: boolean;
+  savedBoards: SavedBoard[];
+  loadBoard: (b: SavedBoard) => void;
+  activeBoardId: string | null;
+  boardTitle: string;
+  setBoardTitle: (s: string) => void;
+  saveMotifBoard: () => void;
+  savingBoard: boolean;
+  newBoard: () => void;
+}) {
+  const usedSourceIds = new Set(ideas.map(i => i.sourceId).filter(Boolean));
+  const availableEcs = ecs.filter(e => !usedSourceIds.has(e.id));
+  const canAnalyze = ideas.length >= 2;
+
+  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); };
+  const handleDropOn = (targetId: string) => {
+    if (draggingIdeaId && draggingIdeaId !== targetId) reorderIdeas(draggingIdeaId, targetId);
+    setDraggingIdeaId(null);
+  };
+
+  const ecToIdeaText = (ec: Extracurricular) => {
+    const role = ec.role ? `${ec.role} of ` : '';
+    const time = ec.years ? ` (${ec.years} yr${ec.years !== 1 ? 's' : ''})` : '';
+    const desc = ec.description ? ` — ${ec.description}` : '';
+    return `${role}${ec.name}${time}${desc}`.trim();
+  };
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {/* LEFT: Idea board (2/3) */}
+      <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" /></svg>
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-primary">Idea Board</h3>
+              <p className="text-[11px] text-slate-400">Drag to reorder · click to edit</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-semibold text-slate-500">{ideas.length} {ideas.length === 1 ? 'idea' : 'ideas'}</span>
+            <button
+              onClick={runMotifAnalysis}
+              disabled={!canAnalyze}
+              className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+            >
+              {hasAnalysis ? 'Re-analyze' : 'Find Motifs'}
+            </button>
+          </div>
+        </div>
+
+        <div className="p-4 space-y-2 min-h-[200px]">
+          {ideas.length === 0 && (
+            <div className="text-center py-10 px-4 border-2 border-dashed border-slate-200 rounded-xl">
+              <div className="w-12 h-12 mx-auto rounded-full bg-slate-100 flex items-center justify-center mb-3">
+                <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+              </div>
+              <p className="text-sm font-semibold text-slate-600">Start adding ideas</p>
+              <p className="text-[11px] text-slate-400 mt-1 max-w-sm mx-auto">Drop in your experiences below or pull straight from your activities on the right.</p>
+            </div>
+          )}
+
+          {ideas.map(idea => (
+            <IdeaCard
+              key={idea.id}
+              idea={idea}
+              isDragging={draggingIdeaId === idea.id}
+              onDragStart={() => setDraggingIdeaId(idea.id)}
+              onDragEnd={() => setDraggingIdeaId(null)}
+              onDragOver={handleDragOver}
+              onDrop={() => handleDropOn(idea.id)}
+              onUpdate={text => updateIdea(idea.id, text)}
+              onRemove={() => removeIdea(idea.id)}
+            />
+          ))}
+
+          {/* Inline new-idea row */}
+          <div className="flex items-center gap-2 pt-1">
+            <input
+              type="text"
+              value={newIdeaDraft}
+              onChange={e => setNewIdeaDraft(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && newIdeaDraft.trim()) { addIdea(newIdeaDraft); setNewIdeaDraft(''); } }}
+              placeholder="Add a new idea and press Enter…"
+              className="flex-1 px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300"
+            />
+            <button
+              onClick={() => { if (newIdeaDraft.trim()) { addIdea(newIdeaDraft); setNewIdeaDraft(''); } }}
+              disabled={!newIdeaDraft.trim()}
+              className="px-3 py-2 rounded-lg text-xs font-semibold text-white bg-slate-700 hover:bg-slate-800 disabled:opacity-40"
+            >
+              Add
+            </button>
+          </div>
+        </div>
+
+        {/* Footer: save board controls */}
+        <div className="border-t border-slate-100 px-4 py-3 bg-slate-50/50 flex flex-wrap items-center gap-2">
+          <input
+            type="text"
+            value={boardTitle}
+            onChange={e => setBoardTitle(e.target.value)}
+            placeholder="Board name…"
+            className="flex-1 min-w-[140px] px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-200"
+          />
+          <button onClick={saveMotifBoard} disabled={savingBoard || ideas.length === 0} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 disabled:opacity-40">
+            {savingBoard ? 'Saving…' : activeBoardId ? 'Update board' : 'Save board'}
+          </button>
+          {activeBoardId && (
+            <button onClick={newBoard} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 bg-white border border-slate-200 hover:bg-slate-50">+ New</button>
+          )}
+          {savedBoards.length > 0 && (
+            <select
+              onChange={e => { const board = savedBoards.find(b => b.id === e.target.value); if (board) loadBoard(board); }}
+              value={activeBoardId || ''}
+              className="px-2 py-1.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+            >
+              <option value="" disabled>Load board…</option>
+              {savedBoards.map(b => <option key={b.id} value={b.id}>{b.title}</option>)}
+            </select>
+          )}
+        </div>
+      </div>
+
+      {/* RIGHT: Activity Library (1/3) */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-primary">Your Activities</h3>
+              <p className="text-[11px] text-slate-400">One click to import</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-3 space-y-1.5 max-h-[420px] overflow-y-auto">
+          {ecsLoading && <p className="text-xs text-slate-400 text-center py-6">Loading activities…</p>}
+          {!ecsLoading && ecs.length === 0 && (
+            <div className="text-center py-8 px-3">
+              <p className="text-xs text-slate-500 leading-relaxed">No activities yet. Add some in your{' '}
+                <a href="/dashboard/profile" className="text-indigo-600 font-semibold underline">Profile</a>
+                {' '}to use them here.
+              </p>
+            </div>
+          )}
+          {!ecsLoading && availableEcs.length === 0 && ecs.length > 0 && (
+            <p className="text-xs text-slate-400 text-center py-4 italic">All activities imported.</p>
+          )}
+          {availableEcs.map(ec => (
+            <button
+              key={ec.id}
+              onClick={() => addIdea(ecToIdeaText(ec), ec.id)}
+              className="w-full text-left px-3 py-2.5 rounded-lg border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/40 transition-colors group"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-slate-700 truncate">{ec.name}</p>
+                  {ec.role && <p className="text-[10px] text-slate-500 truncate">{ec.role}</p>}
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-medium">{ec.category}</span>
+                    {ec.years > 0 && <span className="text-[9px] text-slate-400">{ec.years} yr</span>}
+                  </div>
+                </div>
+                <span className="flex-shrink-0 text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity text-lg leading-none">+</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function IdeaCard({
+  idea, isDragging, onDragStart, onDragEnd, onDragOver, onDrop, onUpdate, onRemove,
+}: {
+  idea: MotifIdea;
+  isDragging: boolean;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDrop: () => void;
+  onUpdate: (text: string) => void;
+  onRemove: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(idea.text);
+
+  const commit = () => {
+    if (draft.trim() && draft.trim() !== idea.text) onUpdate(draft.trim());
+    setEditing(false);
+  };
+
+  return (
+    <div
+      draggable={!editing}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      className={`group flex items-start gap-3 px-3.5 py-3 rounded-xl border bg-white hover:border-indigo-200 hover:shadow-sm transition-all ${
+        isDragging ? 'opacity-50 border-indigo-300' : 'border-slate-200'
+      }`}
+    >
+      {/* Drag handle */}
+      <div className="flex-shrink-0 mt-1 cursor-grab active:cursor-grabbing text-slate-300 group-hover:text-slate-500 transition-colors" title="Drag to reorder">
+        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>
+      </div>
+
+      <div className="flex-1 min-w-0">
+        {editing ? (
+          <textarea
+            autoFocus
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commit(); } if (e.key === 'Escape') { setDraft(idea.text); setEditing(false); } }}
+            rows={2}
+            className="w-full px-2 py-1 text-sm rounded-md border border-indigo-200 focus:outline-none focus:ring-2 focus:ring-indigo-200 resize-none"
+          />
+        ) : (
+          <p
+            onClick={() => { setDraft(idea.text); setEditing(true); }}
+            className="text-sm text-slate-700 leading-relaxed cursor-text"
+          >
+            {idea.text}
+          </p>
+        )}
+        {idea.sourceId && (
+          <span className="inline-flex items-center gap-1 mt-1.5 text-[9px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded px-1.5 py-0.5">
+            <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+            From activity
+          </span>
+        )}
+      </div>
+
+      <button
+        onClick={onRemove}
+        className="flex-shrink-0 mt-1 text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"
+        title="Remove"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+      </button>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   MOTIF BOARD — Tailwind-first storyboard (replacement for MotifStoryboard)
+   ══════════════════════════════════════════════════════════════════════ */
+
+function MotifBoard({ analysis, expandedCard, setExpandedCard }: {
+  analysis: MotifAnalysis;
+  expandedCard: string | null;
+  setExpandedCard: (id: string | null) => void;
+}) {
+  const { bullets, connections, motifs, orphanIds } = analysis;
+  if (bullets.length === 0) return null;
+
+  const orphanBullets = orphanIds.map(id => bullets.find(b => b.id === id)!).filter(Boolean);
+
+  // Build connection lookup for highlighting
+  const connectionMap: Record<string, { targetId: string; label: string; strength: number }[]> = {};
+  for (const c of connections) {
+    if (c.strength >= 0.3) {
+      if (!connectionMap[c.fromId]) connectionMap[c.fromId] = [];
+      if (!connectionMap[c.toId]) connectionMap[c.toId] = [];
+      connectionMap[c.fromId].push({ targetId: c.toId, label: c.label, strength: c.strength });
+      connectionMap[c.toId].push({ targetId: c.fromId, label: c.label, strength: c.strength });
+    }
+  }
+  const connectedTo = expandedCard ? new Set((connectionMap[expandedCard] || []).map(c => c.targetId)) : new Set<string>();
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      {motifs.map((motif, gi) => {
+        const tone = MOTIF_TONE_CLASSES[gi % MOTIF_TONE_CLASSES.length];
+        const mBullets = motif.bulletIds.map(id => bullets.find(b => b.id === id)!).filter(Boolean);
+
+        return (
+          <div key={motif.id} className={`rounded-2xl border ${tone.border} bg-white overflow-hidden shadow-sm flex flex-col`}>
+            {/* Header */}
+            <div className={`px-4 py-3 border-b border-slate-100 ${tone.bgSoft} flex items-center gap-3`}>
+              <div className={`w-8 h-8 rounded-lg ${tone.iconBg} flex items-center justify-center flex-shrink-0`}>
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+              </div>
+              <div className="min-w-0 flex-1">
+                <h4 className={`text-sm font-bold ${tone.text} truncate`}>{motif.name}</h4>
+                <p className="text-[10px] font-medium text-slate-500 truncate">
+                  {motif.dominantThemes.map(t => t.replace(/_/g, ' ')).map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(' · ')}
+                </p>
+              </div>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${tone.chip} border`}>
+                {mBullets.length}
+              </span>
+            </div>
+
+            {/* Bullet cards */}
+            <div className="p-3 space-y-2 flex-1">
+              {mBullets.map(b => {
+                const isExpanded = expandedCard === b.id;
+                const isConnected = connectedTo.has(b.id);
+                const conns = connectionMap[b.id] || [];
+
+                return (
+                  <div
+                    key={b.id}
+                    onClick={() => setExpandedCard(isExpanded ? null : b.id)}
+                    className={`rounded-xl border bg-white p-3 cursor-pointer transition-all hover:shadow-sm ${
+                      isExpanded ? `${tone.border} ring-2 ${tone.ring}` :
+                      isConnected && expandedCard ? `${tone.border}` :
+                      'border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <p className="text-[13px] font-medium text-slate-800 leading-relaxed">{b.text}</p>
+
+                    {/* Theme + value pills */}
+                    {(b.themes.length > 0 || b.analysis.values.length > 0) && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {b.themes.slice(0, 3).map(theme => (
+                          <span key={theme} className={`px-1.5 py-0.5 rounded text-[9px] font-semibold ${tone.chip} border`}>
+                            {theme.replace(/_/g, ' ')}
+                          </span>
+                        ))}
+                        {b.analysis.values.slice(0, 2).map(val => (
+                          <span key={val} className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-slate-100 text-slate-500">
+                            {val.replace(/_val$/, '')}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {isExpanded && (
+                      <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
+                        {(b.analysis.stakes || b.analysis.shift) && (
+                          <div className="grid grid-cols-2 gap-2">
+                            {b.analysis.stakes && (
+                              <div className="p-2 rounded-md bg-slate-50">
+                                <p className="text-[9px] font-bold text-slate-400 uppercase">Stakes</p>
+                                <p className="text-[11px] text-slate-600 mt-0.5">{b.analysis.stakes}</p>
+                              </div>
+                            )}
+                            {b.analysis.shift && (
+                              <div className="p-2 rounded-md bg-slate-50">
+                                <p className="text-[9px] font-bold text-slate-400 uppercase">Shift</p>
+                                <p className="text-[11px] text-slate-600 mt-0.5">{b.analysis.shift}</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {conns.length > 0 && (
+                          <div className="space-y-1">
+                            <p className={`text-[9px] font-bold uppercase tracking-wider ${tone.text}`}>Connections</p>
+                            {conns.slice(0, 3).map((conn, ci) => {
+                              const target = bullets.find(x => x.id === conn.targetId);
+                              if (!target) return null;
+                              return (
+                                <div key={ci} className={`flex items-start gap-2 p-1.5 rounded-md ${tone.bgSoft}`}>
+                                  <span className={`w-1 h-1 rounded-full mt-1.5 flex-shrink-0 ${tone.dot}`} />
+                                  <div className="min-w-0">
+                                    <p className="text-[10px] font-semibold text-slate-700 truncate">{target.text.slice(0, 60)}{target.text.length > 60 ? '…' : ''}</p>
+                                    <p className={`text-[9px] mt-0.5 ${tone.text}`}>{conn.label}</p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Orphans */}
+      {orphanBullets.length > 0 && (
+        <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+          <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/60 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-slate-400 flex items-center justify-center flex-shrink-0">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </div>
+            <div className="min-w-0">
+              <h4 className="text-sm font-bold text-slate-600">Standalone</h4>
+              <p className="text-[10px] text-slate-400">Add more detail to find connections</p>
+            </div>
+          </div>
+          <div className="p-3 space-y-2">
+            {orphanBullets.map(b => (
+              <div key={b.id} className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-[13px] font-medium text-slate-700 leading-relaxed">{b.text}</p>
+                {b.analysis.values.length > 0 && (
+                  <p className="text-[10px] text-slate-400 mt-1.5 italic">
+                    Try adding experiences related to {b.analysis.values[0]?.replace(/_val$/, '') || 'this theme'}.
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   GRAMMAR EDITOR COMPONENT
+   Renders essay text with numbered highlights for grammar issues and a
+   side panel listing the matching suggestions. Errors are listed first,
+   then optimizations. One click accepts a fix.
+   ══════════════════════════════════════════════════════════════════════ */
+
+function GrammarEditor({
+  content,
+  issues,
+  activeIssueId,
+  onSelectIssue,
+  onAccept,
+  onDismiss,
+  onClose,
+  errorCount,
+  optCount,
+}: {
+  content: string;
+  issues: GrammarIssue[];
+  activeIssueId: string | null;
+  onSelectIssue: (id: string | null) => void;
+  onAccept: (issue: GrammarIssue) => void;
+  onDismiss: (issue: GrammarIssue) => void;
+  onClose: () => void;
+  errorCount: number;
+  optCount: number;
+}) {
+  // Number issues by display order (errors first then optimizations)
+  const numbered = issues.map((iss, i) => ({ ...iss, num: i + 1 }));
+
+  // Build a render plan: walk through text and for each position emit either
+  // plain text or a highlight span based on the issues' ranges. Issues are
+  // already deduped (no overlapping) so we can render in order.
+  const sortedByPos = [...numbered].sort((a, b) => a.start - b.start);
+  const segments: Array<{ type: 'text' | 'mark'; text: string; issue?: GrammarIssue & { num: number } }> = [];
+  let cursor = 0;
+  for (const iss of sortedByPos) {
+    if (iss.start > cursor) {
+      segments.push({ type: 'text', text: content.slice(cursor, iss.start) });
+    }
+    segments.push({ type: 'mark', text: content.slice(iss.start, iss.end), issue: iss });
+    cursor = iss.end;
+  }
+  if (cursor < content.length) {
+    segments.push({ type: 'text', text: content.slice(cursor) });
+  }
+
+  return (
+    <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
+      {/* Highlighted text */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 lg:px-6 py-4 lg:py-5">
+        <div className="text-[14px] lg:text-[15px] leading-[1.85] font-sans text-slate-800 whitespace-pre-wrap break-words">
+          {segments.map((seg, i) => {
+            if (seg.type === 'text') return <span key={i}>{seg.text}</span>;
+            const iss = seg.issue!;
+            const isError = iss.severity === 'error';
+            const isActive = activeIssueId === iss.id;
+            return (
+              <span
+                key={i}
+                onClick={() => onSelectIssue(isActive ? null : iss.id)}
+                className={`relative cursor-pointer rounded-[3px] px-[1px] transition-colors ${
+                  isError
+                    ? isActive ? 'bg-rose-200/80' : 'bg-rose-100/70 hover:bg-rose-200/70'
+                    : isActive ? 'bg-amber-200/80' : 'bg-amber-100/70 hover:bg-amber-200/70'
+                }`}
+                title={`${iss.title}: ${iss.message}`}
+              >
+                {seg.text}
+                <sup className={`ml-0.5 inline-flex items-center justify-center min-w-[14px] h-[14px] text-[9px] font-bold rounded-full px-1 align-super ${
+                  isError ? 'bg-rose-500 text-white' : 'bg-amber-500 text-white'
+                }`}>
+                  {iss.num}
+                </sup>
+              </span>
+            );
+          })}
+        </div>
+        <button
+          onClick={onClose}
+          className="mt-4 text-[10px] text-slate-400 hover:text-slate-600 italic"
+        >
+          Close grammar mode to return to editing
+        </button>
+      </div>
+
+      {/* Suggestions sidebar */}
+      <aside className="lg:w-80 xl:w-96 flex-shrink-0 border-t lg:border-t-0 lg:border-l border-slate-200 bg-slate-50/70 flex flex-col">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-white">
+          <div>
+            <h4 className="text-[11px] font-bold text-primary uppercase tracking-wider">Grammar Suggestions</h4>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-rose-600">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                {errorCount} {errorCount === 1 ? 'error' : 'errors'}
+              </span>
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                {optCount} optimization{optCount === 1 ? '' : 's'}
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600"
+            title="Close grammar mode"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
+          {numbered.length === 0 && (
+            <div className="text-center py-10">
+              <div className="w-12 h-12 mx-auto rounded-full bg-emerald-100 flex items-center justify-center mb-3">
+                <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+              </div>
+              <p className="text-xs font-semibold text-emerald-700">No issues found</p>
+              <p className="text-[10px] text-slate-400 mt-1">Your writing reads cleanly.</p>
+            </div>
+          )}
+
+          {numbered.map(iss => {
+            const isError = iss.severity === 'error';
+            const isActive = activeIssueId === iss.id;
+            const canApply = iss.replacement !== iss.original;
+            return (
+              <div
+                key={iss.id}
+                onClick={() => onSelectIssue(isActive ? null : iss.id)}
+                className={`rounded-xl border bg-white p-3 cursor-pointer transition-all ${
+                  isActive
+                    ? isError ? 'border-rose-400 ring-2 ring-rose-100 shadow-sm' : 'border-amber-400 ring-2 ring-amber-100 shadow-sm'
+                    : 'border-slate-200 hover:border-slate-300 hover:shadow-sm'
+                }`}
+              >
+                <div className="flex items-start gap-2.5">
+                  <span className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                    isError ? 'bg-rose-500 text-white' : 'bg-amber-500 text-white'
+                  }`}>
+                    {iss.num}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className={`text-[9px] font-bold uppercase tracking-wider ${isError ? 'text-rose-600' : 'text-amber-600'}`}>
+                        {isError ? 'Error' : 'Optimization'}
+                      </span>
+                      <span className="text-[9px] text-slate-400">• {iss.title}</span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 leading-snug mb-2">{iss.message}</p>
+
+                    {canApply && (
+                      <div className="text-[11px] font-mono bg-slate-50 rounded-md border border-slate-100 p-2 mb-2">
+                        <div className="flex items-start gap-1.5">
+                          <span className="text-rose-500 line-through break-all">{iss.original}</span>
+                        </div>
+                        {iss.replacement && (
+                          <div className="flex items-start gap-1.5 mt-1">
+                            <span className="text-emerald-600 break-all">{iss.replacement}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-1.5">
+                      {canApply && (
+                        <button
+                          onClick={e => { e.stopPropagation(); onAccept(iss); }}
+                          className={`flex-1 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold text-white transition-all ${
+                            isError
+                              ? 'bg-rose-500 hover:bg-rose-600'
+                              : 'bg-amber-500 hover:bg-amber-600'
+                          }`}
+                        >
+                          {iss.replacement ? 'Apply fix' : 'Remove'}
+                        </button>
+                      )}
+                      <button
+                        onClick={e => { e.stopPropagation(); onDismiss(iss); }}
+                        className="px-2.5 py-1.5 rounded-lg text-[10px] font-semibold text-slate-500 bg-slate-100 hover:bg-slate-200 transition-all"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════
    SCORE BAR COMPONENT (compact for sidebar)
    ══════════════════════════════════════════════════════════════════════ */
 
@@ -1768,6 +2414,8 @@ export default function Essays() {
   // ─── Motifs state ───
   const [mode, setMode] = useState<'essays' | 'motifs' | 'supplementals'>('essays');
   const [motifInput, setMotifInput] = useState('');
+  // Idea cards (canonical) — drag-and-droppable representation of motifInput
+  const [motifIdeas, setMotifIdeas] = useState<{ id: string; text: string; sourceId?: string }[]>([]);
   const [motifAnalysis, setMotifAnalysis] = useState<MotifAnalysis | null>(null);
   const [savedBoards, setSavedBoards] = useState<SavedBoard[]>([]);
   const [activeBoardId, setActiveBoardId] = useState<string | null>(null);
@@ -1775,6 +2423,43 @@ export default function Essays() {
   const [savingBoard, setSavingBoard] = useState(false);
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
   const [motifView, setMotifView] = useState<'board' | 'narrative'>('board');
+  const [draggingIdeaId, setDraggingIdeaId] = useState<string | null>(null);
+  const [newIdeaDraft, setNewIdeaDraft] = useState('');
+
+  // Keep motifInput in sync with motifIdeas (for save / re-analyze)
+  useEffect(() => {
+    setMotifInput(motifIdeas.map(i => i.text).join('\n'));
+  }, [motifIdeas]);
+
+  const addIdea = useCallback((text: string, sourceId?: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    setMotifIdeas(prev => {
+      // Avoid dupes when importing the same activity twice
+      if (sourceId && prev.some(p => p.sourceId === sourceId)) return prev;
+      return [...prev, { id: `idea_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, text: trimmed, sourceId }];
+    });
+  }, []);
+
+  const removeIdea = useCallback((id: string) => {
+    setMotifIdeas(prev => prev.filter(i => i.id !== id));
+  }, []);
+
+  const updateIdea = useCallback((id: string, text: string) => {
+    setMotifIdeas(prev => prev.map(i => i.id === id ? { ...i, text } : i));
+  }, []);
+
+  const reorderIdeas = useCallback((fromId: string, toId: string) => {
+    setMotifIdeas(prev => {
+      const fromIdx = prev.findIndex(i => i.id === fromId);
+      const toIdx = prev.findIndex(i => i.id === toId);
+      if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, moved);
+      return next;
+    });
+  }, []);
 
   // ─── Supplementals state ───
   const [suppSchoolFilter, setSuppSchoolFilter] = useState<string>('all');
@@ -1871,11 +2556,11 @@ export default function Essays() {
 
   // ─── Motif actions ───
   const runMotifAnalysis = useCallback(() => {
-    const lines = motifInput.split('\n').map(l => l.replace(/^[\s\-\u2022\*]+/, '').trim()).filter(l => l.length > 0);
+    const lines = motifIdeas.map(i => i.text.replace(/^[\s\-\u2022\*]+/, '').trim()).filter(l => l.length > 0);
     if (lines.length < 2) return;
     const result = analyzeMotifs(lines);
     setMotifAnalysis(result);
-  }, [motifInput]);
+  }, [motifIdeas]);
 
   const saveMotifBoard = useCallback(async () => {
     if (!motifAnalysis || motifAnalysis.bullets.length === 0) return;
@@ -1905,7 +2590,7 @@ export default function Essays() {
     setActiveBoardId(board.id);
     setBoardTitle(board.title);
     const bulletTexts = Array.isArray(board.bullets) ? (board.bullets as string[]) : [];
-    setMotifInput(bulletTexts.join('\n'));
+    setMotifIdeas(bulletTexts.map((t, i) => ({ id: `idea_load_${i}_${Math.random().toString(36).slice(2, 6)}`, text: t })));
     if (board.analysis && typeof board.analysis === 'object' && 'bullets' in (board.analysis as Record<string, unknown>)) {
       setMotifAnalysis(board.analysis as MotifAnalysis);
     } else if (bulletTexts.length >= 2) {
@@ -1917,14 +2602,14 @@ export default function Essays() {
     try {
       await fetch('/api/motifs', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
       setSavedBoards(prev => prev.filter(b => b.id !== id));
-      if (activeBoardId === id) { setActiveBoardId(null); setMotifAnalysis(null); setMotifInput(''); setBoardTitle(''); }
+      if (activeBoardId === id) { setActiveBoardId(null); setMotifAnalysis(null); setMotifIdeas([]); setBoardTitle(''); }
     } catch { /* ignore */ }
   }, [activeBoardId]);
 
   const newBoard = useCallback(() => {
     setActiveBoardId(null);
     setMotifAnalysis(null);
-    setMotifInput('');
+    setMotifIdeas([]);
     setBoardTitle('');
   }, []);
 
@@ -1939,6 +2624,37 @@ export default function Essays() {
     const stats = computeStats(analyzed);
     return { sentences: analyzed, stats };
   }, [editContent, showSentenceAnalysis]);
+
+  // ─── Grammar check state ───
+  const [showGrammar, setShowGrammar] = useState(false);
+  const [activeIssueId, setActiveIssueId] = useState<string | null>(null);
+  const [dismissedIssueIds, setDismissedIssueIds] = useState<Set<string>>(new Set());
+
+  const grammarIssues = useMemo<GrammarIssue[]>(() => {
+    if (!showGrammar || !editContent || editContent.trim().length < 4) return [];
+    return checkGrammar(editContent).filter(i => !dismissedIssueIds.has(i.id));
+  }, [editContent, showGrammar, dismissedIssueIds]);
+
+  const grammarErrorCount = grammarIssues.filter(i => i.severity === 'error').length;
+  const grammarOptCount = grammarIssues.filter(i => i.severity === 'optimization').length;
+
+  const acceptGrammarFix = useCallback((issue: GrammarIssue) => {
+    const next = applyFix(editContent, issue);
+    handleContentChange(next);
+    setActiveIssueId(null);
+  }, [editContent, handleContentChange]);
+
+  const dismissGrammarIssue = useCallback((issue: GrammarIssue) => {
+    setDismissedIssueIds(prev => {
+      const next = new Set(prev);
+      next.add(issue.id);
+      return next;
+    });
+    if (activeIssueId === issue.id) setActiveIssueId(null);
+  }, [activeIssueId]);
+
+  // Reset dismissed list when switching essays
+  useEffect(() => { setDismissedIssueIds(new Set()); setActiveIssueId(null); }, [activeEssay?.id]);
 
   if (status !== 'authenticated') return null;
 
@@ -1996,175 +2712,69 @@ export default function Essays() {
         {mode === 'motifs' && (
           <div className="flex-1 min-h-0 flex flex-col gap-5 overflow-y-auto">
 
-            {/* ─── Top: Input Bar (full-width, compact) ─── */}
-            <div className="flex-shrink-0">
-              {!motifAnalysis ? (
-                /* ── Full empty state ── */
-                <div className="flex items-center justify-center py-12">
-                  <div className="text-center max-w-2xl px-8">
-                    <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-accent/10 to-purple-100 flex items-center justify-center mb-6">
-                      <svg className="w-10 h-10 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                      </svg>
-                    </div>
-                    <h3 className="text-2xl font-bold font-display text-primary mb-2">Motifs — Story Stitching</h3>
-                    <p className="text-sm text-slate-500 mb-6 leading-relaxed">
-                      Your college essay doesn&apos;t have to be about one thing. Drop in your experiences, ideas, and moments below — and watch as Motifs discovers the hidden narrative threads that connect them into a multi-dimensional story.
-                    </p>
+            {/* ─── Idea Workbench: storyboard-style draggable cards + activity import ─── */}
+            <MotifWorkbench
+              ideas={motifIdeas}
+              ecs={ecs}
+              ecsLoading={ecsLoading}
+              draggingIdeaId={draggingIdeaId}
+              setDraggingIdeaId={setDraggingIdeaId}
+              addIdea={addIdea}
+              removeIdea={removeIdea}
+              updateIdea={updateIdea}
+              reorderIdeas={reorderIdeas}
+              newIdeaDraft={newIdeaDraft}
+              setNewIdeaDraft={setNewIdeaDraft}
+              runMotifAnalysis={runMotifAnalysis}
+              hasAnalysis={!!motifAnalysis}
+              savedBoards={savedBoards}
+              loadBoard={loadBoard}
+              activeBoardId={activeBoardId}
+              boardTitle={boardTitle}
+              setBoardTitle={setBoardTitle}
+              saveMotifBoard={saveMotifBoard}
+              savingBoard={savingBoard}
+              newBoard={newBoard}
+            />
 
-                    <div className="bg-white rounded-2xl border border-slate-200 p-6 text-left shadow-sm">
-                      <div className="flex items-center justify-between mb-3">
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Your experiences & ideas</label>
-                        {savedBoards.length > 0 && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] text-slate-400">{savedBoards.length} saved board{savedBoards.length !== 1 ? 's' : ''}</span>
-                            <select
-                              onChange={e => { const board = savedBoards.find(b => b.id === e.target.value); if (board) loadBoard(board); }}
-                              className="text-xs border border-slate-200 rounded-lg px-2 py-1 text-slate-600 focus:outline-none focus:ring-2 focus:ring-accent/30"
-                              value=""
-                            >
-                              <option value="" disabled>Load board...</option>
-                              {savedBoards.map(b => <option key={b.id} value={b.id}>{b.title}</option>)}
-                            </select>
-                          </div>
-                        )}
-                      </div>
-                      <textarea
-                        value={motifInput}
-                        onChange={e => setMotifInput(e.target.value)}
-                        placeholder={"Write one idea per line. Be specific — the more detail, the better connections we can find:\n\n- The summer I spent cooking with my grandmother, learning her recipes from memory\n- Leading the debate team to nationals after we nearly lost our funding\n- When I failed my first AP Calculus exam and had to rethink how I study\n- Teaching coding workshops to kids at the public library every Saturday\n- My family's immigration story and how it shaped my relationship with language"}
-                        rows={7}
-                        className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-accent/30 resize-none font-sans placeholder:text-slate-300"
-                      />
-                      <div className="flex items-center justify-between mt-3">
-                        <p className="text-[11px] text-slate-400">
-                          {motifInput.split('\n').filter(l => l.trim().length > 0).length} ideas entered
-                          {motifInput.split('\n').filter(l => l.trim().length > 0).length < 2 && ' — need at least 2'}
-                        </p>
-                        <button
-                          onClick={runMotifAnalysis}
-                          disabled={motifInput.split('\n').filter(l => l.trim().length > 0).length < 2}
-                          className="px-8 py-3 text-sm font-bold text-white bg-gradient-to-r from-accent to-purple-600 rounded-xl hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-accent/20 hover:shadow-xl hover:shadow-accent/30 hover:-translate-y-0.5"
-                        >
-                          Find Motifs
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-4 mt-6 text-left">
-                      <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                        <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center mb-2">
-                          <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                        </div>
-                        <h4 className="text-xs font-bold text-primary mb-1">Deep Analysis</h4>
-                        <p className="text-[11px] text-slate-500 leading-relaxed">Analyzes each idea for hidden values, tensions, imagery, and shifts — not just surface keywords.</p>
-                      </div>
-                      <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                        <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center mb-2">
-                          <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
-                        </div>
-                        <h4 className="text-xs font-bold text-primary mb-1">Creative Bridges</h4>
-                        <p className="text-[11px] text-slate-500 leading-relaxed">Discovers narrative bridges between seemingly unrelated experiences using contrast, metaphor, and craft.</p>
-                      </div>
-                      <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                        <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center mb-2">
-                          <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                        </div>
-                        <h4 className="text-xs font-bold text-primary mb-1">Essay Architecture</h4>
-                        <p className="text-[11px] text-slate-500 leading-relaxed">Suggests essay structures with central tensions, narrative arcs, and specific writing advice.</p>
-                      </div>
-                    </div>
-                  </div>
+            {motifAnalysis && (
+              <div className="flex items-center justify-between bg-white rounded-xl border border-slate-200 px-4 py-2.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-50 border border-slate-200 text-[11px] font-semibold text-slate-600">
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                    {motifAnalysis.bullets.length} ideas
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-50 border border-indigo-100 text-[11px] font-semibold text-indigo-700">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                    {motifAnalysis.motifs.length} motifs
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-purple-50 border border-purple-100 text-[11px] font-semibold text-purple-700">
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                    {motifAnalysis.connections.filter(c => c.strength >= 0.3).length} bridges
+                  </span>
+                  {motifAnalysis.orphanIds.length > 0 && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-50 border border-amber-100 text-[11px] font-semibold text-amber-700">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                      {motifAnalysis.orphanIds.length} unconnected
+                    </span>
+                  )}
                 </div>
-              ) : (
-                /* ── Compact input bar when results showing ── */
-                <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
-                  <div className="flex items-start gap-4">
-                    <div className="flex-1 min-w-0">
-                      <textarea
-                        value={motifInput}
-                        onChange={e => setMotifInput(e.target.value)}
-                        placeholder="Add or edit your ideas here, one per line..."
-                        rows={3}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-accent/30 resize-none"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-2 flex-shrink-0">
-                      <button
-                        onClick={runMotifAnalysis}
-                        disabled={motifInput.split('\n').filter(l => l.trim().length > 0).length < 2}
-                        className="px-5 py-2 text-xs font-bold text-white bg-gradient-to-r from-accent to-purple-600 rounded-xl hover:opacity-90 transition-all disabled:opacity-40"
-                      >
-                        Re-analyze
-                      </button>
-                      <div className="flex items-center gap-1.5">
-                        <input
-                          type="text"
-                          value={boardTitle}
-                          onChange={e => setBoardTitle(e.target.value)}
-                          placeholder="Board name..."
-                          className="flex-1 px-2 py-1.5 rounded-lg border border-slate-200 text-[11px] focus:outline-none focus:ring-1 focus:ring-accent/30 min-w-0"
-                        />
-                        <button onClick={saveMotifBoard} disabled={savingBoard} className="px-3 py-1.5 text-[11px] font-semibold text-accent border border-accent/30 rounded-lg hover:bg-accent/5 transition-colors disabled:opacity-40 whitespace-nowrap">
-                          {savingBoard ? '...' : activeBoardId ? 'Update' : 'Save'}
-                        </button>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {activeBoardId && <button onClick={newBoard} className="text-[10px] text-slate-400 hover:text-accent font-medium">+ New</button>}
-                        {savedBoards.length > 0 && (
-                          <select
-                            onChange={e => { const board = savedBoards.find(b => b.id === e.target.value); if (board) loadBoard(board); }}
-                            className="text-[10px] border border-slate-200 rounded px-1.5 py-0.5 text-slate-500 focus:outline-none min-w-0"
-                            value={activeBoardId || ''}
-                          >
-                            <option value="" disabled>Load...</option>
-                            {savedBoards.map(b => <option key={b.id} value={b.id}>{b.title}</option>)}
-                          </select>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Stats + View toggle */}
-                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 rounded-lg">
-                        <span className="text-[10px] text-slate-400">Ideas</span>
-                        <span className="text-xs font-bold text-primary">{motifAnalysis.bullets.length}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-accent/5 rounded-lg">
-                        <span className="text-[10px] text-accent/70">Motifs</span>
-                        <span className="text-xs font-bold text-accent">{motifAnalysis.motifs.length}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 rounded-lg">
-                        <span className="text-[10px] text-purple-400">Bridges</span>
-                        <span className="text-xs font-bold text-purple-600">{motifAnalysis.connections.filter(c => c.strength >= 0.3).length}</span>
-                      </div>
-                      {motifAnalysis.orphanIds.length > 0 && (
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 rounded-lg">
-                          <span className="text-[10px] text-amber-500">Unconnected</span>
-                          <span className="text-xs font-bold text-amber-600">{motifAnalysis.orphanIds.length}</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex bg-slate-100 rounded-lg p-0.5">
-                      <button onClick={() => setMotifView('board')} className={`px-3 py-1 rounded-md text-[11px] font-semibold transition-all ${motifView === 'board' ? 'bg-white text-accent shadow-sm' : 'text-slate-500 hover:text-primary'}`}>
-                        Board
-                      </button>
-                      <button onClick={() => setMotifView('narrative')} className={`px-3 py-1 rounded-md text-[11px] font-semibold transition-all ${motifView === 'narrative' ? 'bg-white text-accent shadow-sm' : 'text-slate-500 hover:text-primary'}`}>
-                        Narrative
-                      </button>
-                    </div>
-                  </div>
+                <div className="flex bg-slate-100 rounded-lg p-0.5">
+                  <button onClick={() => setMotifView('board')} className={`px-3 py-1 rounded-md text-[11px] font-semibold transition-all ${motifView === 'board' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-primary'}`}>
+                    Board
+                  </button>
+                  <button onClick={() => setMotifView('narrative')} className={`px-3 py-1 rounded-md text-[11px] font-semibold transition-all ${motifView === 'narrative' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-primary'}`}>
+                    Narrative
+                  </button>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* ─── Results Area (full-width) ─── */}
             {motifAnalysis && (
               <>
                 {motifView === 'board' ? (
-                  <MotifStoryboard analysis={motifAnalysis} expandedCard={expandedCard} setExpandedCard={setExpandedCard} />
+                  <MotifBoard analysis={motifAnalysis} expandedCard={expandedCard} setExpandedCard={setExpandedCard} />
                 ) : (
                   /* ── Narrative view ── */
                   <div className="space-y-6">
@@ -2870,7 +3480,19 @@ export default function Essays() {
                       ))}
                     </div>
                     <button
-                      onClick={() => setShowSentenceAnalysis(prev => !prev)}
+                      onClick={() => { setShowGrammar(prev => !prev); if (!showGrammar) setShowSentenceAnalysis(false); }}
+                      disabled={wordCount < 4}
+                      title="Grammar check: errors first, then stylistic optimizations"
+                      className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed ${showGrammar ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md shadow-emerald-200' : 'text-slate-500 bg-slate-100 hover:bg-slate-200'}`}
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" /></svg>
+                      Grammar
+                      {showGrammar && grammarIssues.length > 0 && (
+                        <span className="ml-0.5 text-[10px] font-bold bg-white/25 rounded-full px-1.5 py-0.5">{grammarIssues.length}</span>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => { setShowSentenceAnalysis(prev => !prev); if (!showSentenceAnalysis) setShowGrammar(false); }}
                       disabled={wordCount < 10}
                       title="Sentence Analysis: highlights internalized (thoughts/feelings) vs externalized (actions/events) sentences"
                       className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed ${showSentenceAnalysis ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md shadow-purple-200' : 'text-slate-500 bg-slate-100 hover:bg-slate-200'}`}
@@ -2921,8 +3543,20 @@ export default function Essays() {
 
                 {/* Textarea with optional sentence analysis overlay */}
                 <div className={`flex-1 min-h-0 flex flex-col relative ${mobileEditorTab === 'scores' ? 'hidden lg:flex' : ''}`}>
-                  {/* Highlighted overlay — shown when analysis is on */}
-                  {showSentenceAnalysis && sentenceAnalysis && editContent.trim().length > 0 ? (
+                  {/* Grammar overlay */}
+                  {showGrammar && editContent.trim().length > 0 ? (
+                    <GrammarEditor
+                      content={editContent}
+                      issues={grammarIssues}
+                      activeIssueId={activeIssueId}
+                      onSelectIssue={setActiveIssueId}
+                      onAccept={acceptGrammarFix}
+                      onDismiss={dismissGrammarIssue}
+                      onClose={() => setShowGrammar(false)}
+                      errorCount={grammarErrorCount}
+                      optCount={grammarOptCount}
+                    />
+                  ) : showSentenceAnalysis && sentenceAnalysis && editContent.trim().length > 0 ? (
                     <div className="flex-1 min-h-0 flex flex-col">
                       <div
                         ref={editorScrollRef}
