@@ -81,7 +81,7 @@ export default function FAQ() {
     <>
       <Head>
         <title>College Admissions Consulting FAQ | AdmitsOnly Programs &amp; Enrollment</title>
-        <meta name="description" content="Frequently asked questions about AdmitsOnly's college admissions consulting programs, enrollment process, pricing, delivery formats, and how our academic coaching helps students get into top universities." />
+        <meta name="description" content="Frequently asked questions about AdmitsOnly's college admissions consulting programs, enrollment process, delivery formats, and how our academic coaching helps students get into top universities." />
       </Head>
 
       <div className="bg-white">

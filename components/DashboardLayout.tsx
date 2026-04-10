@@ -152,12 +152,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             )}
             {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
           </button>
-          <Link href="/pricing" className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-500 hover:text-primary hover:bg-slate-50 transition-all">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-            </svg>
-            Billing
-          </Link>
           <button
             onClick={() => signOut({ callbackUrl: '/' })}
             className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-500 hover:text-red-600 hover:bg-red-50 transition-all mt-1"
