@@ -1,5 +1,5 @@
 /* ──────────────────────── COLLEGE DATABASE ──────────────────────── */
-// Curated database of ~150 colleges with admissions data for the
+// Curated database of ~170 colleges with admissions data for the
 // Reach / Match / Safety matching engine.
 
 export interface College {
@@ -179,4 +179,28 @@ export const colleges: College[] = [
   { id: 'usd', name: 'University of San Diego', location: 'San Diego, CA', state: 'CA', type: 'Private', acceptanceRate: 49.0, avgGPA: 3.68, satRange: [1180, 1350], strengths: ['Business', 'Engineering', 'Nursing', 'International Relations'], size: 'Medium', logoColor: 'blue' },
   { id: 'slu', name: 'Saint Louis University', location: 'St. Louis, MO', state: 'MO', type: 'Private', acceptanceRate: 54.0, avgGPA: 3.60, satRange: [1160, 1350], strengths: ['Aviation', 'Pre-Med', 'Business', 'Public Health'], size: 'Medium', logoColor: 'blue' },
   { id: 'usf', name: 'University of South Florida', location: 'Tampa, FL', state: 'FL', type: 'Public', acceptanceRate: 42.0, avgGPA: 3.65, satRange: [1170, 1340], strengths: ['Engineering', 'Marine Science', 'Business', 'Public Health'], size: 'Large', logoColor: 'green' },
+
+  // ─── Additional Selective Private Colleges ───
+  { id: 'davidson', name: 'Davidson College', location: 'Davidson, NC', state: 'NC', type: 'Private', acceptanceRate: 13.0, avgGPA: 3.86, satRange: [1360, 1510], strengths: ['Economics', 'Political Science', 'Biology', 'Pre-Med'], size: 'Small', logoColor: 'red' },
+  { id: 'wandl', name: 'Washington and Lee University', location: 'Lexington, VA', state: 'VA', type: 'Private', acceptanceRate: 14.0, avgGPA: 3.92, satRange: [1430, 1540], strengths: ['Business', 'Law', 'Economics', 'Political Science'], size: 'Small', logoColor: 'blue' },
+  { id: 'colorado_college', name: 'Colorado College', location: 'Colorado Springs, CO', state: 'CO', type: 'Private', acceptanceRate: 18.0, avgGPA: 3.88, satRange: [1370, 1520], strengths: ['Environmental Science', 'Economics', 'English', 'Block Plan'], size: 'Small', logoColor: 'yellow' },
+  { id: 'urichmond', name: 'University of Richmond', location: 'Richmond, VA', state: 'VA', type: 'Private', acceptanceRate: 22.0, avgGPA: 3.88, satRange: [1380, 1490], strengths: ['Business (Robins)', 'Leadership Studies', 'Law', 'Political Science'], size: 'Medium', logoColor: 'blue' },
+  { id: 'reed', name: 'Reed College', location: 'Portland, OR', state: 'OR', type: 'Private', acceptanceRate: 25.0, avgGPA: 3.90, satRange: [1310, 1490], strengths: ['Physics', 'Biology', 'English', 'Humanities'], size: 'Small', logoColor: 'red' },
+  { id: 'macalester', name: 'Macalester College', location: 'St. Paul, MN', state: 'MN', type: 'Private', acceptanceRate: 29.0, avgGPA: 3.81, satRange: [1360, 1490], strengths: ['International Studies', 'Economics', 'Political Science', 'Environmental Studies'], size: 'Small', logoColor: 'orange' },
+  { id: 'kenyon', name: 'Kenyon College', location: 'Gambier, OH', state: 'OH', type: 'Private', acceptanceRate: 31.0, avgGPA: 3.84, satRange: [1370, 1470], strengths: ['English', 'Creative Writing', 'Political Science', 'Drama'], size: 'Small', logoColor: 'purple' },
+  { id: 'whitman', name: 'Whitman College', location: 'Walla Walla, WA', state: 'WA', type: 'Private', acceptanceRate: 38.0, avgGPA: 3.78, satRange: [1330, 1470], strengths: ['Biology', 'Economics', 'Politics', 'Environmental Studies'], size: 'Small', logoColor: 'blue' },
+  { id: 'furman', name: 'Furman University', location: 'Greenville, SC', state: 'SC', type: 'Private', acceptanceRate: 43.0, avgGPA: 3.65, satRange: [1280, 1420], strengths: ['Music', 'Political Science', 'Biology', 'Sustainability'], size: 'Small', logoColor: 'purple' },
+  { id: 'providence', name: 'Providence College', location: 'Providence, RI', state: 'RI', type: 'Private', acceptanceRate: 51.0, avgGPA: 3.54, satRange: [1100, 1310], strengths: ['Business', 'Education', 'Biology', 'Humanities'], size: 'Medium', logoColor: 'blue' },
+  { id: 'utulsa', name: 'University of Tulsa', location: 'Tulsa, OK', state: 'OK', type: 'Private', acceptanceRate: 58.0, avgGPA: 3.56, satRange: [1150, 1390], strengths: ['Petroleum Engineering', 'Business', 'CS', 'Engineering'], size: 'Small', logoColor: 'blue' },
+  { id: 'udayton', name: 'University of Dayton', location: 'Dayton, OH', state: 'OH', type: 'Private', acceptanceRate: 65.0, avgGPA: 3.58, satRange: [1200, 1360], strengths: ['Engineering', 'Business', 'Education', 'Pre-Med'], size: 'Medium', logoColor: 'red' },
+  { id: 'seton_hall', name: 'Seton Hall University', location: 'South Orange, NJ', state: 'NJ', type: 'Private', acceptanceRate: 73.0, avgGPA: 3.55, satRange: [1220, 1380], strengths: ['Nursing', 'Business', 'Diplomacy', 'Education'], size: 'Medium', logoColor: 'blue' },
+  { id: 'depaul', name: 'DePaul University', location: 'Chicago, IL', state: 'IL', type: 'Private', acceptanceRate: 76.0, avgGPA: 3.55, satRange: [1090, 1300], strengths: ['Business', 'Communications', 'CS', 'Education'], size: 'Large', logoColor: 'blue' },
+
+  // ─── Additional Public Universities ───
+  { id: 'byu', name: 'Brigham Young University', location: 'Provo, UT', state: 'UT', type: 'Private', acceptanceRate: 67.0, avgGPA: 3.78, satRange: [1290, 1450], strengths: ['Business', 'Accounting', 'Engineering', 'CS'], size: 'Large', logoColor: 'blue' },
+  { id: 'uhawaii', name: 'University of Hawaii at Manoa', location: 'Honolulu, HI', state: 'HI', type: 'Public', acceptanceRate: 80.0, avgGPA: 3.50, satRange: [1130, 1350], strengths: ['Marine Biology', 'Astronomy', 'Hawaiian Studies', 'Tropical Agriculture'], size: 'Large', logoColor: 'green' },
+  { id: 'uutah', name: 'University of Utah', location: 'Salt Lake City, UT', state: 'UT', type: 'Public', acceptanceRate: 86.0, avgGPA: 3.50, satRange: [1190, 1380], strengths: ['Engineering', 'Business', 'CS', 'Health Sciences'], size: 'Large', logoColor: 'red' },
+  { id: 'olemiss', name: 'University of Mississippi', location: 'Oxford, MS', state: 'MS', type: 'Public', acceptanceRate: 88.0, avgGPA: 3.40, satRange: [1020, 1210], strengths: ['Pharmacy', 'Accounting', 'Law', 'Creative Writing'], size: 'Large', logoColor: 'red' },
+  { id: 'ukansas', name: 'University of Kansas', location: 'Lawrence, KS', state: 'KS', type: 'Public', acceptanceRate: 93.0, avgGPA: 3.45, satRange: [1090, 1290], strengths: ['Business', 'Pharmacy', 'Engineering', 'Journalism'], size: 'Large', logoColor: 'blue' },
+  { id: 'unm', name: 'University of New Mexico', location: 'Albuquerque, NM', state: 'NM', type: 'Public', acceptanceRate: 95.0, avgGPA: 3.42, satRange: [900, 1160], strengths: ['Engineering', 'Earth Sciences', 'Nursing', 'Native American Studies'], size: 'Large', logoColor: 'red' },
 ];
