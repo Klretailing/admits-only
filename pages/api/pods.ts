@@ -153,9 +153,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           content: content.trim(),
           type: type || 'discussion',
           essayId: essayId || null,
+          parentId: req.body.parentId || null,
         },
         include: { user: { select: { id: true, name: true } } },
       });
+
+      // Award XP for messaging
+      try {
+        const today = new Date().toISOString().slice(0, 10);
+        const stats = await (prisma as any).podMemberStats.findUnique({
+          where: { podId_userId: { podId, userId: user.id } },
+        });
+        if (stats) {
+          const wasActiveYesterday = stats.lastActiveDate === new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+          const wasActiveToday = stats.lastActiveDate === today;
+          const newStreak = wasActiveToday ? stats.currentStreak : (wasActiveYesterday ? stats.currentStreak + 1 : 1);
+          await (prisma as any).podMemberStats.update({
+            where: { id: stats.id },
+            data: {
+              xp: stats.xp + 2,
+              messagesCount: stats.messagesCount + 1,
+              currentStreak: newStreak,
+              longestStreak: Math.max(stats.longestStreak, newStreak),
+              lastActiveDate: today,
+            },
+          });
+        } else {
+          await (prisma as any).podMemberStats.create({
+            data: { podId, userId: user.id, xp: 2, messagesCount: 1, currentStreak: 1, lastActiveDate: today },
+          });
+        }
+      } catch { /* XP tracking is best-effort */ }
 
       return res.json({ message });
     }

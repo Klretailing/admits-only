@@ -44,6 +44,13 @@ model User {
   // Essay library
   uploadedEssayDocs  EssayDocument[]      @relation("EssayDocumentUploader")
 
+  // Engagement features
+  messageReactions   PodMessageReaction[]
+  createdPolls       PodPoll[]            @relation("PollCreator")
+  pollVotes          PodPollVote[]
+  podMemberStats     PodMemberStats[]
+  podActivities      PodActivity[]
+
   @@map("users")
 }
 
@@ -126,6 +133,9 @@ model StudyPod {
   messages      PodMessage[]
   documents     PodDocument[]
   studySessions PodStudySession[]
+  polls         PodPoll[]
+  memberStats   PodMemberStats[]
+  activities    PodActivity[]
 
   @@map("study_pods")
 }
@@ -149,14 +159,100 @@ model PodMessage {
   podId     String
   userId    String
   content   String
-  type      String   @default("discussion") // discussion | essay_share | feedback
+  type      String   @default("discussion") // discussion | essay_share | feedback | poll
   essayId   String?
+  parentId  String?
+  createdAt DateTime @default(now())
+
+  pod       StudyPod             @relation(fields: [podId], references: [id], onDelete: Cascade)
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reactions PodMessageReaction[]
+
+  @@map("pod_messages")
+}
+
+model PodMessageReaction {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  emoji     String
+  createdAt DateTime @default(now())
+
+  message PodMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+  @@index([messageId])
+  @@map("pod_message_reactions")
+}
+
+model PodPoll {
+  id        String    @id @default(cuid())
+  podId     String
+  creatorId String
+  question  String
+  options   String    @default("[]")
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+
+  pod     StudyPod      @relation(fields: [podId], references: [id], onDelete: Cascade)
+  creator User          @relation("PollCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  votes   PodPollVote[]
+
+  @@index([podId])
+  @@map("pod_polls")
+}
+
+model PodPollVote {
+  id        String   @id @default(cuid())
+  pollId    String
+  userId    String
+  optionIdx Int
+  createdAt DateTime @default(now())
+
+  poll PodPoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  user User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([pollId, userId])
+  @@map("pod_poll_votes")
+}
+
+model PodMemberStats {
+  id             String   @id @default(cuid())
+  podId          String
+  userId         String
+  xp             Int      @default(0)
+  currentStreak  Int      @default(0)
+  longestStreak  Int      @default(0)
+  lastActiveDate String   @default("")
+  messagesCount  Int      @default(0)
+  sessionsCount  Int      @default(0)
+  reactionsGiven Int      @default(0)
+  docsShared     Int      @default(0)
+  pollsVoted     Int      @default(0)
+  achievements   String   @default("[]")
+  updatedAt      DateTime @updatedAt
+
+  pod  StudyPod @relation(fields: [podId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([podId, userId])
+  @@map("pod_member_stats")
+}
+
+model PodActivity {
+  id        String   @id @default(cuid())
+  podId     String
+  userId    String
+  type      String
+  metadata  String   @default("{}")
   createdAt DateTime @default(now())
 
   pod  StudyPod @relation(fields: [podId], references: [id], onDelete: Cascade)
   user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("pod_messages")
+  @@index([podId])
+  @@map("pod_activities")
 }
 
 model MotifBoard {

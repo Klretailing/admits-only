@@ -1,6 +1,6 @@
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Head from 'next/head';
 import DashboardLayout from '../../components/DashboardLayout';
 import { useStaggerReveal } from '../../hooks/useAnimations';
@@ -94,10 +94,8 @@ function MajorPicker({
                 i < visibleCount ? 'animate-fade-up' : 'opacity-0'
               }`}
             >
-              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${cat.bg} flex items-center justify-center mb-3`}>
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d={major.icon} />
-                </svg>
+              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${cat.bg} flex items-center justify-center mb-3 text-lg`}>
+                {major.icon}
               </div>
               <p className="text-sm font-bold font-display text-primary">{major.name}</p>
               <span className={`inline-block text-xs font-semibold px-3 py-1.5 rounded-lg mt-2 ${cat.text} ${cat.bg} ${cat.border}`}>
@@ -129,18 +127,19 @@ function ExplorationQuiz({
   const totalQuestions = QUIZ_QUESTIONS.length;
   const progressPct = ((step) / totalQuestions) * 100;
   const [selected, setSelected] = useState<number | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
 
-  // Reset selected when step changes
   useEffect(() => {
     setSelected(null);
+    return () => clearTimeout(timerRef.current);
   }, [step]);
 
   const handleSelect = useCallback((optionIndex: number) => {
     setSelected(optionIndex);
-    const timer = setTimeout(() => {
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
       onAnswer(step, optionIndex);
     }, 300);
-    return () => clearTimeout(timer);
   }, [step, onAnswer]);
 
   return (
@@ -176,7 +175,7 @@ function ExplorationQuiz({
               }`}
             >
               <p className={`text-sm ${isSelected ? 'font-semibold text-accent' : 'text-slate-600'}`}>
-                {option}
+                {option.label}
               </p>
             </button>
           );
@@ -283,10 +282,8 @@ function RoadmapView({
 
       {/* Major header */}
       <div className="flex items-center gap-4">
-        <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${categoryConfig[major.category].bg} flex items-center justify-center shadow-md`}>
-          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d={major.icon} />
-          </svg>
+        <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${categoryConfig[major.category].bg} flex items-center justify-center shadow-md text-xl`}>
+          {major.icon}
         </div>
         <div>
           <h1 className="text-2xl font-bold font-display text-primary">{major.name}</h1>
@@ -306,7 +303,7 @@ function RoadmapView({
                 : 'bg-white border border-slate-100 text-slate-600 hover:border-slate-200'
             }`}
           >
-            {p.title}
+            {p.name}
           </button>
         ))}
         <button
@@ -511,10 +508,8 @@ function CompareView({
                 onClick={() => onSelectB(major.id)}
                 className="bg-white rounded-2xl border border-slate-100 p-4 sm:p-5 dash-card-hover cursor-pointer text-left transition-all"
               >
-                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${cat.bg} flex items-center justify-center mb-3`}>
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d={major.icon} />
-                  </svg>
+                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${cat.bg} flex items-center justify-center mb-3 text-lg`}>
+                  {major.icon}
                 </div>
                 <p className="text-sm font-bold font-display text-primary">{major.name}</p>
                 <span className={`inline-block text-xs font-semibold px-3 py-1.5 rounded-lg mt-2 ${cat.text} ${cat.bg} ${cat.border}`}>
@@ -546,14 +541,12 @@ function CompareView({
         <div className="bg-white rounded-2xl border border-slate-100 p-4 sm:p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${catA.bg} flex items-center justify-center`}>
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d={majorA.icon} />
-                </svg>
+              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${catA.bg} flex items-center justify-center text-lg`}>
+                {majorA.icon}
               </div>
               <div>
                 <h3 className="text-lg font-bold text-primary">{majorA.name}</h3>
-                <p className="text-xs text-slate-400">{statsA.bestPath.title}</p>
+                <p className="text-xs text-slate-400">{statsA.bestPath.name}</p>
               </div>
             </div>
             <button onClick={onChangeA} className="text-sm text-slate-500 hover:text-primary">
@@ -567,14 +560,12 @@ function CompareView({
         <div className="bg-white rounded-2xl border border-slate-100 p-4 sm:p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${catB.bg} flex items-center justify-center`}>
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d={majorB.icon} />
-                </svg>
+              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${catB.bg} flex items-center justify-center text-lg`}>
+                {majorB.icon}
               </div>
               <div>
                 <h3 className="text-lg font-bold text-primary">{majorB.name}</h3>
-                <p className="text-xs text-slate-400">{statsB.bestPath.title}</p>
+                <p className="text-xs text-slate-400">{statsB.bestPath.name}</p>
               </div>
             </div>
             <button onClick={onChangeB} className="text-sm text-slate-500 hover:text-primary">
@@ -652,10 +643,13 @@ export default function CareerRoadmapPage() {
     if (status === 'unauthenticated') router.push('/auth/login');
   }, [status, router]);
 
+  const viewRef = useRef(view);
+  viewRef.current = view;
+
   const pushView = useCallback((next: View) => {
-    setViewHistory(prev => [...prev, view]);
+    setViewHistory(prev => [...prev, viewRef.current]);
     setView(next);
-  }, [view]);
+  }, []);
 
   const goBack = useCallback(() => {
     setViewHistory(prev => {
