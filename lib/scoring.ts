@@ -47,21 +47,36 @@ export function normalizeBucket(category: string): string {
 }
 
 export const comparativeData = [
+  // Building tier
+  { gpa: 2.6, sat: 870, score: 18 }, { gpa: 2.8, sat: 920, score: 24 },
+  { gpa: 2.7, sat: 890, score: 20 }, { gpa: 2.9, sat: 960, score: 28 },
+  { gpa: 3.0, sat: 950, score: 30 }, { gpa: 2.8, sat: 980, score: 26 },
+  { gpa: 3.0, sat: 1020, score: 38 }, { gpa: 3.1, sat: 1060, score: 40 },
+  { gpa: 2.9, sat: 1040, score: 34 }, { gpa: 3.2, sat: 1000, score: 36 },
+  { gpa: 2.7, sat: 940, score: 22 }, { gpa: 3.1, sat: 980, score: 32 },
+  // Developing tier
   { gpa: 3.2, sat: 1050, score: 42 }, { gpa: 3.4, sat: 1100, score: 48 },
-  { gpa: 3.0, sat: 1020, score: 38 }, { gpa: 3.6, sat: 1200, score: 58 },
-  { gpa: 3.5, sat: 1150, score: 52 }, { gpa: 3.8, sat: 1280, score: 65 },
-  { gpa: 3.7, sat: 1250, score: 62 }, { gpa: 3.9, sat: 1350, score: 72 },
-  { gpa: 4.0, sat: 1400, score: 78 }, { gpa: 3.3, sat: 1080, score: 45 },
-  { gpa: 3.1, sat: 1060, score: 40 }, { gpa: 4.0, sat: 1520, score: 92 },
-  { gpa: 3.9, sat: 1480, score: 88 }, { gpa: 3.8, sat: 1450, score: 85 },
-  { gpa: 3.7, sat: 1380, score: 76 }, { gpa: 4.0, sat: 1560, score: 95 },
+  { gpa: 3.3, sat: 1080, score: 45 }, { gpa: 3.5, sat: 1150, score: 52 },
+  { gpa: 3.4, sat: 1120, score: 47 }, { gpa: 3.3, sat: 1180, score: 50 },
+  { gpa: 3.6, sat: 1200, score: 58 }, { gpa: 3.5, sat: 1130, score: 53 },
+  { gpa: 3.4, sat: 1160, score: 54 }, { gpa: 3.2, sat: 1120, score: 46 },
+  { gpa: 3.3, sat: 1140, score: 49 }, { gpa: 3.5, sat: 1190, score: 55 },
+  { gpa: 3.6, sat: 1170, score: 56 }, { gpa: 3.4, sat: 1220, score: 56 },
+  // Competitive tier
+  { gpa: 3.6, sat: 1280, score: 65 }, { gpa: 3.7, sat: 1250, score: 62 },
+  { gpa: 3.8, sat: 1280, score: 65 }, { gpa: 3.9, sat: 1350, score: 72 },
+  { gpa: 4.0, sat: 1400, score: 78 }, { gpa: 3.7, sat: 1380, score: 76 },
   { gpa: 3.6, sat: 1320, score: 70 }, { gpa: 3.5, sat: 1280, score: 64 },
-  { gpa: 3.4, sat: 1220, score: 56 }, { gpa: 3.3, sat: 1180, score: 50 },
-  { gpa: 3.2, sat: 1120, score: 46 }, { gpa: 4.0, sat: 1490, score: 90 },
-  { gpa: 3.9, sat: 1420, score: 82 }, { gpa: 3.8, sat: 1380, score: 75 },
   { gpa: 3.6, sat: 1300, score: 68 }, { gpa: 3.5, sat: 1240, score: 60 },
-  { gpa: 3.7, sat: 1340, score: 72 }, { gpa: 4.0, sat: 1540, score: 94 },
-  { gpa: 3.8, sat: 1400, score: 80 }, { gpa: 3.4, sat: 1160, score: 54 },
+  { gpa: 3.7, sat: 1340, score: 72 }, { gpa: 3.8, sat: 1380, score: 75 },
+  { gpa: 3.8, sat: 1400, score: 80 }, { gpa: 3.9, sat: 1420, score: 82 },
+  // Elite tier
+  { gpa: 3.8, sat: 1450, score: 85 }, { gpa: 3.9, sat: 1480, score: 88 },
+  { gpa: 4.0, sat: 1490, score: 90 }, { gpa: 4.0, sat: 1520, score: 92 },
+  { gpa: 4.0, sat: 1540, score: 94 }, { gpa: 4.0, sat: 1560, score: 95 },
+  { gpa: 3.9, sat: 1500, score: 89 }, { gpa: 3.8, sat: 1470, score: 86 },
+  { gpa: 4.0, sat: 1440, score: 84 }, { gpa: 3.9, sat: 1460, score: 87 },
+  { gpa: 3.7, sat: 1420, score: 79 }, { gpa: 4.0, sat: 1580, score: 97 },
 ];
 
 export function evaluateExtracurriculars(ecs: Extracurricular[]): { score: number; feedback: string } {

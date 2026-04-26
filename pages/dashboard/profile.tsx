@@ -1,8 +1,9 @@
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import Head from 'next/head';
 import DashboardLayout from '../../components/DashboardLayout';
+import { useTheme } from '../../lib/themeContext';
 import { computeHolisticScore, evaluateExtracurriculars, comparativeData, normalizeBucket as normalizeBucketShared } from '../../lib/scoring';
 import type { Extracurricular as ExtracurricularType } from '../../lib/scoring';
 
@@ -314,72 +315,156 @@ function generatePersonaSuggestions(ctx: ProfileContext): PersonaSuggestion[] {
 
 /* ──────────────────────── SCATTERPLOT ──────────────────────── */
 
+function getTier(score: number): 'building' | 'developing' | 'competitive' | 'elite' {
+  if (score < 40) return 'building';
+  if (score < 65) return 'developing';
+  if (score < 85) return 'competitive';
+  return 'elite';
+}
+
+const tierColors = {
+  building: { fill: '#ef4444', solid: '#fca5a5' },
+  developing: { fill: '#f59e0b', solid: '#fcd34d' },
+  competitive: { fill: '#10b981', solid: '#6ee7b7' },
+  elite: { fill: '#8b5cf6', solid: '#c4b5fd' },
+};
+
 function Scatterplot({ userGpa, userSat }: { userGpa: number; userSat: number }) {
-  const W = 520, H = 380;
+  const [selected, setSelected] = useState<number | null>(null);
+  const [hovered, setHovered] = useState<number | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+
+  const W = 540, H = 400;
   const PAD = { top: 28, right: 34, bottom: 54, left: 58 };
   const plotW = W - PAD.left - PAD.right;
   const plotH = H - PAD.top - PAD.bottom;
-  const xMin = 2.5, xMax = 4.2, yMin = 800, yMax = 1600;
+  const xMin = 2.4, xMax = 4.2, yMin = 800, yMax = 1600;
   const toX = (gpa: number) => PAD.left + ((gpa - xMin) / (xMax - xMin)) * plotW;
   const toY = (sat: number) => PAD.top + plotH - ((sat - yMin) / (yMax - yMin)) * plotH;
   const hasUser = userGpa > 0 && userSat > 0;
 
+  const active = selected ?? hovered;
+
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full max-w-[540px]">
-      <defs>
-        <linearGradient id="chart-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#0f172a" /><stop offset="100%" stopColor="#1e1b4b" /></linearGradient>
-        <linearGradient id="zone-red" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#ef4444" stopOpacity="0.15" /><stop offset="100%" stopColor="#f87171" stopOpacity="0.08" /></linearGradient>
-        <linearGradient id="zone-amber" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#f59e0b" stopOpacity="0.15" /><stop offset="100%" stopColor="#fbbf24" stopOpacity="0.08" /></linearGradient>
-        <linearGradient id="zone-green" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity="0.2" /><stop offset="100%" stopColor="#34d399" stopOpacity="0.08" /></linearGradient>
-        <radialGradient id="user-glow" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="#a78bfa" stopOpacity="0.6" /><stop offset="50%" stopColor="#8b5cf6" stopOpacity="0.2" /><stop offset="100%" stopColor="#6366f1" stopOpacity="0" /></radialGradient>
-        <filter id="dot-shadow" x="-100%" y="-100%" width="300%" height="300%"><feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#a78bfa" floodOpacity="0.6" /></filter>
-        <radialGradient id="comp-dot" cx="30%" cy="30%" r="70%"><stop offset="0%" stopColor="#818cf8" stopOpacity="0.5" /><stop offset="100%" stopColor="#6366f1" stopOpacity="0.25" /></radialGradient>
-        <radialGradient id="user-dot-grad" cx="30%" cy="30%" r="70%"><stop offset="0%" stopColor="#c4b5fd" /><stop offset="100%" stopColor="#7c3aed" /></radialGradient>
-        <linearGradient id="grid-line" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#334155" stopOpacity="0.3" /><stop offset="50%" stopColor="#475569" stopOpacity="0.15" /><stop offset="100%" stopColor="#334155" stopOpacity="0.3" /></linearGradient>
-      </defs>
-      <rect x="0" y="0" width={W} height={H} rx="20" fill="url(#chart-bg)" />
-      {/* Subtle grid pattern */}
-      {[3.0, 3.5, 4.0].map((g) => (<line key={`gx-${g}`} x1={toX(g)} y1={PAD.top} x2={toX(g)} y2={PAD.top + plotH} stroke="#475569" strokeWidth="0.5" strokeDasharray="3 6" opacity="0.3" />))}
-      {[1000, 1200, 1400].map((s) => (<line key={`gy-${s}`} x1={PAD.left} y1={toY(s)} x2={PAD.left + plotW} y2={toY(s)} stroke="#475569" strokeWidth="0.5" strokeDasharray="3 6" opacity="0.3" />))}
-      {/* Zone backgrounds */}
-      <rect x={toX(xMin)} y={toY(1150)} width={toX(3.3) - toX(xMin)} height={toY(yMin) - toY(1150)} fill="url(#zone-red)" rx="8" />
-      <rect x={toX(xMin)} y={toY(1150)} width={toX(3.3) - toX(xMin)} height={toY(yMin) - toY(1150)} fill="none" stroke="#ef4444" strokeWidth="0.5" strokeOpacity="0.2" rx="8" />
-      <text x={toX(xMin) + 8} y={toY(1150) + 16} className="text-[9px] font-bold" fill="#f87171" opacity="0.8">Building</text>
-      <rect x={toX(3.3)} y={toY(1350)} width={toX(3.7) - toX(3.3)} height={toY(1150) - toY(1350)} fill="url(#zone-amber)" rx="8" />
-      <rect x={toX(3.3)} y={toY(1350)} width={toX(3.7) - toX(3.3)} height={toY(1150) - toY(1350)} fill="none" stroke="#f59e0b" strokeWidth="0.5" strokeOpacity="0.2" rx="8" />
-      <text x={toX(3.3) + 8} y={toY(1350) + 16} className="text-[9px] font-bold" fill="#fbbf24" opacity="0.8">Developing</text>
-      <rect x={toX(3.7)} y={toY(yMax)} width={toX(xMax) - toX(3.7)} height={toY(1350) - toY(yMax)} fill="url(#zone-green)" rx="8" />
-      <rect x={toX(3.7)} y={toY(yMax)} width={toX(xMax) - toX(3.7)} height={toY(1350) - toY(yMax)} fill="none" stroke="#10b981" strokeWidth="0.5" strokeOpacity="0.2" rx="8" />
-      <text x={toX(3.7) + 8} y={toY(yMax) + 16} className="text-[9px] font-bold" fill="#34d399" opacity="0.8">Competitive</text>
-      {/* Axes */}
-      <line x1={PAD.left} y1={PAD.top + plotH} x2={PAD.left + plotW} y2={PAD.top + plotH} stroke="#64748b" strokeWidth="1" opacity="0.4" />
-      <line x1={PAD.left} y1={PAD.top} x2={PAD.left} y2={PAD.top + plotH} stroke="#64748b" strokeWidth="1" opacity="0.4" />
-      {/* Axis labels */}
-      {[2.5, 3.0, 3.5, 4.0].map((g) => (<text key={`xl-${g}`} x={toX(g)} y={PAD.top + plotH + 20} textAnchor="middle" className="text-[10px] font-medium" fill="#94a3b8">{g.toFixed(1)}</text>))}
-      <text x={PAD.left + plotW / 2} y={H - 8} textAnchor="middle" className="text-[11px] font-bold" fill="#a78bfa">GPA</text>
-      {[800, 1000, 1200, 1400, 1600].map((s) => (<text key={`yl-${s}`} x={PAD.left - 10} y={toY(s) + 4} textAnchor="end" className="text-[10px] font-medium" fill="#94a3b8">{s}</text>))}
-      <text x={14} y={PAD.top + plotH / 2} textAnchor="middle" className="text-[11px] font-bold" fill="#a78bfa" transform={`rotate(-90, 14, ${PAD.top + plotH / 2})`}>SAT Score</text>
-      {/* Comparative dots */}
-      {comparativeData.map((d, i) => (<circle key={i} cx={toX(d.gpa)} cy={toY(d.sat)} r="4.5" fill="url(#comp-dot)" />))}
-      {/* User position */}
-      {hasUser && (
-        <g>
-          <circle cx={toX(userGpa)} cy={toY(userSat)} r="28" fill="url(#user-glow)" />
-          <circle cx={toX(userGpa)} cy={toY(userSat)} r="9" fill="url(#user-dot-grad)" filter="url(#dot-shadow)" />
-          <circle cx={toX(userGpa)} cy={toY(userSat)} r="9" fill="none" stroke="white" strokeWidth="2" opacity="0.9" />
-          <circle cx={toX(userGpa) - 2} cy={toY(userSat) - 2} r="2.5" fill="white" opacity="0.4" />
-          <rect x={toX(userGpa) + 14} y={toY(userSat) - 11} width="32" height="22" rx="6" fill="#7c3aed" opacity="0.9" />
-          <text x={toX(userGpa) + 30} y={toY(userSat) + 4} textAnchor="middle" className="text-[10px] font-extrabold" fill="white">You</text>
+    <div className="relative">
+      <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="w-full max-w-[560px] cursor-crosshair" onClick={(e) => {
+        if ((e.target as Element).tagName !== 'circle') setSelected(null);
+      }}>
+        <defs>
+          <linearGradient id="chart-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#0f172a" /><stop offset="100%" stopColor="#1e1b4b" /></linearGradient>
+          <radialGradient id="user-glow" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="#a78bfa" stopOpacity="0.6" /><stop offset="50%" stopColor="#8b5cf6" stopOpacity="0.2" /><stop offset="100%" stopColor="#6366f1" stopOpacity="0" /></radialGradient>
+          <filter id="dot-shadow" x="-100%" y="-100%" width="300%" height="300%"><feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#a78bfa" floodOpacity="0.6" /></filter>
+          <radialGradient id="user-dot-grad" cx="30%" cy="30%" r="70%"><stop offset="0%" stopColor="#c4b5fd" /><stop offset="100%" stopColor="#7c3aed" /></radialGradient>
+        </defs>
+        <rect x="0" y="0" width={W} height={H} rx="16" fill="url(#chart-bg)" />
+
+        {/* Grid lines */}
+        {[2.5, 3.0, 3.5, 4.0].map((g) => (<line key={`gx-${g}`} x1={toX(g)} y1={PAD.top} x2={toX(g)} y2={PAD.top + plotH} stroke="#334155" strokeWidth="0.5" strokeDasharray="4 8" />))}
+        {[900, 1000, 1100, 1200, 1300, 1400, 1500].map((s) => (<line key={`gy-${s}`} x1={PAD.left} y1={toY(s)} x2={PAD.left + plotW} y2={toY(s)} stroke="#334155" strokeWidth="0.5" strokeDasharray="4 8" />))}
+
+        {/* Zone backgrounds — solid fills */}
+        <rect x={toX(xMin)} y={toY(1100)} width={toX(3.2) - toX(xMin)} height={toY(yMin) - toY(1100)} fill="#ef4444" opacity="0.12" rx="6" />
+        <text x={toX(xMin) + 6} y={toY(1100) + 14} className="text-[9px] font-bold" fill="#ef4444" opacity="0.7">Building</text>
+
+        <rect x={toX(3.0)} y={toY(1300)} width={toX(3.8) - toX(3.0)} height={toY(1100) - toY(1300)} fill="#f59e0b" opacity="0.1" rx="6" />
+        <text x={toX(3.0) + 6} y={toY(1300) + 14} className="text-[9px] font-bold" fill="#f59e0b" opacity="0.7">Developing</text>
+
+        <rect x={toX(3.4)} y={toY(1500)} width={toX(4.1) - toX(3.4)} height={toY(1300) - toY(1500)} fill="#10b981" opacity="0.1" rx="6" />
+        <text x={toX(3.4) + 6} y={toY(1500) + 14} className="text-[9px] font-bold" fill="#10b981" opacity="0.7">Competitive</text>
+
+        <rect x={toX(3.7)} y={toY(yMax)} width={toX(xMax) - toX(3.7)} height={toY(1500) - toY(yMax)} fill="#8b5cf6" opacity="0.1" rx="6" />
+        <text x={toX(3.7) + 6} y={toY(yMax) + 14} className="text-[9px] font-bold" fill="#8b5cf6" opacity="0.7">Elite</text>
+
+        {/* Axes */}
+        <line x1={PAD.left} y1={PAD.top + plotH} x2={PAD.left + plotW} y2={PAD.top + plotH} stroke="#475569" strokeWidth="1" />
+        <line x1={PAD.left} y1={PAD.top} x2={PAD.left} y2={PAD.top + plotH} stroke="#475569" strokeWidth="1" />
+
+        {/* Axis labels */}
+        {[2.5, 3.0, 3.5, 4.0].map((g) => (<text key={`xl-${g}`} x={toX(g)} y={PAD.top + plotH + 20} textAnchor="middle" className="text-[10px] font-medium" fill="#94a3b8">{g.toFixed(1)}</text>))}
+        <text x={PAD.left + plotW / 2} y={H - 6} textAnchor="middle" className="text-[11px] font-bold" fill="#a78bfa">GPA</text>
+        {[800, 1000, 1200, 1400, 1600].map((s) => (<text key={`yl-${s}`} x={PAD.left - 10} y={toY(s) + 4} textAnchor="end" className="text-[10px] font-medium" fill="#94a3b8">{s}</text>))}
+        <text x={14} y={PAD.top + plotH / 2} textAnchor="middle" className="text-[11px] font-bold" fill="#a78bfa" transform={`rotate(-90, 14, ${PAD.top + plotH / 2})`}>SAT Score</text>
+
+        {/* Comparative dots — colored by tier */}
+        {comparativeData.map((d, i) => {
+          const tier = getTier(d.score);
+          const color = tierColors[tier];
+          const isActive = active === i;
+          return (
+            <g key={i}>
+              {isActive && <circle cx={toX(d.gpa)} cy={toY(d.sat)} r="14" fill={color.fill} opacity="0.2" />}
+              <circle
+                cx={toX(d.gpa)} cy={toY(d.sat)} r={isActive ? 6 : 4.5}
+                fill={color.fill} opacity={isActive ? 1 : 0.7}
+                stroke={isActive ? color.solid : 'none'} strokeWidth={isActive ? 1.5 : 0}
+                className="transition-all duration-150 cursor-pointer"
+                onMouseEnter={() => setHovered(i)}
+                onMouseLeave={() => setHovered(null)}
+                onClick={(e) => { e.stopPropagation(); setSelected(selected === i ? null : i); }}
+              />
+            </g>
+          );
+        })}
+
+        {/* User position */}
+        {hasUser && (
+          <g>
+            <circle cx={toX(userGpa)} cy={toY(userSat)} r="28" fill="url(#user-glow)">
+              <animate attributeName="r" values="26;32;26" dur="3s" repeatCount="indefinite" />
+              <animate attributeName="opacity" values="0.8;0.4;0.8" dur="3s" repeatCount="indefinite" />
+            </circle>
+            <circle cx={toX(userGpa)} cy={toY(userSat)} r="9" fill="url(#user-dot-grad)" filter="url(#dot-shadow)" />
+            <circle cx={toX(userGpa)} cy={toY(userSat)} r="9" fill="none" stroke="white" strokeWidth="2" opacity="0.9" />
+            <circle cx={toX(userGpa) - 2} cy={toY(userSat) - 2} r="2.5" fill="white" opacity="0.4" />
+            <rect x={toX(userGpa) + 14} y={toY(userSat) - 11} width="32" height="22" rx="6" fill="#7c3aed" opacity="0.95" />
+            <text x={toX(userGpa) + 30} y={toY(userSat) + 4} textAnchor="middle" className="text-[10px] font-extrabold" fill="white">You</text>
+          </g>
+        )}
+
+        {/* Legend */}
+        <g transform={`translate(${PAD.left + plotW - 140}, ${PAD.top + 6})`}>
+          <rect x="0" y="0" width="138" height="82" rx="10" fill="#0f172a" fillOpacity="0.9" stroke="#334155" strokeWidth="0.5" />
+          <circle cx="14" cy="14" r="5" fill="#8b5cf6" /><text x="26" y="18" className="text-[9px] font-semibold" fill="#c4b5fd">Elite (85+)</text>
+          <circle cx="14" cy="30" r="5" fill="#10b981" /><text x="26" y="34" className="text-[9px] font-semibold" fill="#6ee7b7">Competitive (65-84)</text>
+          <circle cx="14" cy="46" r="5" fill="#f59e0b" /><text x="26" y="50" className="text-[9px] font-semibold" fill="#fcd34d">Developing (40-64)</text>
+          <circle cx="14" cy="62" r="5" fill="#ef4444" /><text x="26" y="66" className="text-[9px] font-semibold" fill="#fca5a5">Building (&lt;40)</text>
         </g>
-      )}
-      {/* Legend */}
-      <g transform={`translate(${PAD.left + plotW - 130}, ${PAD.top + 8})`}>
-        <rect x="0" y="0" width="128" height="64" rx="12" fill="#1e293b" fillOpacity="0.8" stroke="#334155" strokeWidth="0.5" />
-        <circle cx="14" cy="16" r="5" fill="#34d399" fillOpacity="0.6" /><text x="26" y="20" className="text-[9px] font-semibold" fill="#94a3b8">Competitive</text>
-        <circle cx="14" cy="32" r="5" fill="#fbbf24" fillOpacity="0.6" /><text x="26" y="36" className="text-[9px] font-semibold" fill="#94a3b8">Developing</text>
-        <circle cx="14" cy="48" r="5" fill="#f87171" fillOpacity="0.6" /><text x="26" y="52" className="text-[9px] font-semibold" fill="#94a3b8">Building</text>
-      </g>
-    </svg>
+
+        {/* Tooltip for active dot */}
+        {active !== null && (() => {
+          const d = comparativeData[active];
+          const tier = getTier(d.score);
+          const color = tierColors[tier];
+          const tx = toX(d.gpa);
+          const ty = toY(d.sat);
+          const flipX = tx > W - 130;
+          const flipY = ty < 80;
+          const bx = flipX ? tx - 122 : tx + 12;
+          const by = flipY ? ty + 16 : ty - 56;
+          return (
+            <g>
+              <rect x={bx} y={by} width="110" height="50" rx="8" fill="#0f172a" stroke={color.fill} strokeWidth="1" opacity="0.95" />
+              <text x={bx + 8} y={by + 16} className="text-[10px] font-bold" fill={color.solid}>Score: {d.score}</text>
+              <text x={bx + 8} y={by + 30} className="text-[9px] font-medium" fill="#94a3b8">GPA {d.gpa.toFixed(1)} · SAT {d.sat}</text>
+              <text x={bx + 8} y={by + 43} className="text-[9px] font-semibold" fill={color.fill} style={{ textTransform: 'capitalize' }}>{tier}</text>
+            </g>
+          );
+        })()}
+      </svg>
+
+      {/* Bottom stats summary */}
+      <div className="flex items-center gap-4 mt-3 text-[11px]">
+        <span className="text-slate-400">{comparativeData.length} students tracked</span>
+        <span className="text-slate-500">·</span>
+        <span className="text-slate-400">Click any dot for details</span>
+        {hasUser && (
+          <>
+            <span className="text-slate-500">·</span>
+            <span className="text-violet-400 font-semibold">Your position is highlighted</span>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -504,6 +589,8 @@ function DescriptionSuggestions({
 export default function StudentProfile() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/login');
@@ -975,16 +1062,23 @@ export default function StudentProfile() {
             )}
 
             {/* ─── PERSONALIZED SUGGESTIONS ─── */}
-            <div className="relative overflow-hidden rounded-2xl border border-violet-500/10 bg-gradient-to-br from-white via-violet-50/30 to-indigo-50/50 p-6">
-              <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-br from-violet-200/20 to-transparent rounded-full blur-3xl" />
+            <div className="relative overflow-hidden rounded-2xl border p-6" style={{
+              background: isDark ? 'linear-gradient(to bottom right, #1e1b2e, #1a1a2e, #1c1a30)' : 'linear-gradient(to bottom right, #ffffff, rgba(237,233,254,0.3), rgba(224,231,255,0.5))',
+              borderColor: isDark ? '#3b2d5e' : 'rgba(139,92,246,0.1)',
+            }}>
+              <div className="absolute top-0 right-0 w-48 h-48 rounded-full blur-3xl" style={{ background: isDark ? 'rgba(139,92,246,0.08)' : 'rgba(196,181,253,0.2)' }} />
               <div className="flex items-center justify-between mb-5">
                 <div>
-                  <h3 className="text-lg font-bold font-display text-primary">Expert Guidance</h3>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Personalized advice based on your current profile</p>
+                  <h3 className="text-lg font-bold font-display" style={{ color: isDark ? '#e8eaed' : undefined }}>{isDark ? '' : ''}<span className={isDark ? '' : 'text-primary'}>Expert Guidance</span></h3>
+                  <p className="text-[11px] mt-0.5" style={{ color: isDark ? '#9aa0a6' : undefined }}><span className={isDark ? '' : 'text-slate-400'}>Personalized advice based on your current profile</span></p>
                 </div>
                 <button
                   onClick={() => setShowPersonas(!showPersonas)}
-                  className="text-[10px] text-violet-500 hover:text-violet-700 font-semibold px-2.5 py-1 rounded-lg hover:bg-violet-50 transition-colors"
+                  className="text-[10px] font-semibold px-2.5 py-1 rounded-lg transition-colors"
+                  style={{
+                    color: isDark ? '#c4b5fd' : '#8b5cf6',
+                    ...(isDark ? {} : {}),
+                  }}
                 >
                   {showPersonas ? 'Collapse' : 'Expand'}
                 </button>
@@ -993,17 +1087,22 @@ export default function StudentProfile() {
               {showPersonas && (
                 <div className="relative space-y-3">
                   {personaSuggestions.map((ps, i) => (
-                    <div key={i} className="group p-4 rounded-xl bg-white/80 backdrop-blur-sm border border-slate-100 hover:border-violet-200 hover:shadow-lg hover:shadow-violet-100/50 transition-all duration-300">
+                    <div key={i} className="group p-4 rounded-xl backdrop-blur-sm transition-all duration-300" style={{
+                      background: isDark ? '#252338' : 'rgba(255,255,255,0.8)',
+                      borderWidth: 1,
+                      borderStyle: 'solid',
+                      borderColor: isDark ? '#3b2d5e' : '#f1f5f9',
+                    }}>
                       <div className="flex items-center gap-3 mb-2.5">
                         <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${ps.persona.avatarBg} flex items-center justify-center text-white font-bold text-xs flex-shrink-0 shadow-lg`} style={{ boxShadow: `0 4px 14px -2px ${ps.persona.avatarBg.includes('violet') ? '#8b5cf640' : ps.persona.avatarBg.includes('sky') ? '#0ea5e940' : '#f43f5e40'}` }}>
                           {ps.persona.emoji}
                         </div>
                         <div>
                           <p className={`text-sm font-bold ${ps.persona.color}`}>{ps.persona.name}</p>
-                          <p className="text-[10px] text-slate-400 font-medium">{ps.persona.title}</p>
+                          <p className="text-[10px] font-medium" style={{ color: isDark ? '#9aa0a6' : '#94a3b8' }}>{ps.persona.title}</p>
                         </div>
                       </div>
-                      <p className="text-xs text-slate-600 leading-relaxed pl-[52px]">{ps.suggestion}</p>
+                      <p className="text-xs leading-relaxed pl-[52px]" style={{ color: isDark ? '#b0b3b8' : '#475569' }}>{ps.suggestion}</p>
                     </div>
                   ))}
                 </div>
