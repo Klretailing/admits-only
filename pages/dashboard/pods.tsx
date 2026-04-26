@@ -26,6 +26,7 @@ interface PodMessage {
   content: string;
   type: string;
   essayId: string | null;
+  parentId?: string | null;
   createdAt: string;
   user: { id: string; name: string };
 }
@@ -93,6 +94,51 @@ interface SessionParticipant {
   user: { id: string; name: string };
 }
 
+interface PodPoll {
+  id: string;
+  podId: string;
+  creatorId: string;
+  question: string;
+  options: string;
+  createdAt: string;
+  creator: { id: string; name: string };
+  votes: { userId: string; optionIdx: number }[];
+}
+
+interface MemberStats {
+  id: string;
+  podId: string;
+  userId: string;
+  xp: number;
+  currentStreak: number;
+  longestStreak: number;
+  messagesCount: number;
+  sessionsCount: number;
+  reactionsGiven: number;
+  docsShared: number;
+  pollsVoted: number;
+  achievements: string;
+  user?: { id: string; name: string };
+}
+
+interface PodActivityItem {
+  id: string;
+  podId: string;
+  userId: string;
+  type: string;
+  metadata: string;
+  createdAt: string;
+  user: { id: string; name: string };
+}
+
+interface AchievementDef {
+  id: string;
+  label: string;
+  desc: string;
+  icon: string;
+  threshold: Record<string, number>;
+}
+
 /* ─── Avatar color generator ─── */
 const AVATAR_COLORS = [
   'from-indigo-500 to-purple-600',
@@ -154,8 +200,8 @@ export default function StudyPods() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
 
-  // Document Collaboration Hub
-  const [activeTab, setActiveTab] = useState<'chat' | 'documents' | 'focus'>('chat');
+  // Tabs
+  const [activeTab, setActiveTab] = useState<'chat' | 'documents' | 'focus' | 'leaderboard'>('chat');
   const [documents, setDocuments] = useState<PodDoc[]>([]);
   const [selectedDoc, setSelectedDoc] = useState<PodDoc | null>(null);
   const [docLoading, setDocLoading] = useState(false);
@@ -183,10 +229,21 @@ export default function StudyPods() {
   const [timerDisplay, setTimerDisplay] = useState('');
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Message reactions
+  // Message reactions (persisted)
   const [messageReactions, setMessageReactions] = useState<Record<string, Record<string, string[]>>>({});
   const [showReactionPicker, setShowReactionPicker] = useState<string | null>(null);
   const [hoveredMessage, setHoveredMessage] = useState<string | null>(null);
+
+  // Engagement: Streaks, XP, Leaderboard, Polls, Activity
+  const [myStats, setMyStats] = useState<MemberStats | null>(null);
+  const [leaderboard, setLeaderboard] = useState<MemberStats[]>([]);
+  const [achievementDefs, setAchievementDefs] = useState<AchievementDef[]>([]);
+  const [pods_polls, setPodsPolls] = useState<PodPoll[]>([]);
+  const [podActivities, setPodActivities] = useState<PodActivityItem[]>([]);
+  const [showCreatePoll, setShowCreatePoll] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState('');
+  const [pollOptions, setPollOptions] = useState(['', '']);
+  const [replyToMsg, setReplyToMsg] = useState<PodMessage | null>(null);
 
   // Text selection commenting
   const [selectedText, setSelectedText] = useState('');
@@ -374,6 +431,65 @@ export default function StudyPods() {
       loadSessions(selectedPod.id);
     }
   }, [selectedPod, activeTab, loadSessions]);
+
+  /* ─── Engagement data loading ─── */
+  const loadReactions = useCallback(async (podId: string) => {
+    try {
+      const r = await fetch(`/api/pod-engage?action=reactions&podId=${podId}`);
+      const data = await r.json();
+      if (data.reactions) setMessageReactions(data.reactions);
+    } catch { /* ignore */ }
+  }, []);
+
+  const loadMyStats = useCallback(async (podId: string) => {
+    try {
+      const r = await fetch(`/api/pod-engage?action=my-stats&podId=${podId}`);
+      const data = await r.json();
+      if (data.stats) setMyStats(data.stats);
+      if (data.achievements) setAchievementDefs(data.achievements);
+    } catch { /* ignore */ }
+  }, []);
+
+  const loadLeaderboard = useCallback(async (podId: string) => {
+    try {
+      const r = await fetch(`/api/pod-engage?action=leaderboard&podId=${podId}`);
+      const data = await r.json();
+      if (data.leaderboard) setLeaderboard(data.leaderboard);
+    } catch { /* ignore */ }
+  }, []);
+
+  const loadPolls = useCallback(async (podId: string) => {
+    try {
+      const r = await fetch(`/api/pod-engage?action=polls&podId=${podId}`);
+      const data = await r.json();
+      if (data.polls) setPodsPolls(data.polls);
+    } catch { /* ignore */ }
+  }, []);
+
+  const loadActivities = useCallback(async (podId: string) => {
+    try {
+      const r = await fetch(`/api/pod-engage?action=activity&podId=${podId}`);
+      const data = await r.json();
+      if (data.activities) setPodActivities(data.activities);
+    } catch { /* ignore */ }
+  }, []);
+
+  // Load engagement data when a pod is selected
+  useEffect(() => {
+    if (selectedPod) {
+      loadReactions(selectedPod.id);
+      loadMyStats(selectedPod.id);
+      loadPolls(selectedPod.id);
+    }
+  }, [selectedPod, loadReactions, loadMyStats, loadPolls]);
+
+  // Load leaderboard when tab switches
+  useEffect(() => {
+    if (selectedPod && activeTab === 'leaderboard') {
+      loadLeaderboard(selectedPod.id);
+      loadActivities(selectedPod.id);
+    }
+  }, [selectedPod, activeTab, loadLeaderboard, loadActivities]);
 
   // Timer countdown
   useEffect(() => {
@@ -708,8 +824,10 @@ export default function StudyPods() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [editorDoc]);
 
-  // Toggle reaction on a message
-  const toggleReaction = (messageId: string, emoji: string) => {
+  // Toggle reaction on a message (persisted)
+  const toggleReaction = async (messageId: string, emoji: string) => {
+    if (!selectedPod) return;
+    // Optimistic update
     setMessageReactions(prev => {
       const msgReactions = { ...(prev[messageId] || {}) };
       const users = msgReactions[emoji] ? [...msgReactions[emoji]] : [];
@@ -721,6 +839,74 @@ export default function StudyPods() {
       return { ...prev, [messageId]: msgReactions };
     });
     setShowReactionPicker(null);
+    // Persist
+    try {
+      await fetch('/api/pod-engage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'toggle-reaction', podId: selectedPod.id, messageId, emoji }),
+      });
+      loadMyStats(selectedPod.id);
+    } catch { /* optimistic is good enough */ }
+  };
+
+  // Create poll
+  const createPoll = async () => {
+    if (!selectedPod || !pollQuestion.trim() || pollOptions.filter(o => o.trim()).length < 2) return;
+    try {
+      await fetch('/api/pod-engage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create-poll',
+          podId: selectedPod.id,
+          question: pollQuestion,
+          options: pollOptions.filter(o => o.trim()),
+        }),
+      });
+      setShowCreatePoll(false);
+      setPollQuestion('');
+      setPollOptions(['', '']);
+      loadMessages(selectedPod.id);
+      loadPolls(selectedPod.id);
+    } catch { /* ignore */ }
+  };
+
+  // Vote on poll
+  const votePoll = async (pollId: string, optionIdx: number) => {
+    if (!selectedPod) return;
+    try {
+      const r = await fetch('/api/pod-engage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'vote-poll', podId: selectedPod.id, pollId, optionIdx }),
+      });
+      const data = await r.json();
+      if (data.poll) {
+        setPodsPolls(prev => prev.map(p => p.id === data.poll.id ? data.poll : p));
+      }
+      loadMyStats(selectedPod.id);
+    } catch { /* ignore */ }
+  };
+
+  // Send threaded reply
+  const sendReply = async () => {
+    if (!messageText.trim() || !selectedPod || !replyToMsg || sending) return;
+    setSending(true);
+    try {
+      const r = await fetch('/api/pods', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'message', podId: selectedPod.id, content: messageText, parentId: replyToMsg.id }),
+      });
+      if (r.ok) {
+        setMessageText('');
+        setReplyToMsg(null);
+        loadMessages(selectedPod.id);
+        inputRef.current?.focus();
+      }
+    } catch { /* ignore */ }
+    setSending(false);
   };
 
   // Handle text selection for commenting
@@ -989,8 +1175,25 @@ export default function StudyPods() {
               )}
             </div>
 
-            {/* Sidebar footer — user info */}
+            {/* Sidebar footer — user info + streak */}
             <div className="p-3 border-t border-[#522b5b]">
+              {myStats && myStats.currentStreak > 0 && (
+                <div className="flex items-center gap-2 mb-2 px-1">
+                  <span className="text-base">{myStats.currentStreak >= 7 ? '🔥' : '⚡'}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-bold text-amber-300">{myStats.currentStreak}-day streak</p>
+                      <p className="text-[10px] text-white/40">{myStats.xp} XP</p>
+                    </div>
+                    <div className="h-1 bg-white/10 rounded-full mt-1 overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full transition-all"
+                        style={{ width: `${Math.min(100, (myStats.currentStreak / 30) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <div className="relative">
                   <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${getAvatarColor(currentUserName)} flex items-center justify-center text-white text-xs font-bold`}>
@@ -998,10 +1201,15 @@ export default function StudyPods() {
                   </div>
                   <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 border-2 border-[#3F0E40] rounded-full" />
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-xs font-semibold text-white truncate">{currentUserName}</p>
                   <p className="text-[10px] text-emerald-400">Active</p>
                 </div>
+                {myStats && myStats.xp > 0 && (
+                  <div className="px-2 py-0.5 rounded-md bg-accent/20 text-accent text-[10px] font-bold">
+                    {myStats.xp} XP
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1108,6 +1316,16 @@ export default function StudyPods() {
                         {sessions.filter(s => s.status !== 'completed').length}
                       </span>
                     )}
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('leaderboard')}
+                    className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold border-b-2 transition-all -mb-px ${
+                      activeTab === 'leaderboard'
+                        ? 'border-[#1264a3] text-[#1264a3]'
+                        : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                    }`}
+                  >
+                    Leaderboard
                   </button>
                 </div>
               </div>
@@ -1498,6 +1716,157 @@ export default function StudyPods() {
                 </div>
               )}
 
+              {/* ═══════════════ LEADERBOARD TAB ═══════════════ */}
+              {activeTab === 'leaderboard' && (
+                <div className="flex-1 overflow-y-auto">
+                  <div className="px-4 lg:px-5 py-4 space-y-5">
+                    {/* My stats card */}
+                    {myStats && (
+                      <div className="bg-gradient-to-br from-accent/5 to-purple-500/5 rounded-2xl border border-accent/10 p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="text-sm font-bold text-primary">Your Stats</h4>
+                          <div className="flex items-center gap-1.5">
+                            {myStats.currentStreak > 0 && (
+                              <span className="text-xs font-bold text-amber-500 flex items-center gap-1">
+                                {myStats.currentStreak >= 7 ? '🔥' : '⚡'} {myStats.currentStreak}-day streak
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-4 gap-3 text-center">
+                          <div>
+                            <p className="text-xl font-bold font-display text-accent">{myStats.xp}</p>
+                            <p className="text-[10px] text-slate-400">XP</p>
+                          </div>
+                          <div>
+                            <p className="text-xl font-bold font-display text-primary">{myStats.messagesCount}</p>
+                            <p className="text-[10px] text-slate-400">Messages</p>
+                          </div>
+                          <div>
+                            <p className="text-xl font-bold font-display text-primary">{myStats.sessionsCount}</p>
+                            <p className="text-[10px] text-slate-400">Sessions</p>
+                          </div>
+                          <div>
+                            <p className="text-xl font-bold font-display text-primary">{myStats.longestStreak}</p>
+                            <p className="text-[10px] text-slate-400">Best Streak</p>
+                          </div>
+                        </div>
+                        {/* Achievements */}
+                        {(() => {
+                          const unlocked: string[] = JSON.parse(myStats.achievements || '[]');
+                          return unlocked.length > 0 ? (
+                            <div className="mt-3 pt-3 border-t border-accent/10">
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Achievements</p>
+                              <div className="flex flex-wrap gap-2">
+                                {achievementDefs.filter(a => unlocked.includes(a.id)).map(a => (
+                                  <div key={a.id} className="flex items-center gap-1.5 px-2.5 py-1 bg-white rounded-lg border border-slate-100 shadow-sm" title={a.desc}>
+                                    <span className="text-sm">{a.icon}</span>
+                                    <span className="text-[10px] font-semibold text-primary">{a.label}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ) : null;
+                        })()}
+                      </div>
+                    )}
+
+                    {/* Leaderboard */}
+                    <div>
+                      <h4 className="text-sm font-bold text-primary mb-3">Pod Rankings</h4>
+                      <div className="space-y-1.5">
+                        {leaderboard.map((entry, i) => {
+                          const rankIcon = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : null;
+                          const isMe = entry.userId === currentUserId;
+                          return (
+                            <div key={entry.id} className={`flex items-center gap-3 p-3 rounded-xl transition-all ${isMe ? 'bg-accent/5 border border-accent/10' : 'bg-white border border-slate-100'}`}>
+                              <div className="w-7 text-center">
+                                {rankIcon ? <span className="text-base">{rankIcon}</span> : <span className="text-xs font-bold text-slate-400">{i + 1}</span>}
+                              </div>
+                              <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${getAvatarColor(entry.user?.name || '')} flex items-center justify-center text-white text-xs font-bold`}>
+                                {getInitials(entry.user?.name || '?')}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-sm font-semibold truncate ${isMe ? 'text-accent' : 'text-primary'}`}>
+                                  {entry.user?.name || 'Unknown'} {isMe && <span className="text-[10px] text-accent/60">(you)</span>}
+                                </p>
+                                <div className="flex items-center gap-3 mt-0.5">
+                                  {entry.currentStreak > 0 && (
+                                    <span className="text-[10px] text-amber-500 font-semibold">{entry.currentStreak >= 7 ? '🔥' : '⚡'} {entry.currentStreak}d</span>
+                                  )}
+                                  <span className="text-[10px] text-slate-400">{entry.messagesCount} msgs</span>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm font-bold text-accent">{entry.xp}</p>
+                                <p className="text-[10px] text-slate-400">XP</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {leaderboard.length === 0 && (
+                          <div className="text-center py-8">
+                            <p className="text-3xl mb-2">🏆</p>
+                            <p className="text-sm text-slate-500">Send messages and complete sessions to earn XP!</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Recent Activity Feed */}
+                    {podActivities.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-bold text-primary mb-3">Recent Activity</h4>
+                        <div className="space-y-2">
+                          {podActivities.slice(0, 10).map(a => {
+                            const meta = JSON.parse(a.metadata || '{}');
+                            const activityText: Record<string, string> = {
+                              poll_created: `created a poll: "${meta.question || ''}"`,
+                              session_started: 'started a focus session',
+                              doc_shared: `shared a document: ${meta.fileName || ''}`,
+                            };
+                            return (
+                              <div key={a.id} className="flex items-start gap-2.5 px-3 py-2 bg-slate-50 rounded-lg">
+                                <div className={`w-6 h-6 rounded-md bg-gradient-to-br ${getAvatarColor(a.user.name)} flex items-center justify-center text-white text-[8px] font-bold mt-0.5`}>
+                                  {getInitials(a.user.name)}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs text-slate-600">
+                                    <span className="font-semibold text-primary">{a.user.name}</span>{' '}
+                                    {activityText[a.type] || a.type}
+                                  </p>
+                                  <p className="text-[10px] text-slate-400 mt-0.5">{formatTime(a.createdAt)}</p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* All Achievements (locked + unlocked) */}
+                    <div>
+                      <h4 className="text-sm font-bold text-primary mb-3">All Achievements</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        {achievementDefs.map(a => {
+                          const unlocked = myStats ? JSON.parse(myStats.achievements || '[]').includes(a.id) : false;
+                          return (
+                            <div key={a.id} className={`flex items-center gap-2.5 p-3 rounded-xl border transition-all ${unlocked ? 'bg-white border-accent/20 shadow-sm' : 'bg-slate-50 border-slate-100 opacity-50'}`}>
+                              <span className="text-xl">{a.icon}</span>
+                              <div className="min-w-0">
+                                <p className={`text-xs font-bold ${unlocked ? 'text-primary' : 'text-slate-400'}`}>{a.label}</p>
+                                <p className="text-[10px] text-slate-400 truncate">{a.desc}</p>
+                              </div>
+                              {unlocked && <span className="ml-auto text-emerald-500 text-sm">✓</span>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* ═══════════════ CHAT TAB ═══════════════ */}
               {activeTab === 'chat' && <>
               {/* ─── Members panel (collapsible) ─── */}
@@ -1596,8 +1965,8 @@ export default function StudyPods() {
                                 </button>
                                 <button
                                   className="p-1.5 rounded-md text-slate-400 hover:text-accent hover:bg-accent/5 transition-all"
-                                  title="Reply"
-                                  onClick={() => { setMessageText(`@${msg.user.name} `); inputRef.current?.focus(); }}
+                                  title="Reply in thread"
+                                  onClick={() => { setReplyToMsg(msg); inputRef.current?.focus(); }}
                                 >
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
@@ -1690,27 +2059,79 @@ export default function StudyPods() {
                                       </>
                                     );
                                   }
+                                  // Poll card
+                                  if (msg.type === 'poll' && msg.essayId) {
+                                    const poll = pods_polls.find(p => p.id === msg.essayId);
+                                    if (poll) {
+                                      const options: string[] = JSON.parse(poll.options || '[]');
+                                      const totalVotes = poll.votes.length;
+                                      const myVote = poll.votes.find(v => v.userId === currentUserId);
+                                      return (
+                                        <div className="w-full max-w-md mt-1 p-3.5 bg-gradient-to-br from-white to-purple-50/30 border border-purple-200/50 rounded-xl">
+                                          <p className="text-sm font-bold text-primary mb-2.5">{poll.question}</p>
+                                          <div className="space-y-1.5">
+                                            {options.map((opt, i) => {
+                                              const voteCount = poll.votes.filter(v => v.optionIdx === i).length;
+                                              const pct = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
+                                              const isMyVote = myVote?.optionIdx === i;
+                                              return (
+                                                <button
+                                                  key={i}
+                                                  onClick={() => votePoll(poll.id, i)}
+                                                  className={`w-full relative overflow-hidden rounded-lg border p-2 text-left transition-all ${
+                                                    isMyVote ? 'border-accent/40 bg-accent/5' : 'border-slate-200 hover:border-accent/20'
+                                                  }`}
+                                                >
+                                                  <div className="absolute inset-0 bg-accent/10 rounded-lg" style={{ width: `${pct}%` }} />
+                                                  <div className="relative flex items-center justify-between">
+                                                    <span className={`text-xs ${isMyVote ? 'font-bold text-accent' : 'text-slate-700'}`}>{opt}</span>
+                                                    <span className="text-[10px] text-slate-400 font-semibold">{pct}%</span>
+                                                  </div>
+                                                </button>
+                                              );
+                                            })}
+                                          </div>
+                                          <p className="text-[10px] text-slate-400 mt-2">{totalVotes} vote{totalVotes !== 1 ? 's' : ''}</p>
+                                        </div>
+                                      );
+                                    }
+                                  }
                                   return msg.content;
                                 })()}
                               </div>
 
+                              {/* Thread reply indicator */}
+                              {msg.parentId && (() => {
+                                const parent = messages.find(m => m.id === msg.parentId);
+                                return parent ? (
+                                  <div className="flex items-center gap-1.5 mt-1 text-[10px] text-slate-400">
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg>
+                                    <span>replying to <span className="font-semibold text-slate-500">{parent.user.name}</span></span>
+                                    <span className="text-slate-300 truncate max-w-[200px]">{parent.content}</span>
+                                  </div>
+                                ) : null;
+                              })()}
+
                               {/* Reactions display */}
                               {messageReactions[msg.id] && Object.keys(messageReactions[msg.id]).length > 0 && (
                                 <div className="flex flex-wrap gap-1.5 mt-1.5">
-                                  {Object.entries(messageReactions[msg.id]).map(([emoji, users]) => (
+                                  {Object.entries(messageReactions[msg.id]).map(([emoji, userIds]) => {
+                                    const uids = userIds as string[];
+                                    return (
                                     <button
                                       key={emoji}
                                       onClick={() => toggleReaction(msg.id, emoji)}
                                       className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border transition-all ${
-                                        users.includes(currentUserId)
+                                        uids.includes(currentUserId)
                                           ? 'bg-accent/10 border-accent/30 text-accent'
                                           : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-accent/20 hover:bg-accent/5'
                                       }`}
                                     >
                                       <span>{emoji}</span>
-                                      <span className="font-semibold text-[10px]">{users.length}</span>
+                                      <span className="font-semibold text-[10px]">{uids.length}</span>
                                     </button>
-                                  ))}
+                                    );
+                                  })}
                                 </div>
                               )}
                             </div>
@@ -1751,7 +2172,71 @@ export default function StudyPods() {
                     </button>
                   </div>
                 )}
-                <div className="flex items-end gap-2 bg-white border border-slate-300 rounded-lg px-3 py-2 focus-within:border-slate-500 focus-within:shadow-[0_0_0_4px_rgba(29,155,209,0.1)] transition-all">
+                {/* Reply indicator */}
+                {replyToMsg && (
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-accent/5 border border-accent/10 rounded-t-lg text-xs">
+                    <span className="text-accent font-semibold">Replying to {replyToMsg.user.name}</span>
+                    <span className="text-slate-400 truncate flex-1">{replyToMsg.content}</span>
+                    <button onClick={() => setReplyToMsg(null)} className="text-slate-400 hover:text-slate-600">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  </div>
+                )}
+                {/* Poll creator */}
+                {showCreatePoll && (
+                  <div className="px-3 py-3 bg-slate-50 border border-slate-200 rounded-lg mb-2 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-bold text-primary">Create a Poll</p>
+                      <button onClick={() => setShowCreatePoll(false)} className="text-slate-400 hover:text-slate-600">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={pollQuestion}
+                      onChange={e => setPollQuestion(e.target.value)}
+                      placeholder="Ask a question..."
+                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30"
+                      autoFocus
+                    />
+                    {pollOptions.map((opt, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="text-xs text-slate-400 w-5">{i + 1}.</span>
+                        <input
+                          type="text"
+                          value={opt}
+                          onChange={e => {
+                            const next = [...pollOptions];
+                            next[i] = e.target.value;
+                            setPollOptions(next);
+                          }}
+                          placeholder={`Option ${i + 1}`}
+                          className="flex-1 px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30"
+                        />
+                        {pollOptions.length > 2 && (
+                          <button onClick={() => setPollOptions(pollOptions.filter((_, j) => j !== i))} className="text-slate-300 hover:text-red-400">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between">
+                      {pollOptions.length < 6 && (
+                        <button onClick={() => setPollOptions([...pollOptions, ''])} className="text-xs text-accent hover:text-accent/80 font-semibold">
+                          + Add option
+                        </button>
+                      )}
+                      <button
+                        onClick={createPoll}
+                        disabled={!pollQuestion.trim() || pollOptions.filter(o => o.trim()).length < 2}
+                        className="px-4 py-1.5 text-xs font-semibold text-white bg-accent rounded-lg hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed ml-auto"
+                      >
+                        Create Poll
+                      </button>
+                    </div>
+                  </div>
+                )}
+                <div className={`flex items-end gap-2 bg-white border border-slate-300 rounded-lg px-3 py-2 focus-within:border-slate-500 focus-within:shadow-[0_0_0_4px_rgba(29,155,209,0.1)] transition-all ${replyToMsg ? 'rounded-t-none border-t-0' : ''}`}>
                   {/* Attachment button */}
                   <button
                     onClick={() => fileInputRef.current?.click()}
@@ -1761,18 +2246,31 @@ export default function StudyPods() {
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
                   </button>
+                  {/* Poll button */}
+                  <button
+                    onClick={() => setShowCreatePoll(!showCreatePoll)}
+                    className="p-2 rounded-xl text-slate-400 hover:text-accent hover:bg-accent/5 transition-all flex-shrink-0"
+                    title="Create a poll"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                  </button>
                   <input
                     ref={inputRef}
                     type="text"
                     value={messageText}
                     onChange={e => setMessageText(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-                    placeholder={`Message #${selectedPod.name.toLowerCase().replace(/\s+/g, '-')}...`}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        replyToMsg ? sendReply() : sendMessage();
+                      }
+                    }}
+                    placeholder={replyToMsg ? `Reply to ${replyToMsg.user.name}...` : `Message #${selectedPod.name.toLowerCase().replace(/\s+/g, '-')}...`}
                     className="flex-1 py-1.5 text-sm bg-transparent focus:outline-none placeholder-slate-400"
                   />
                   {/* Send */}
                   <button
-                    onClick={sendMessage}
+                    onClick={replyToMsg ? sendReply : sendMessage}
                     disabled={!messageText.trim() || sending}
                     className={`p-2 rounded-lg transition-all flex-shrink-0 ${
                       messageText.trim()

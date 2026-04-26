@@ -14,15 +14,13 @@ export interface Milestone {
 
 export interface CareerPath {
   id: string;
-  label: string;
-  title: string;
+  name: string;
   peakSalary: number;
   milestones: Milestone[];
 }
 
 export interface Major {
   id: string;
-  label: string;
   name: string;
   description: string;
   icon: string;
@@ -32,7 +30,6 @@ export interface Major {
 
 export interface QuizQuestion {
   id: string;
-  question: string;
   text: string;
   options: { label: string; weights: Record<string, number> }[];
 }
@@ -63,15 +60,25 @@ export const milestoneColor: Record<string, string> = {
 
 /* ──────────────────────── COLLEGE MATCHING ──────────────────────── */
 
-export function getRecommendedColleges(strengths: string[], limit = 3) {
-  const normalize = (s: string) => s.replace(/\s*\(.*?\)\s*/g, '').trim().toLowerCase();
-  const needSet = strengths.map(normalize);
+const normalizeStrength = (s: string) => s.replace(/\s*\(.*?\)\s*/g, '').trim().toLowerCase();
 
-  const scored = colleges.map(c => {
-    const overlap = c.strengths.reduce((n, s) => {
-      return needSet.some(ns => normalize(s).includes(ns) || ns.includes(normalize(s))) ? n + 1 : n;
-    }, 0);
-    return { college: c, score: overlap };
+const normalizedColleges = colleges.map(c => ({
+  college: c,
+  norms: c.strengths.map(normalizeStrength),
+}));
+
+export function getRecommendedColleges(strengths: string[], limit = 3) {
+  if (!strengths.length) return [];
+  const needSet = strengths.map(normalizeStrength);
+
+  const scored = normalizedColleges.map(({ college, norms }) => {
+    let score = 0;
+    for (const ns of needSet) {
+      for (const cn of norms) {
+        if (cn.includes(ns) || ns.includes(cn)) { score++; break; }
+      }
+    }
+    return { college, score };
   });
 
   return scored
@@ -86,7 +93,6 @@ export function getRecommendedColleges(strengths: string[], limit = 3) {
 export const MAJORS: Major[] = [
   {
     id: 'cs',
-    label: 'Computer Science',
     name: 'Computer Science',
     description: 'Design software, build AI systems, and solve complex computational problems.',
     icon: '💻',
@@ -94,8 +100,7 @@ export const MAJORS: Major[] = [
     paths: [
       {
         id: 'cs-swe',
-        label: 'Software Engineer',
-        title: 'Software Engineer',
+        name: 'Software Engineer',
         peakSalary: 300000,
         milestones: [
           { id: 'cs-swe-1', label: "Bachelor's in CS", type: 'education', durationYears: 4, requirements: ['Data Structures & Algorithms', 'Software Engineering', 'Calculus I & II'], salaryRange: [0, 0], matchingStrengths: ['CS', 'Engineering'] },
@@ -106,8 +111,7 @@ export const MAJORS: Major[] = [
       },
       {
         id: 'cs-ml',
-        label: 'AI / ML Engineer',
-        title: 'AI / ML Engineer',
+        name: 'AI / ML Engineer',
         peakSalary: 350000,
         milestones: [
           { id: 'cs-ml-1', label: "Bachelor's in CS / Math", type: 'education', durationYears: 4, requirements: ['Linear Algebra', 'Probability & Statistics', 'Machine Learning coursework'], salaryRange: [0, 0], matchingStrengths: ['CS', 'Math', 'AI'] },
@@ -118,8 +122,7 @@ export const MAJORS: Major[] = [
       },
       {
         id: 'cs-pm',
-        label: 'Product Manager (Tech)',
-        title: 'Product Manager (Tech)',
+        name: 'Product Manager (Tech)',
         peakSalary: 300000,
         milestones: [
           { id: 'cs-pm-1', label: "Bachelor's in CS / Business", type: 'education', durationYears: 4, requirements: ['Technical fundamentals', 'HCI or UX elective', 'Business or econ minor recommended'], salaryRange: [0, 0], matchingStrengths: ['CS', 'Business'] },
@@ -132,7 +135,6 @@ export const MAJORS: Major[] = [
   },
   {
     id: 'engineering',
-    label: 'Mechanical Engineering',
     name: 'Mechanical Engineering',
     description: 'Apply physics and materials science to design, build, and optimize machines and systems.',
     icon: '⚙️',
@@ -140,8 +142,7 @@ export const MAJORS: Major[] = [
     paths: [
       {
         id: 'eng-design',
-        label: 'Design Engineer',
-        title: 'Design Engineer',
+        name: 'Design Engineer',
         peakSalary: 180000,
         milestones: [
           { id: 'eng-d-1', label: "Bachelor's in ME", type: 'education', durationYears: 4, requirements: ['Thermodynamics', 'Solid Mechanics', 'CAD / SolidWorks'], salaryRange: [0, 0], matchingStrengths: ['Engineering', 'Physics'] },
@@ -152,8 +153,7 @@ export const MAJORS: Major[] = [
       },
       {
         id: 'eng-aero',
-        label: 'Aerospace Engineer',
-        title: 'Aerospace Engineer',
+        name: 'Aerospace Engineer',
         peakSalary: 180000,
         milestones: [
           { id: 'eng-a-1', label: "Bachelor's in ME / Aero", type: 'education', durationYears: 4, requirements: ['Aerodynamics', 'Control Systems', 'Propulsion'], salaryRange: [0, 0], matchingStrengths: ['Engineering', 'Physics', 'Aerospace'] },
@@ -164,8 +164,7 @@ export const MAJORS: Major[] = [
       },
       {
         id: 'eng-mfg',
-        label: 'Manufacturing / Operations',
-        title: 'Manufacturing / Operations',
+        name: 'Manufacturing / Operations',
         peakSalary: 250000,
         milestones: [
           { id: 'eng-m-1', label: "Bachelor's in ME / IE", type: 'education', durationYears: 4, requirements: ['Manufacturing Processes', 'Lean / Six Sigma intro', 'Statistics'], salaryRange: [0, 0], matchingStrengths: ['Engineering'] },
@@ -178,7 +177,6 @@ export const MAJORS: Major[] = [
   },
   {
     id: 'business',
-    label: 'Business Administration',
     name: 'Business Administration',
     description: 'Lead organizations, manage teams, and drive strategic growth across industries.',
     icon: '📊',
@@ -186,8 +184,7 @@ export const MAJORS: Major[] = [
     paths: [
       {
         id: 'biz-consulting',
-        label: 'Management Consultant',
-        title: 'Management Consultant',
+        name: 'Management Consultant',
         peakSalary: 700000,
         milestones: [
           { id: 'biz-c-1', label: "Bachelor's in Business / Econ", type: 'education', durationYears: 4, requirements: ['Financial Accounting', 'Strategy', 'Statistics'], salaryRange: [0, 0], matchingStrengths: ['Business', 'Economics'] },
@@ -199,8 +196,7 @@ export const MAJORS: Major[] = [
       },
       {
         id: 'biz-finance',
-        label: 'Investment Banking / Finance',
-        title: 'Investment Banking / Finance',
+        name: 'Investment Banking / Finance',
         peakSalary: 600000,
         milestones: [
           { id: 'biz-f-1', label: "Bachelor's in Finance / Business", type: 'education', durationYears: 4, requirements: ['Corporate Finance', 'Financial Modeling', 'Accounting'], salaryRange: [0, 0], matchingStrengths: ['Business', 'Finance', 'Economics'] },
@@ -211,8 +207,7 @@ export const MAJORS: Major[] = [
       },
       {
         id: 'biz-entrepreneur',
-        label: 'Entrepreneurship',
-        title: 'Entrepreneurship',
+        name: 'Entrepreneurship',
         peakSalary: 1000000,
         milestones: [
           { id: 'biz-e-1', label: "Bachelor's in Business / Any", type: 'education', durationYears: 4, requirements: ['Entrepreneurship courses', 'Accounting basics', 'Marketing fundamentals'], salaryRange: [0, 0], matchingStrengths: ['Business'] },
@@ -225,7 +220,6 @@ export const MAJORS: Major[] = [
   },
   {
     id: 'biology',
-    label: 'Biology / Pre-Med',
     name: 'Biology / Pre-Med',
     description: 'Study living systems and prepare for careers in medicine, research, or biotechnology.',
     icon: '🧬',
@@ -233,8 +227,7 @@ export const MAJORS: Major[] = [
     paths: [
       {
         id: 'bio-md',
-        label: 'Physician (MD)',
-        title: 'Physician (MD)',
+        name: 'Physician (MD)',
         peakSalary: 450000,
         milestones: [
           { id: 'bio-md-1', label: "Bachelor's in Biology", type: 'education', durationYears: 4, requirements: ['Organic Chemistry', 'Biochemistry', 'Physics I & II', 'MCAT preparation'], salaryRange: [0, 0], matchingStrengths: ['Biology', 'Medicine', 'Pre-Med'] },
@@ -245,8 +238,7 @@ export const MAJORS: Major[] = [
       },
       {
         id: 'bio-research',
-        label: 'Biomedical Researcher',
-        title: 'Biomedical Researcher',
+        name: 'Biomedical Researcher',
         peakSalary: 160000,
         milestones: [
           { id: 'bio-r-1', label: "Bachelor's in Biology / Biochem", type: 'education', durationYears: 4, requirements: ['Research experience', 'Molecular Biology', 'Statistics'], salaryRange: [0, 0], matchingStrengths: ['Biology', 'Biomedical Engineering'] },
@@ -257,8 +249,7 @@ export const MAJORS: Major[] = [
       },
       {
         id: 'bio-biotech',
-        label: 'Biotech / Pharma',
-        title: 'Biotech / Pharma',
+        name: 'Biotech / Pharma',
         peakSalary: 250000,
         milestones: [
           { id: 'bio-bt-1', label: "Bachelor's in Biology / Chem", type: 'education', durationYears: 4, requirements: ['Cell Biology', 'Genetics', 'Lab techniques'], salaryRange: [0, 0], matchingStrengths: ['Biology', 'Chemistry'] },
@@ -271,7 +262,6 @@ export const MAJORS: Major[] = [
   },
   {
     id: 'nursing',
-    label: 'Nursing',
     name: 'Nursing',
     description: 'Provide direct patient care and advance into specialized clinical or leadership roles.',
     icon: '🏥',
@@ -279,8 +269,7 @@ export const MAJORS: Major[] = [
     paths: [
       {
         id: 'nurs-clinical',
-        label: 'Clinical Nurse → NP',
-        title: 'Clinical Nurse → NP',
+        name: 'Clinical Nurse → NP',
         peakSalary: 145000,
         milestones: [
           { id: 'nurs-c-1', label: 'BSN (Nursing Degree)', type: 'education', durationYears: 4, requirements: ['Anatomy & Physiology', 'Clinical rotations', 'NCLEX-RN exam'], salaryRange: [0, 0], matchingStrengths: ['Nursing', 'Medicine', 'Health Sciences'] },
@@ -291,8 +280,7 @@ export const MAJORS: Major[] = [
       },
       {
         id: 'nurs-admin',
-        label: 'Nurse Administrator',
-        title: 'Nurse Administrator',
+        name: 'Nurse Administrator',
         peakSalary: 220000,
         milestones: [
           { id: 'nurs-a-1', label: 'BSN (Nursing Degree)', type: 'education', durationYears: 4, requirements: ['Nursing fundamentals', 'Leadership elective', 'Clinical hours'], salaryRange: [0, 0], matchingStrengths: ['Nursing', 'Health Sciences'] },
@@ -303,8 +291,7 @@ export const MAJORS: Major[] = [
       },
       {
         id: 'nurs-crna',
-        label: 'Nurse Anesthetist (CRNA)',
-        title: 'Nurse Anesthetist (CRNA)',
+        name: 'Nurse Anesthetist (CRNA)',
         peakSalary: 260000,
         milestones: [
           { id: 'nurs-cr-1', label: 'BSN (Nursing Degree)', type: 'education', durationYears: 4, requirements: ['Strong science foundation', 'Critical care elective', 'NCLEX-RN'], salaryRange: [0, 0], matchingStrengths: ['Nursing', 'Medicine'] },
@@ -317,7 +304,6 @@ export const MAJORS: Major[] = [
   },
   {
     id: 'psychology',
-    label: 'Psychology',
     name: 'Psychology',
     description: 'Understand human behavior, cognition, and emotion through research and clinical practice.',
     icon: '🧠',
@@ -325,8 +311,7 @@ export const MAJORS: Major[] = [
     paths: [
       {
         id: 'psych-clinical',
-        label: 'Clinical Psychologist',
-        title: 'Clinical Psychologist',
+        name: 'Clinical Psychologist',
         peakSalary: 140000,
         milestones: [
           { id: 'psy-cl-1', label: "Bachelor's in Psychology", type: 'education', durationYears: 4, requirements: ['Abnormal Psychology', 'Research Methods', 'Statistics'], salaryRange: [0, 0], matchingStrengths: ['Psychology', 'Neuroscience'] },
@@ -337,8 +322,7 @@ export const MAJORS: Major[] = [
       },
       {
         id: 'psych-io',
-        label: 'Industrial-Organizational Psych',
-        title: 'Industrial-Organizational Psych',
+        name: 'Industrial-Organizational Psych',
         peakSalary: 180000,
         milestones: [
           { id: 'psy-io-1', label: "Bachelor's in Psychology", type: 'education', durationYears: 4, requirements: ['Organizational Behavior', 'Statistics', 'Social Psychology'], salaryRange: [0, 0], matchingStrengths: ['Psychology'] },
@@ -349,8 +333,7 @@ export const MAJORS: Major[] = [
       },
       {
         id: 'psych-ux',
-        label: 'UX Researcher',
-        title: 'UX Researcher',
+        name: 'UX Researcher',
         peakSalary: 220000,
         milestones: [
           { id: 'psy-ux-1', label: "Bachelor's in Psychology / HCI", type: 'education', durationYears: 4, requirements: ['Cognitive Psychology', 'Research Design', 'HCI or UX electives'], salaryRange: [0, 0], matchingStrengths: ['Psychology', 'CS'] },
@@ -363,7 +346,6 @@ export const MAJORS: Major[] = [
   },
   {
     id: 'economics',
-    label: 'Economics',
     name: 'Economics',
     description: 'Analyze markets, policy, and human decision-making through data and theory.',
     icon: '📈',
@@ -371,8 +353,7 @@ export const MAJORS: Major[] = [
     paths: [
       {
         id: 'econ-policy',
-        label: 'Policy Economist',
-        title: 'Policy Economist',
+        name: 'Policy Economist',
         peakSalary: 200000,
         milestones: [
           { id: 'econ-p-1', label: "Bachelor's in Economics", type: 'education', durationYears: 4, requirements: ['Econometrics', 'Macro & Microeconomics', 'Calculus through Multivariable'], salaryRange: [0, 0], matchingStrengths: ['Economics', 'Public Policy', 'Political Science'] },
@@ -383,8 +364,7 @@ export const MAJORS: Major[] = [
       },
       {
         id: 'econ-data',
-        label: 'Data Scientist',
-        title: 'Data Scientist',
+        name: 'Data Scientist',
         peakSalary: 280000,
         milestones: [
           { id: 'econ-d-1', label: "Bachelor's in Econ / Stats", type: 'education', durationYears: 4, requirements: ['Econometrics', 'Probability & Statistics', 'Programming (R, Python)'], salaryRange: [0, 0], matchingStrengths: ['Economics', 'Math', 'CS'] },
@@ -395,8 +375,7 @@ export const MAJORS: Major[] = [
       },
       {
         id: 'econ-quant',
-        label: 'Quantitative Analyst',
-        title: 'Quantitative Analyst',
+        name: 'Quantitative Analyst',
         peakSalary: 800000,
         milestones: [
           { id: 'econ-q-1', label: "Bachelor's in Econ / Math", type: 'education', durationYears: 4, requirements: ['Real Analysis', 'Stochastic Calculus', 'Financial Economics'], salaryRange: [0, 0], matchingStrengths: ['Economics', 'Math', 'Finance'] },
@@ -409,7 +388,6 @@ export const MAJORS: Major[] = [
   },
   {
     id: 'polisci',
-    label: 'Political Science',
     name: 'Political Science',
     description: 'Study governance, law, and policy to shape public institutions and international affairs.',
     icon: '⚖️',
@@ -417,8 +395,7 @@ export const MAJORS: Major[] = [
     paths: [
       {
         id: 'poli-law',
-        label: 'Attorney',
-        title: 'Attorney',
+        name: 'Attorney',
         peakSalary: 500000,
         milestones: [
           { id: 'pol-l-1', label: "Bachelor's in Poli Sci / Pre-Law", type: 'education', durationYears: 4, requirements: ['Constitutional Law', 'Logic & Argumentation', 'Strong GPA & writing skills'], salaryRange: [0, 0], matchingStrengths: ['Political Science', 'Law', 'History'] },
@@ -429,8 +406,7 @@ export const MAJORS: Major[] = [
       },
       {
         id: 'poli-govt',
-        label: 'Government / Public Service',
-        title: 'Government / Public Service',
+        name: 'Government / Public Service',
         peakSalary: 160000,
         milestones: [
           { id: 'pol-g-1', label: "Bachelor's in Poli Sci", type: 'education', durationYears: 4, requirements: ['American Government', 'International Relations', 'Public Policy analysis'], salaryRange: [0, 0], matchingStrengths: ['Political Science', 'Public Policy', 'Government'] },
@@ -441,8 +417,7 @@ export const MAJORS: Major[] = [
       },
       {
         id: 'poli-intl',
-        label: 'International Relations / Diplomacy',
-        title: 'International Relations / Diplomacy',
+        name: 'International Relations / Diplomacy',
         peakSalary: 190000,
         milestones: [
           { id: 'pol-i-1', label: "Bachelor's in Poli Sci / IR", type: 'education', durationYears: 4, requirements: ['International Relations theory', 'Foreign language proficiency', 'Study abroad recommended'], salaryRange: [0, 0], matchingStrengths: ['Political Science', 'International Studies'] },
@@ -455,7 +430,6 @@ export const MAJORS: Major[] = [
   },
   {
     id: 'communications',
-    label: 'Communications',
     name: 'Communications',
     description: 'Master storytelling, media, and persuasion to connect brands with audiences.',
     icon: '📡',
@@ -463,8 +437,7 @@ export const MAJORS: Major[] = [
     paths: [
       {
         id: 'comm-marketing',
-        label: 'Marketing / Brand Strategy',
-        title: 'Marketing / Brand Strategy',
+        name: 'Marketing / Brand Strategy',
         peakSalary: 280000,
         milestones: [
           { id: 'com-m-1', label: "Bachelor's in Comms / Marketing", type: 'education', durationYears: 4, requirements: ['Marketing Principles', 'Consumer Behavior', 'Digital Media'], salaryRange: [0, 0], matchingStrengths: ['Journalism', 'Business'] },
@@ -475,8 +448,7 @@ export const MAJORS: Major[] = [
       },
       {
         id: 'comm-pr',
-        label: 'Public Relations',
-        title: 'Public Relations',
+        name: 'Public Relations',
         peakSalary: 200000,
         milestones: [
           { id: 'com-pr-1', label: "Bachelor's in Comms / PR", type: 'education', durationYears: 4, requirements: ['Media Writing', 'Crisis Communication', 'Public Speaking'], salaryRange: [0, 0], matchingStrengths: ['Journalism'] },
@@ -487,8 +459,7 @@ export const MAJORS: Major[] = [
       },
       {
         id: 'comm-media',
-        label: 'Media Producer / Content',
-        title: 'Media Producer / Content',
+        name: 'Media Producer / Content',
         peakSalary: 200000,
         milestones: [
           { id: 'com-md-1', label: "Bachelor's in Comms / Film", type: 'education', durationYears: 4, requirements: ['Video Production', 'Storytelling & Narrative', 'Audio editing'], salaryRange: [0, 0], matchingStrengths: ['Journalism', 'Film'] },
@@ -501,7 +472,6 @@ export const MAJORS: Major[] = [
   },
   {
     id: 'art-design',
-    label: 'Art & Design',
     name: 'Art & Design',
     description: 'Create visual experiences — from digital interfaces to architecture to brand identities.',
     icon: '🎨',
@@ -509,8 +479,7 @@ export const MAJORS: Major[] = [
     paths: [
       {
         id: 'art-ux',
-        label: 'UX / UI Designer',
-        title: 'UX / UI Designer',
+        name: 'UX / UI Designer',
         peakSalary: 230000,
         milestones: [
           { id: 'art-ux-1', label: "Bachelor's in Design / HCI", type: 'education', durationYears: 4, requirements: ['Visual Design fundamentals', 'Interaction Design', 'User Research methods'], salaryRange: [0, 0], matchingStrengths: ['Art', 'Design', 'Architecture'] },
@@ -521,8 +490,7 @@ export const MAJORS: Major[] = [
       },
       {
         id: 'art-graphic',
-        label: 'Graphic Designer / Brand',
-        title: 'Graphic Designer / Brand',
+        name: 'Graphic Designer / Brand',
         peakSalary: 200000,
         milestones: [
           { id: 'art-g-1', label: "Bachelor's in Graphic Design", type: 'education', durationYears: 4, requirements: ['Typography', 'Color Theory', 'Print & Digital layout'], salaryRange: [0, 0], matchingStrengths: ['Art', 'Design'] },
@@ -533,8 +501,7 @@ export const MAJORS: Major[] = [
       },
       {
         id: 'art-arch',
-        label: 'Architect',
-        title: 'Architect',
+        name: 'Architect',
         peakSalary: 250000,
         milestones: [
           { id: 'art-ar-1', label: "Bachelor's in Architecture (5yr)", type: 'education', durationYears: 5, requirements: ['Design Studio sequence', 'Structures & Materials', 'Architectural History'], salaryRange: [0, 0], matchingStrengths: ['Architecture', 'Design', 'Art'] },
@@ -552,7 +519,6 @@ export const MAJORS: Major[] = [
 export const QUIZ_QUESTIONS: QuizQuestion[] = [
   {
     id: 'q1',
-    question: 'When you encounter a problem you\'ve never seen before, what\'s your first instinct?',
     text: 'When you encounter a problem you\'ve never seen before, what\'s your first instinct?',
     options: [
       { label: 'Break it into pieces and test each part systematically', weights: { cs: 3, engineering: 3, economics: 2, biology: 1 } },
@@ -563,7 +529,6 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
   },
   {
     id: 'q2',
-    question: 'You have a free Saturday with no obligations. What sounds most fulfilling?',
     text: 'You have a free Saturday with no obligations. What sounds most fulfilling?',
     options: [
       { label: 'Building or tinkering with something — code, circuits, a shelf', weights: { cs: 3, engineering: 3, 'art-design': 1 } },
@@ -574,7 +539,6 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
   },
   {
     id: 'q3',
-    question: 'Which type of frustration would bother you the LEAST?',
     text: 'Which type of frustration would bother you the LEAST?',
     options: [
       { label: 'Spending weeks debugging something with no guarantee it works', weights: { cs: 3, engineering: 2, economics: 1 } },
@@ -585,7 +549,6 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
   },
   {
     id: 'q4',
-    question: 'When choosing between two options, which factor carries more weight for you?',
     text: 'When choosing between two options, which factor carries more weight for you?',
     options: [
       { label: 'Financial stability and clear advancement milestones', weights: { business: 3, economics: 3, engineering: 2, cs: 1 } },
@@ -596,7 +559,6 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
   },
   {
     id: 'q5',
-    question: 'In group projects, which role do you naturally gravitate toward?',
     text: 'In group projects, which role do you naturally gravitate toward?',
     options: [
       { label: 'The one who builds the deliverable or does the technical work', weights: { cs: 3, engineering: 3, 'art-design': 2 } },
@@ -607,7 +569,6 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
   },
   {
     id: 'q6',
-    question: 'Which of these headlines would you most likely click on?',
     text: 'Which of these headlines would you most likely click on?',
     options: [
       { label: '"The Algorithm That\'s Quietly Reshaping How Cities Plan Traffic"', weights: { cs: 3, engineering: 2, economics: 1 } },

@@ -408,6 +408,96 @@ export async function ensureSchema() {
       );
     `);
 
+    // ─── Message Reactions (persistent) ───
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "pod_message_reactions" (
+        "id"        TEXT NOT NULL,
+        "messageId" TEXT NOT NULL,
+        "userId"    TEXT NOT NULL,
+        "emoji"     TEXT NOT NULL,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "pod_message_reactions_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "pod_message_reactions_messageId_fkey" FOREIGN KEY ("messageId") REFERENCES "pod_messages"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "pod_message_reactions_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "pod_message_reactions_unique" UNIQUE ("messageId", "userId", "emoji")
+      );
+    `);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "pod_message_reactions_messageId_idx" ON "pod_message_reactions"("messageId");`);
+
+    // ─── Message Threads (add parentId to pod_messages) ───
+    await prisma.$executeRawUnsafe(`ALTER TABLE "pod_messages" ADD COLUMN IF NOT EXISTS "parentId" TEXT;`);
+
+    // ─── Pod Polls ───
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "pod_polls" (
+        "id"        TEXT NOT NULL,
+        "podId"     TEXT NOT NULL,
+        "creatorId" TEXT NOT NULL,
+        "question"  TEXT NOT NULL,
+        "options"   TEXT NOT NULL DEFAULT '[]',
+        "expiresAt" TIMESTAMP(3),
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "pod_polls_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "pod_polls_podId_fkey" FOREIGN KEY ("podId") REFERENCES "study_pods"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "pod_polls_creatorId_fkey" FOREIGN KEY ("creatorId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "pod_polls_podId_idx" ON "pod_polls"("podId");`);
+
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "pod_poll_votes" (
+        "id"       TEXT NOT NULL,
+        "pollId"   TEXT NOT NULL,
+        "userId"   TEXT NOT NULL,
+        "optionIdx" INTEGER NOT NULL,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "pod_poll_votes_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "pod_poll_votes_pollId_fkey" FOREIGN KEY ("pollId") REFERENCES "pod_polls"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "pod_poll_votes_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "pod_poll_votes_unique" UNIQUE ("pollId", "userId")
+      );
+    `);
+
+    // ─── Streaks, XP & Achievements ───
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "pod_member_stats" (
+        "id"             TEXT NOT NULL,
+        "podId"          TEXT NOT NULL,
+        "userId"         TEXT NOT NULL,
+        "xp"             INTEGER NOT NULL DEFAULT 0,
+        "currentStreak"  INTEGER NOT NULL DEFAULT 0,
+        "longestStreak"  INTEGER NOT NULL DEFAULT 0,
+        "lastActiveDate" TEXT NOT NULL DEFAULT '',
+        "messagesCount"  INTEGER NOT NULL DEFAULT 0,
+        "sessionsCount"  INTEGER NOT NULL DEFAULT 0,
+        "reactionsGiven" INTEGER NOT NULL DEFAULT 0,
+        "docsShared"     INTEGER NOT NULL DEFAULT 0,
+        "pollsVoted"     INTEGER NOT NULL DEFAULT 0,
+        "achievements"   TEXT NOT NULL DEFAULT '[]',
+        "updatedAt"      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "pod_member_stats_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "pod_member_stats_unique" UNIQUE ("podId", "userId"),
+        CONSTRAINT "pod_member_stats_podId_fkey" FOREIGN KEY ("podId") REFERENCES "study_pods"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "pod_member_stats_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+
+    // ─── Pod Activity Feed ───
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "pod_activities" (
+        "id"        TEXT NOT NULL,
+        "podId"     TEXT NOT NULL,
+        "userId"    TEXT NOT NULL,
+        "type"      TEXT NOT NULL,
+        "metadata"  TEXT NOT NULL DEFAULT '{}',
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "pod_activities_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "pod_activities_podId_fkey" FOREIGN KEY ("podId") REFERENCES "study_pods"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "pod_activities_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "pod_activities_podId_idx" ON "pod_activities"("podId");`);
+
     globalForPrisma.schemaReady = true;
   } catch (e) {
     // Tables likely already exist — mark as ready
