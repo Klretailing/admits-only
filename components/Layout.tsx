@@ -33,6 +33,7 @@ function Logo() {
 
 const navLinks = [
   { href: '/services', label: 'Programs' },
+  { href: '/consulting', label: 'Consulting' },
   { href: '/about', label: 'About' },
   { href: '/faq', label: 'FAQ' },
   { href: '/newsletter', label: 'Newsletter' },
@@ -100,10 +101,10 @@ export default function Layout({ children }: LayoutProps) {
     <>
       <Head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="description" content="AdmitsOnly is a premium college admissions consulting and academic coaching collective. Expert SAT/ACT prep, essay coaching, and mentorship for top-tier university admissions." />
-        <meta name="keywords" content="college admissions consulting, SAT prep, ACT prep, college essay coaching, academic mentorship, university admissions, scholarship preparation, STEM tutoring" />
+        <meta name="description" content="AdmitsOnly is the all-in-one college admissions platform. AI essay coaching, SAT/ACT tracking, college matching for 170+ universities, Study Pods, career roadmaps, and holistic profile scoring." />
+        <meta name="keywords" content="college admissions platform, AI essay coach, college match tool, SAT prep tracker, study groups, career roadmap, holistic admissions scoring, college application help" />
         <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect rx='20' width='100' height='100' fill='%236366f1'/><text x='50' y='68' font-size='60' text-anchor='middle' fill='white' font-weight='bold'>A</text></svg>" />
-        <title>AdmitsOnly | Premium College Admissions Consulting &amp; Academic Coaching</title>
+        <title>AdmitsOnly | The College Admissions Platform — AI Tools for Students</title>
       </Head>
 
       {/* Skip to content — accessibility */}
@@ -228,18 +229,18 @@ export default function Layout({ children }: LayoutProps) {
                   <span className="text-lg font-bold font-display">AdmitsOnly</span>
                 </div>
                 <p className="mt-4 text-slate-400 text-sm leading-relaxed max-w-sm">
-                  Premium college admissions consulting and academic coaching for ambitious students.
-                  Personalized mentorship that opens doors to the world&apos;s best universities.
+                  The all-in-one college admissions platform. AI essay coaching, SAT tracking, college matching,
+                  Study Pods, and expert consulting — everything students need to get into their dream school.
                 </p>
               </div>
 
               <div>
-                <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-4">Programs</h4>
+                <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-4">Platform</h4>
                 <ul className="space-y-3 text-sm text-slate-300">
-                  <li><Link href="/services" className="hover:text-white transition-colors">Writing Curriculum</Link></li>
-                  <li><Link href="/services" className="hover:text-white transition-colors">SAT / ACT Preparation</Link></li>
-                  <li><Link href="/services" className="hover:text-white transition-colors">Career Guidance</Link></li>
-                  <li><Link href="/services" className="hover:text-white transition-colors">College Admissions</Link></li>
+                  <li><Link href="/auth/register" className="hover:text-white transition-colors">Get Started Free</Link></li>
+                  <li><Link href="/services" className="hover:text-white transition-colors">Programs</Link></li>
+                  <li><Link href="/consulting" className="hover:text-white transition-colors">Consulting</Link></li>
+                  <li><Link href="/auth/login" className="hover:text-white transition-colors">Sign In</Link></li>
                 </ul>
               </div>
 

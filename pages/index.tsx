@@ -8,30 +8,99 @@ import ServiceShowcase from '../components/ServiceShowcase';
 
 /* ──────────────────────── DATA ──────────────────────── */
 
-const journey = [
-  {
-    step: '01',
-    title: 'Initial Conversation',
-    description: 'We start by listening. A free strategy call helps us understand your student\'s strengths, challenges, and goals so we can recommend the right path forward.',
-  },
-  {
-    step: '02',
-    title: 'Personalized Plan',
-    description: 'Based on what we learn, we build a tailored plan — whether that\'s mentoring, admissions support, test prep, or a combination — with clear milestones and regular check-ins.',
-  },
-  {
-    step: '03',
-    title: 'Ongoing Support & Results',
-    description: 'We walk alongside your family every step of the way. Progress is tracked, plans adapt as needed, and we celebrate every milestone together.',
-  },
-];
-
 const universities = [
   'Stanford', 'MIT', 'Harvard', 'Princeton', 'Yale', 'Columbia',
   'Duke', 'Northwestern', 'UChicago', 'Caltech', 'Georgetown',
   'UC Berkeley', 'UCLA', 'Georgia Tech', 'UMD', 'Boston University',
   'UC San Diego', 'UC Davis', 'UC Irvine', 'UC Santa Barbara',
   'Santa Clara', 'Case Western',
+];
+
+const platformFeatures = [
+  {
+    icon: (
+      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+      </svg>
+    ),
+    gradient: 'from-accent to-purple-600',
+    shadow: 'shadow-accent/20',
+    title: 'AI Essay Coach',
+    description: 'Write stronger essays with AI-powered feedback on voice, structure, and originality. Track drafts and get scored against admissions standards.',
+  },
+  {
+    icon: (
+      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+      </svg>
+    ),
+    gradient: 'from-amber-500 to-orange-600',
+    shadow: 'shadow-amber-500/20',
+    title: 'SAT/ACT Score Tracker',
+    description: 'Diagnostic-first prep with practice tests, score trending, and section breakdowns. See exactly where to focus for maximum improvement.',
+  },
+  {
+    icon: (
+      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+      </svg>
+    ),
+    gradient: 'from-emerald-500 to-teal-600',
+    shadow: 'shadow-emerald-500/20',
+    title: 'College Match Engine',
+    description: 'Match your profile against 170+ universities. See acceptance probability, compare schools, and build your application list with data.',
+  },
+  {
+    icon: (
+      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+      </svg>
+    ),
+    gradient: 'from-rose-500 to-pink-600',
+    shadow: 'shadow-rose-500/20',
+    title: 'Study Pods',
+    description: 'Collaborate in private study groups with group chat, polls, XP streaks, leaderboards, and document sharing. The accountability engine students need.',
+  },
+  {
+    icon: (
+      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+      </svg>
+    ),
+    gradient: 'from-sky-500 to-cyan-600',
+    shadow: 'shadow-sky-500/20',
+    title: 'Career Roadmap',
+    description: 'Explore career paths by major with salary timelines, milestone requirements, and college recommendations. Take a quiz if you\'re undecided.',
+  },
+  {
+    icon: (
+      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+    ),
+    gradient: 'from-violet-500 to-indigo-600',
+    shadow: 'shadow-violet-500/20',
+    title: 'Holistic Profile Scoring',
+    description: 'See where you stand with a percentile ranking across GPA, SAT, and extracurriculars. Get AI-powered recommendations to improve your profile.',
+  },
+];
+
+const howItWorks = [
+  {
+    step: '01',
+    title: 'Create Your Profile',
+    description: 'Enter your GPA, test scores, and extracurriculars. Our AI instantly scores your profile and shows you where you stand among thousands of applicants.',
+  },
+  {
+    step: '02',
+    title: 'Use the Tools',
+    description: 'Write essays with AI feedback, match against 170+ colleges, track your SAT improvement, explore career paths, and collaborate in Study Pods.',
+  },
+  {
+    step: '03',
+    title: 'Track & Improve',
+    description: 'Watch your holistic score climb as you strengthen your profile. Data-driven dashboards show exactly what\'s working and where to focus next.',
+  },
 ];
 
 /* ──────────────────────── SCROLL SECTION ──────────────────────── */
@@ -67,8 +136,9 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>AdmitsOnly | College Admissions Consulting &amp; Academic Coaching (2025–2026)</title>
-        <meta name="description" content="AdmitsOnly helps ambitious students gain admission to top universities like Stanford, MIT, Harvard, and more. Expert SAT/ACT prep, college essay coaching, STEM mentorship, and personalized academic programs." />
+        <title>AdmitsOnly | The College Admissions Platform — AI Essay Coach, College Matching &amp; More</title>
+        <meta name="description" content="AdmitsOnly is the all-in-one college admissions platform for ambitious students. AI essay coaching, SAT/ACT score tracking, college match engine for 170+ universities, Study Pods, career roadmaps, and holistic profile scoring. Get started free." />
+        <meta name="keywords" content="college admissions platform, AI essay coach, college match tool, SAT prep tracker, study groups for college, career roadmap tool, holistic admissions scoring, college application help" />
       </Head>
 
       <div className="bg-white">
@@ -80,32 +150,31 @@ export default function Home() {
 
           <div className="relative max-w-7xl mx-auto px-6 py-24 lg:py-32">
             <div className="max-w-3xl">
-              <div className="section-label">Premium College Admissions Consulting</div>
+              <div className="section-label">The College Admissions Platform</div>
               <h1 className="mt-6 text-4xl sm:text-5xl lg:text-6xl font-extrabold font-display text-white leading-[1.1] tracking-tight">
-                Your child&apos;s path to a{' '}
-                <span className="gradient-text">top university</span>{' '}
-                starts here
+                Everything you need to get into your{' '}
+                <span className="gradient-text">dream school</span>
               </h1>
               <p className="mt-6 text-lg lg:text-xl text-slate-300 leading-relaxed max-w-2xl">
-                Personalized academic coaching, expert admissions strategy, and immersive programs
-                designed by educators who&apos;ve helped hundreds of students get into Stanford, MIT, Harvard, and 20+ elite institutions.
+                AI-powered essay coaching, SAT/ACT score tracking, a college match engine for 170+ universities,
+                collaborative Study Pods, career roadmaps, and holistic profile scoring — all in one place.
               </p>
               <div className="mt-10 flex flex-wrap gap-4">
-                <Link href="/contact" className="btn-primary text-base">
-                  Book a Free Strategy Call
+                <Link href="/auth/register" className="btn-primary text-base">
+                  Get Started Free
                 </Link>
-                <Link href="/services" className="btn-ghost text-base">
-                  Explore Programs &rarr;
+                <Link href="#platform" className="btn-ghost text-base">
+                  See the Platform &darr;
                 </Link>
               </div>
             </div>
 
             {/* Animated Stats */}
             <div className="mt-16 grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <AnimatedStat end={98} suffix="%" label="Family Retention" />
-              <AnimatedStat end={500} suffix="+" label="Families Served" />
-              <AnimatedStat end={12} suffix="+" label="Years of Excellence" />
-              <AnimatedStat end={15} suffix="+" label="States Nationwide" />
+              <AnimatedStat end={170} suffix="+" label="Universities Matched" />
+              <AnimatedStat end={500} suffix="+" label="Students on Platform" />
+              <AnimatedStat end={6} suffix="" label="Built-In Tools" />
+              <AnimatedStat end={98} suffix="%" label="Student Satisfaction" />
             </div>
           </div>
         </section>
@@ -114,7 +183,7 @@ export default function Home() {
         <section className="py-14 bg-surface border-y border-slate-100">
           <div className="max-w-7xl mx-auto px-6 mb-8 text-center">
             <p className="text-sm font-semibold uppercase tracking-widest text-slate-400">
-              Our Students Have Been Admitted To
+              Students Using AdmitsOnly Have Been Admitted To
             </p>
           </div>
           <div className="marquee-container">
@@ -143,22 +212,51 @@ export default function Home() {
           </div>
         </section>
 
+        {/* ─── PLATFORM FEATURES GRID ─── */}
+        <section id="platform" className="section-padding bg-white">
+          <div className="max-w-7xl mx-auto px-6">
+            <RevealSection>
+              <div className="text-center">
+                <div className="section-label">What&apos;s Inside</div>
+                <h2 className="section-title">Six powerful tools, one platform</h2>
+                <p className="section-subtitle mx-auto">
+                  Every tool a student needs to build a competitive application — from first practice test to acceptance letter.
+                </p>
+              </div>
+            </RevealSection>
+
+            <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {platformFeatures.map((feature, i) => (
+                <RevealSection key={feature.title} delay={i * 80}>
+                  <div className="group relative overflow-hidden rounded-2xl border border-slate-100 bg-white p-7 hover:border-accent/20 hover:shadow-xl hover:shadow-accent/5 transition-all duration-300 h-full">
+                    <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center flex-shrink-0 shadow-lg ${feature.shadow}`}>
+                      {feature.icon}
+                    </div>
+                    <h3 className="mt-5 text-lg font-bold font-display text-primary">{feature.title}</h3>
+                    <p className="mt-2 text-slate-500 text-sm leading-relaxed">{feature.description}</p>
+                  </div>
+                </RevealSection>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* ─── ESSAY MOCKUP SECTION ─── */}
-        <section className="section-padding bg-white overflow-hidden">
+        <section className="section-padding bg-surface overflow-hidden">
           <div className="max-w-7xl mx-auto px-6">
             <div className="grid gap-12 lg:grid-cols-[1fr_1.3fr] items-center">
               <RevealSection>
-                <div className="section-label">Essay Coaching That Gets Results</div>
-                <h2 className="section-title">We help students craft essays that admissions officers remember</h2>
+                <div className="section-label">AI-Powered Essay Coaching</div>
+                <h2 className="section-title">Write essays that admissions officers remember</h2>
                 <p className="section-subtitle !max-w-none">
-                  Our expert essay strategists guide students through every draft — from brainstorming authentic stories
-                  to polishing the final version. The result? Personal statements that bring applications to life and
-                  stand out in a pool of 50,000+ applicants.
+                  Our AI essay coach guides students through every draft — from brainstorming authentic stories
+                  to polishing the final version. Get scored on voice, structure, and originality, with actionable
+                  feedback that improves your writing in real time.
                 </p>
                 <div className="mt-8 space-y-4">
                   {[
-                    { label: 'Story Mining Workshops', desc: 'Uncover the unique experiences that make your application unforgettable.' },
-                    { label: 'Iterative Draft Reviews', desc: 'Multiple rounds of expert feedback from former admissions readers.' },
+                    { label: 'AI Feedback Engine', desc: 'Real-time scoring on narrative voice, grammar, vocabulary, and originality.' },
+                    { label: 'Draft Tracking', desc: 'Save multiple drafts and watch your scores improve version over version.' },
                     { label: 'Supplemental Essay Strategy', desc: 'Tailored approach for each university\'s unique prompts and culture.' },
                   ].map((item) => (
                     <div key={item.label} className="flex gap-4 items-start">
@@ -174,8 +272,8 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
-                <Link href="/services" className="mt-8 btn-primary inline-flex text-sm">
-                  See How It Works &rarr;
+                <Link href="/auth/register" className="mt-8 btn-primary inline-flex text-sm">
+                  Start Writing Free &rarr;
                 </Link>
               </RevealSection>
 
@@ -187,14 +285,14 @@ export default function Home() {
         </section>
 
         {/* ─── BENTO GRID CAPABILITIES ─── */}
-        <section className="section-padding bg-surface bg-grid">
+        <section className="section-padding bg-white bg-grid">
           <div className="max-w-7xl mx-auto px-6">
             <RevealSection>
               <div className="text-center">
                 <div className="section-label">Platform Capabilities</div>
-                <h2 className="section-title">Everything you need for world-class academic coaching</h2>
+                <h2 className="section-title">Built for how students actually learn</h2>
                 <p className="section-subtitle mx-auto">
-                  Our integrated platform combines cutting-edge learning technology with proven pedagogical methods.
+                  Adaptive technology that meets students where they are — combining AI diagnostics, progress tracking, and live collaboration.
                 </p>
               </div>
             </RevealSection>
@@ -204,53 +302,10 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ─── ECOSYSTEM ─── */}
-        <section className="section-padding bg-white">
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="grid gap-12 lg:grid-cols-2 items-center">
-              <RevealSection>
-                <div className="section-label">Why AdmitsOnly</div>
-                <h2 className="section-title">An end-to-end college admissions ecosystem built for results</h2>
-                <p className="section-subtitle">
-                  From initial diagnostic to acceptance letter, every touchpoint is designed to maximize your child&apos;s
-                  potential. We blend data-driven assessments with human mentorship so families feel supported at every milestone.
-                </p>
-                <div className="mt-8 flex flex-wrap gap-3">
-                  {['White-Glove Onboarding', 'Outcome-Driven Dashboards', 'Accountability & Community'].map((pill) => (
-                    <span key={pill} className="px-4 py-2 bg-accent/5 border border-accent/10 rounded-full text-sm font-medium text-accent">
-                      {pill}
-                    </span>
-                  ))}
-                </div>
-              </RevealSection>
-
-              <RevealSection delay={150}>
-                <div className="bg-gradient-to-br from-slate-50 to-white rounded-3xl p-8 border border-slate-100 shadow-lg">
-                  <h3 className="text-xl font-bold font-display text-primary">Experience Pillars</h3>
-                  <ul className="mt-6 space-y-5">
-                    {[
-                      'Concierge scheduling, feedback loops, and premium client touchpoints at every step.',
-                      'Flexible delivery: 1-on-1, small cohorts, immersive retreats, or hybrid combinations.',
-                      'Measurement-driven growth plans with quarterly impact reports for full transparency.',
-                    ].map((item, i) => (
-                      <li key={i} className="flex gap-4 items-start">
-                        <span className="mt-1 flex-shrink-0 w-6 h-6 rounded-full bg-accent/10 flex items-center justify-center">
-                          <span className="w-2 h-2 rounded-full bg-accent" />
-                        </span>
-                        <span className="text-slate-600 leading-relaxed">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </RevealSection>
-            </div>
-          </div>
-        </section>
-
-        {/* ─── SERVICES ─── */}
+        {/* ─── SERVICES SHOWCASE (animated blocks) ─── */}
         <ServiceShowcase />
 
-        {/* ─── LEARNING JOURNEY ─── */}
+        {/* ─── HOW IT WORKS ─── */}
         <section className="section-padding bg-primary relative overflow-hidden">
           <div className="absolute inset-0 bg-grid opacity-20" />
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-accent/10 rounded-full blur-3xl" />
@@ -260,16 +315,16 @@ export default function Home() {
               <div className="text-center">
                 <div className="badge bg-white/10 text-white border-white/20 mb-4">How It Works</div>
                 <h2 className="text-3xl lg:text-4xl font-bold font-display text-white tracking-tight">
-                  Getting started is straightforward
+                  From sign-up to acceptance letter
                 </h2>
                 <p className="mt-4 text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed">
-                  No pressure, no commitment upfront. We start with a conversation and build from there.
+                  Create an account in 30 seconds. No credit card required. Start using every tool immediately.
                 </p>
               </div>
             </RevealSection>
 
             <div className="mt-14 grid gap-6 md:grid-cols-3">
-              {journey.map((step, i) => (
+              {howItWorks.map((step, i) => (
                 <RevealSection key={step.step} delay={i * 150}>
                   <div className="glass-card-dark rounded-2xl p-7 h-full">
                     <div className="text-4xl font-extrabold font-display gradient-text">{step.step}</div>
@@ -282,15 +337,15 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ─── TESTIMONIALS CAROUSEL ─── */}
+        {/* ─── SOCIAL PROOF / TESTIMONIALS ─── */}
         <section className="section-padding bg-white">
           <div className="max-w-7xl mx-auto px-6">
             <RevealSection>
               <div className="text-center">
-                <div className="section-label">What Families Are Saying</div>
-                <h2 className="section-title">Trusted by 500+ families across the country</h2>
+                <div className="section-label">Student &amp; Parent Reviews</div>
+                <h2 className="section-title">Trusted by students and families nationwide</h2>
                 <p className="section-subtitle mx-auto">
-                  Real stories from parents and students who transformed their academic journey with AdmitsOnly.
+                  Real stories from students and parents who used AdmitsOnly to strengthen their college applications.
                 </p>
               </div>
             </RevealSection>
@@ -300,24 +355,24 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ─── FINAL CTA ─── */}
+        {/* ─── PLATFORM CTA ─── */}
         <section className="relative overflow-hidden bg-gradient-to-br from-accent via-purple-600 to-violet-700 section-padding">
           <div className="absolute inset-0 bg-grid opacity-10" />
           <div className="relative max-w-4xl mx-auto px-6 text-center">
             <RevealSection>
               <h2 className="text-3xl lg:text-4xl font-bold font-display text-white tracking-tight">
-                Ready to transform your child&apos;s academic future?
+                Your college admissions journey starts here
               </h2>
               <p className="mt-4 text-lg text-white/80 max-w-2xl mx-auto leading-relaxed">
-                Schedule a free strategy call to discuss your family&apos;s goals and discover how AdmitsOnly&apos;s
-                personalized approach can help your student gain admission to their dream university.
+                Join thousands of students using AdmitsOnly to build stronger applications.
+                Create your free account and start using every tool today.
               </p>
               <div className="mt-10 flex flex-wrap justify-center gap-4">
-                <Link href="/contact" className="btn-secondary text-base !border-0">
-                  Book a Free Strategy Call
+                <Link href="/auth/register" className="btn-secondary text-base !border-0">
+                  Create Free Account
                 </Link>
-                <Link href="/services" className="btn-ghost text-base">
-                  View Programs &rarr;
+                <Link href="/consulting" className="btn-ghost text-base">
+                  Work With a Consultant &rarr;
                 </Link>
               </div>
             </RevealSection>
