@@ -1,8 +1,8 @@
 import Head from 'next/head';
 import Link from 'next/link';
+import { useState } from 'react';
 import { useInView, useCountUp } from '../hooks/useAnimations';
 import EssayMockup from '../components/EssayMockup';
-import BentoGrid from '../components/BentoGrid';
 
 /* ──────────────────────── DATA ──────────────────────── */
 
@@ -56,6 +56,51 @@ const tools = [
   { name: 'Profile Scoring', href: '/dashboard/profile', gradient: 'from-violet-500 to-indigo-600' },
 ];
 
+const features = [
+  {
+    id: 'study-pods',
+    name: 'Study Pods',
+    href: '/dashboard/pods',
+    gradient: 'from-rose-500 to-pink-600',
+    description: 'Collaborative study groups with real-time chat, document sharing, XP streaks, and leaderboards to keep everyone accountable.',
+  },
+  {
+    id: 'essay-coach',
+    name: 'AI Essay Coach',
+    href: '/dashboard/essays',
+    gradient: 'from-accent to-purple-600',
+    description: 'AI-powered essay analysis with grammar checking, vocabulary scoring, structural feedback, and draft-over-draft improvement tracking.',
+  },
+  {
+    id: 'sat-tracker',
+    name: 'SAT/ACT Tracker',
+    href: '/dashboard/profile',
+    gradient: 'from-amber-500 to-orange-600',
+    description: 'Log practice and official scores, visualize trends over time, and see exactly where you stand against national percentiles.',
+  },
+  {
+    id: 'college-match',
+    name: 'College Match',
+    href: '/dashboard/college-match',
+    gradient: 'from-emerald-500 to-teal-600',
+    description: 'Match against 170+ universities based on your GPA, test scores, extracurriculars, and preferences with reach, match, and safety tiers.',
+  },
+  {
+    id: 'career-roadmap',
+    name: 'Career Roadmap',
+    href: '/dashboard/career-roadmap',
+    gradient: 'from-sky-500 to-cyan-600',
+    description: 'Explore career paths by major with salary timelines, milestone requirements, and college recommendations. Take a quiz if undecided.',
+  },
+  {
+    id: 'progress-tracker',
+    name: 'Progress Tracker',
+    href: '/dashboard/profile',
+    gradient: 'from-violet-500 to-indigo-600',
+    description: 'Holistic profile scoring benchmarks your GPA, SAT, extracurriculars, and essays against real applicant data with percentile rankings.',
+  },
+];
+
 /* ──────────────────────── HELPERS ──────────────────────── */
 
 function RevealSection({ children, className = '', delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
@@ -81,9 +126,149 @@ function AnimatedStat({ end, suffix, label }: { end: number; suffix: string; lab
   );
 }
 
+/* ──────────────────────── FEATURE PREVIEWS ──────────────────────── */
+
+function FeaturePreview({ id }: { id: string }) {
+  switch (id) {
+    case 'study-pods':
+      return (
+        <div className="h-[72px] flex flex-col justify-center gap-1.5 px-1">
+          <div className="flex items-end gap-1.5">
+            <div className="w-4 h-4 rounded-full bg-rose-300 flex-shrink-0" />
+            <div className="bg-rose-100 rounded-lg rounded-bl-sm px-2.5 py-1.5">
+              <div className="w-14 h-1 bg-rose-300/60 rounded-full" />
+            </div>
+          </div>
+          <div className="flex items-end gap-1.5 self-end">
+            <div className="bg-indigo-100 rounded-lg rounded-br-sm px-2.5 py-1.5">
+              <div className="w-[72px] h-1 bg-accent/30 rounded-full" />
+            </div>
+            <div className="w-4 h-4 rounded-full bg-indigo-300 flex-shrink-0" />
+          </div>
+          <div className="flex items-center gap-1 ml-5">
+            <svg className="w-2.5 h-2.5 text-slate-300" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5z" />
+            </svg>
+            <div className="w-10 h-0.5 bg-slate-200 rounded-full" />
+          </div>
+        </div>
+      );
+    case 'essay-coach':
+      return (
+        <div className="h-[72px] flex flex-col justify-center gap-[5px] px-1">
+          <div className="flex items-center gap-1">
+            <div className="h-1.5 flex-1 bg-slate-200 rounded-full" />
+            <div className="h-1.5 w-6 bg-slate-200 rounded-full" />
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="h-1.5 w-8 bg-slate-200 rounded-full" />
+            <div className="h-1.5 w-12 bg-purple-200 rounded-full" />
+            <div className="h-1.5 w-6 bg-slate-200 rounded-full" />
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="h-1.5 w-14 bg-slate-200 rounded-full" />
+            <div className="h-1.5 w-8 bg-amber-200 rounded-full" />
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="h-1.5 w-5 bg-slate-200 rounded-full" />
+            <div className="h-1.5 w-16 bg-emerald-200 rounded-full" />
+            <div className="h-1.5 w-4 bg-slate-200 rounded-full" />
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="h-1.5 w-10 bg-slate-200 rounded-full" />
+            <div className="h-1.5 w-6 bg-rose-200 rounded-full" />
+            <div className="h-1.5 flex-1 bg-slate-200 rounded-full" />
+          </div>
+        </div>
+      );
+    case 'sat-tracker':
+      return (
+        <div className="h-[72px] flex items-end justify-center gap-2.5 px-3 pb-1">
+          {[
+            { h: 28, color: 'bg-amber-200' },
+            { h: 36, color: 'bg-amber-300' },
+            { h: 44, color: 'bg-amber-400' },
+            { h: 54, color: 'bg-orange-400' },
+          ].map((bar, i) => (
+            <div key={i} className="flex-1 flex flex-col items-center gap-1">
+              <div className={`w-full ${bar.color} rounded-t-sm`} style={{ height: `${bar.h}px` }} />
+              <div className="w-4 h-0.5 bg-slate-200 rounded-full" />
+            </div>
+          ))}
+        </div>
+      );
+    case 'college-match':
+      return (
+        <div className="h-[72px] flex flex-col justify-center gap-2 px-1">
+          {[
+            { w: '82%', color: 'bg-emerald-400', label: 'w-12' },
+            { w: '68%', color: 'bg-teal-400', label: 'w-8' },
+            { w: '45%', color: 'bg-cyan-400', label: 'w-10' },
+          ].map((row, i) => (
+            <div key={i} className="flex items-center gap-1.5">
+              <div className="w-4 h-4 rounded bg-slate-100 flex-shrink-0 flex items-center justify-center">
+                <div className="w-2 h-2 rounded-sm bg-slate-200" />
+              </div>
+              <div className={`h-1 bg-slate-200 rounded-full ${row.label}`} />
+              <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div className={`h-full ${row.color} rounded-full`} style={{ width: row.w }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    case 'career-roadmap':
+      return (
+        <div className="h-[72px] flex items-center px-2">
+          <div className="flex items-center w-full">
+            {[
+              { color: 'bg-sky-400', ring: 'ring-sky-100' },
+              { color: 'bg-cyan-400', ring: 'ring-cyan-100' },
+              { color: 'bg-teal-400', ring: 'ring-teal-100' },
+              { color: 'bg-emerald-400', ring: 'ring-emerald-100' },
+            ].map((dot, i, arr) => (
+              <div key={i} className={`flex items-center ${i < arr.length - 1 ? 'flex-1' : ''}`}>
+                <div className={`w-3.5 h-3.5 rounded-full ${dot.color} flex-shrink-0 ring-3 ${dot.ring}`} />
+                {i < arr.length - 1 && (
+                  <div className="flex-1 h-0.5 bg-gradient-to-r from-sky-200 to-teal-200 mx-0.5" />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    case 'progress-tracker':
+      return (
+        <div className="h-[72px] flex items-center justify-center gap-3">
+          <svg width="48" height="48" viewBox="0 0 48 48">
+            <circle cx="24" cy="24" r="19" stroke="#e2e8f0" strokeWidth="4" fill="none" />
+            <circle
+              cx="24" cy="24" r="19"
+              stroke="#8b5cf6" strokeWidth="4" fill="none"
+              strokeDasharray={`${0.78 * 119.4} ${119.4}`}
+              strokeLinecap="round"
+              transform="rotate(-90 24 24)"
+            />
+            <text x="24" y="26" textAnchor="middle" fontSize="11" fontWeight="700" fill="#7c3aed">78</text>
+          </svg>
+          <div className="flex flex-col gap-1.5">
+            <div className="w-12 h-1 bg-violet-200 rounded-full" />
+            <div className="w-8 h-1 bg-slate-200 rounded-full" />
+            <div className="w-10 h-1 bg-violet-100 rounded-full" />
+          </div>
+        </div>
+      );
+    default:
+      return null;
+  }
+}
+
 /* ──────────────────────── COMPONENT ──────────────────────── */
 
 export default function Home() {
+  const [activeFeature, setActiveFeature] = useState<string | null>(null);
+  const selectedFeature = features.find((f) => f.id === activeFeature) ?? null;
+
   return (
     <>
       <Head>
@@ -179,24 +364,21 @@ export default function Home() {
             <div className="grid gap-5 md:grid-cols-3">
               {painPoints.map((p, i) => (
                 <RevealSection key={i} delay={i * 100}>
-                  <div className="relative overflow-hidden rounded-2xl border border-slate-100 bg-white p-6 h-full">
-                    {/* Pain */}
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center text-red-400 flex-shrink-0">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </div>
-                      <p className="text-sm text-slate-400 line-through decoration-red-300">{p.pain}</p>
+                  <div className="rounded-2xl border border-slate-100 bg-white overflow-hidden h-full">
+                    <div className="px-6 pt-5 pb-4 bg-slate-50/80 border-b border-slate-100">
+                      <p className="text-sm text-slate-400 italic line-through decoration-slate-300/60 decoration-1">
+                        &ldquo;{p.pain}&rdquo;
+                      </p>
                     </div>
-                    {/* Solution */}
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent flex-shrink-0">
-                        {p.icon}
+                    <div className="px-6 py-5">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent flex-shrink-0">
+                          {p.icon}
+                        </div>
+                        <p className="text-base font-bold text-primary">{p.solve}</p>
                       </div>
-                      <p className="text-base font-bold text-primary">{p.solve}</p>
+                      <p className="text-sm text-slate-500 leading-relaxed">{p.detail}</p>
                     </div>
-                    <p className="text-sm text-slate-500 leading-relaxed">{p.detail}</p>
                   </div>
                 </RevealSection>
               ))}
@@ -204,18 +386,72 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ─── BENTO GRID ─── */}
+        {/* ─── FEATURE GRID ─── */}
         <section className="section-padding bg-white bg-grid">
-          <div className="max-w-7xl mx-auto px-6">
+          <div className="max-w-5xl mx-auto px-6">
             <RevealSection>
               <div className="text-center mb-12">
-                <div className="section-label">Platform Capabilities</div>
-                <h2 className="section-title">Built for how students actually learn</h2>
+                <div className="section-label">Platform Features</div>
+                <h2 className="section-title">Everything you need, built in</h2>
               </div>
             </RevealSection>
-            <BentoGrid />
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {features.map((f, i) => (
+                <RevealSection key={f.id} delay={i * 80}>
+                  <button
+                    onClick={() => setActiveFeature(f.id)}
+                    className="w-full text-left rounded-2xl border border-slate-100 bg-white p-4 transition-all duration-200 hover:shadow-lg hover:shadow-slate-200/50 hover:border-accent/20 hover:-translate-y-1 group cursor-pointer"
+                  >
+                    <div className="bg-slate-50 rounded-xl p-3 mb-3 overflow-hidden">
+                      <FeaturePreview id={f.id} />
+                    </div>
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${f.gradient} flex items-center justify-center flex-shrink-0 shadow-sm`}>
+                        <div className="w-2.5 h-2.5 bg-white/80 rounded-sm" />
+                      </div>
+                      <span className="text-sm font-semibold text-primary group-hover:text-accent transition-colors">{f.name}</span>
+                    </div>
+                  </button>
+                </RevealSection>
+              ))}
+            </div>
           </div>
         </section>
+
+        {/* ─── FEATURE MODAL ─── */}
+        {selectedFeature && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            onClick={() => setActiveFeature(null)}
+          >
+            <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
+            <div
+              className="relative bg-white rounded-2xl border border-slate-100 p-6 max-w-sm w-full shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setActiveFeature(null)}
+                className="absolute top-3 right-3 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${selectedFeature.gradient} flex items-center justify-center shadow-lg`}>
+                <div className="w-4 h-4 bg-white/80 rounded" />
+              </div>
+              <h3 className="mt-4 text-lg font-bold font-display text-primary">{selectedFeature.name}</h3>
+              <p className="mt-2 text-sm text-slate-500 leading-relaxed">{selectedFeature.description}</p>
+              <Link
+                href={selectedFeature.href}
+                className="mt-5 btn-primary text-sm !py-2.5 !px-5 inline-flex"
+              >
+                Try It Free &rarr;
+              </Link>
+            </div>
+          </div>
+        )}
 
         {/* ─── ESSAY DEEP-DIVE ─── */}
         <section className="section-padding bg-surface overflow-hidden">
