@@ -6,6 +6,7 @@ import DashboardLayout from '../../components/DashboardLayout';
 import { useTheme } from '../../lib/themeContext';
 import { computeHolisticScore, evaluateExtracurriculars, comparativeData, normalizeBucket as normalizeBucketShared } from '../../lib/scoring';
 import type { Extracurricular as ExtracurricularType } from '../../lib/scoring';
+import { tracker } from '../../lib/analytics';
 
 /* ──────────────────────── TYPES ──────────────────────── */
 
@@ -679,6 +680,7 @@ export default function StudentProfile() {
       });
     } catch (e) { /* silent */ }
     setSaving(false);
+    tracker.feature('profile', 'save', { ecCount: profile.extracurriculars.length, scored: showScore });
   }, [profile]);
 
   const addExtracurricular = () => {

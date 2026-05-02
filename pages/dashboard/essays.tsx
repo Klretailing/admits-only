@@ -6,6 +6,7 @@ import DashboardLayout from '../../components/DashboardLayout';
 import { SCHOOLS, PROMPT_TYPES as SUPP_PROMPT_TYPES, getPromptTypeInfo, findSchoolByName, findReuseOpportunities, type SchoolData, type SupplementalPrompt, type ReuseMatch, type PromptType as SuppPromptType } from '../../lib/schoolData';
 import { analyzeSentences, computeStats, type AnalyzedSentence, type AnalysisStats } from '../../lib/sentenceAnalysis';
 import { checkGrammar, applyFix, type GrammarIssue } from '../../lib/grammarCheck';
+import { tracker } from '../../lib/analytics';
 
 /* ══════════════════════════════════════════════════════════════════════
    TYPES
@@ -3480,7 +3481,7 @@ export default function Essays() {
                       ))}
                     </div>
                     <button
-                      onClick={() => { setShowGrammar(prev => !prev); if (!showGrammar) setShowSentenceAnalysis(false); }}
+                      onClick={() => { setShowGrammar(prev => !prev); if (!showGrammar) { setShowSentenceAnalysis(false); tracker.feature('essays', 'grammar_check', { wordCount }); } }}
                       disabled={wordCount < 4}
                       title="Grammar check: errors first, then stylistic optimizations"
                       className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed ${showGrammar ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md shadow-emerald-200' : 'text-slate-500 bg-slate-100 hover:bg-slate-200'}`}
@@ -3492,7 +3493,7 @@ export default function Essays() {
                       )}
                     </button>
                     <button
-                      onClick={() => { setShowSentenceAnalysis(prev => !prev); if (!showSentenceAnalysis) setShowGrammar(false); }}
+                      onClick={() => { setShowSentenceAnalysis(prev => !prev); if (!showSentenceAnalysis) { setShowGrammar(false); tracker.feature('essays', 'sentence_analysis', { wordCount }); } }}
                       disabled={wordCount < 10}
                       title="Sentence Analysis: highlights internalized (thoughts/feelings) vs externalized (actions/events) sentences"
                       className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed ${showSentenceAnalysis ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md shadow-purple-200' : 'text-slate-500 bg-slate-100 hover:bg-slate-200'}`}

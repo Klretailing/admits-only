@@ -4,6 +4,7 @@ import { signOut, useSession } from 'next-auth/react';
 import { useState, type ReactNode } from 'react';
 import HelpChatbot from './HelpChatbot';
 import { useTheme } from '../lib/themeContext';
+import { tracker } from '../lib/analytics';
 
 const sidebarLinks = [
   {
@@ -134,6 +135,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <Link
                 key={link.href}
                 href={link.href}
+                onClick={() => tracker.nav('sidebar', link.href)}
                 className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
                   active
                     ? 'bg-gradient-to-r from-accent/10 to-purple-500/5 text-accent shadow-sm border border-accent/10'
@@ -213,7 +215,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   <Link
                     key={link.href}
                     href={link.href}
-                    onClick={() => setMobileMenuOpen(false)}
+                    onClick={() => { tracker.nav('sidebar', link.href); setMobileMenuOpen(false); }}
                     className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
                       active ? 'bg-accent/10 text-accent' : 'text-slate-500 hover:text-primary hover:bg-slate-50'
                     }`}
@@ -342,6 +344,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <Link
                 key={link.href}
                 href={link.href}
+                onClick={() => tracker.nav('mobile_tab', link.href)}
                 className={`flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-all relative ${
                   active ? 'text-accent' : 'text-slate-400'
                 }`}
