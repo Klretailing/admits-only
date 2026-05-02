@@ -5,6 +5,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import DashboardLayout from '../../components/DashboardLayout';
 import { colleges, type College } from '../../lib/colleges';
+import { tracker } from '../../lib/analytics';
 
 /* ──────────────────────── TYPES ──────────────────────── */
 
@@ -703,6 +704,7 @@ export default function CollegeHeatmapPage() {
   const [gpa, setGpa] = useState(3.5);
   const [sat, setSat] = useState(1200);
   const [viewMode, setViewMode] = useState<'grid' | 'galaxy'>('galaxy');
+  const sliderDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedTile, setSelectedTile] = useState<HeatmapTile | null>(null);
   const [savedSchools, setSavedSchools] = useState<Set<string>>(new Set());
   const [sortKey, setSortKey] = useState<SortKey>('fit-desc');
@@ -791,6 +793,7 @@ export default function CollegeHeatmapPage() {
       });
       localStorage.setItem('admitsonly_applications', JSON.stringify(apps));
       setSavedSchools(prev => { const next = new Set(Array.from(prev)); next.add(college.name.toLowerCase()); return next; });
+      tracker.feature('college-heatmap', 'add_to_tracker', { college: college.name, acceptanceRate: college.acceptanceRate });
     } catch {}
   }, []);
 
@@ -833,7 +836,7 @@ export default function CollegeHeatmapPage() {
           {/* View toggle */}
           <div className="flex items-center bg-slate-100 rounded-xl p-1 gap-1">
             <button
-              onClick={() => setViewMode('galaxy')}
+              onClick={() => { setViewMode('galaxy'); tracker.feature('college-heatmap', 'view_toggle', { mode: 'galaxy' }); }}
               className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
                 viewMode === 'galaxy'
                   ? 'bg-gradient-to-r from-accent to-purple-600 text-white shadow-md shadow-accent/20'
@@ -852,7 +855,7 @@ export default function CollegeHeatmapPage() {
               Galaxy
             </button>
             <button
-              onClick={() => setViewMode('grid')}
+              onClick={() => { setViewMode('grid'); tracker.feature('college-heatmap', 'view_toggle', { mode: 'grid' }); }}
               className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
                 viewMode === 'grid'
                   ? 'bg-white text-slate-800 shadow-sm'
@@ -884,7 +887,11 @@ export default function CollegeHeatmapPage() {
               </div>
               <input
                 type="range" min="2.0" max="4.0" step="0.01" value={gpa}
-                onChange={e => setGpa(parseFloat(e.target.value))}
+                onChange={e => {
+                  const v = parseFloat(e.target.value); setGpa(v);
+                  if (sliderDebounceRef.current) clearTimeout(sliderDebounceRef.current);
+                  sliderDebounceRef.current = setTimeout(() => tracker.feature('college-heatmap', 'gpa_slider', { gpa: v }), 800);
+                }}
                 className="w-full h-2 rounded-full appearance-none cursor-pointer accent-accent"
                 style={{ background: `linear-gradient(to right, #6366f1 ${((gpa - 2) / 2) * 100}%, #e2e8f0 ${((gpa - 2) / 2) * 100}%)` }}
               />
@@ -897,7 +904,11 @@ export default function CollegeHeatmapPage() {
               </div>
               <input
                 type="range" min="800" max="1600" step="10" value={sat}
-                onChange={e => setSat(parseInt(e.target.value))}
+                onChange={e => {
+                  const v = parseInt(e.target.value); setSat(v);
+                  if (sliderDebounceRef.current) clearTimeout(sliderDebounceRef.current);
+                  sliderDebounceRef.current = setTimeout(() => tracker.feature('college-heatmap', 'sat_slider', { sat: v }), 800);
+                }}
                 className="w-full h-2 rounded-full appearance-none cursor-pointer accent-accent"
                 style={{ background: `linear-gradient(to right, #6366f1 ${((sat - 800) / 800) * 100}%, #e2e8f0 ${((sat - 800) / 800) * 100}%)` }}
               />

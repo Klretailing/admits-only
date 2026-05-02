@@ -108,16 +108,21 @@ model ContactSubmission {
 }
 
 model AnalyticsEvent {
-  id        String   @id @default(cuid())
-  type      String   // pageview | click | session | event
-  timestamp DateTime
-  path      String
-  referrer  String?
-  meta      Json?
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  type       String   // pageview | click | session | event | feature | nav | scroll
+  timestamp  DateTime
+  path       String
+  sessionId  String?
+  userId     String?
+  referrer   String?
+  meta       Json?
+  deviceInfo Json?
+  createdAt  DateTime @default(now())
 
   @@index([type])
   @@index([timestamp])
+  @@index([sessionId])
+  @@index([userId])
   @@map("analytics_events")
 }
 

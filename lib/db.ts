@@ -103,15 +103,28 @@ export async function ensureSchema() {
 
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "analytics_events" (
-        "id"        TEXT NOT NULL,
-        "type"      TEXT NOT NULL,
-        "timestamp" TIMESTAMP(3) NOT NULL,
-        "path"      TEXT NOT NULL,
-        "referrer"  TEXT,
-        "meta"      JSONB,
-        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "id"         TEXT NOT NULL,
+        "type"       TEXT NOT NULL,
+        "timestamp"  TIMESTAMP(3) NOT NULL,
+        "path"       TEXT NOT NULL,
+        "sessionId"  TEXT,
+        "userId"     TEXT,
+        "referrer"   TEXT,
+        "meta"       JSONB,
+        "deviceInfo" JSONB,
+        "createdAt"  TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         CONSTRAINT "analytics_events_pkey" PRIMARY KEY ("id")
       );
+    `);
+
+    await prisma.$executeRawUnsafe(`ALTER TABLE "analytics_events" ADD COLUMN IF NOT EXISTS "sessionId" TEXT`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "analytics_events" ADD COLUMN IF NOT EXISTS "userId" TEXT`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "analytics_events" ADD COLUMN IF NOT EXISTS "deviceInfo" JSONB`);
+    await prisma.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS "analytics_events_sessionId_idx" ON "analytics_events" ("sessionId");
+    `);
+    await prisma.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS "analytics_events_userId_idx" ON "analytics_events" ("userId");
     `);
 
     await prisma.$executeRawUnsafe(`

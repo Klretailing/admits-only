@@ -1,6 +1,6 @@
 import '../styles/globals.css'
 import type { AppProps } from 'next/app'
-import { SessionProvider } from 'next-auth/react'
+import { SessionProvider, useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import { useEffect } from 'react'
 import Layout from '../components/Layout'
@@ -10,11 +10,10 @@ import { ThemeProvider } from '../lib/themeContext'
 // Pages that use their own layout (no Layout wrapper)
 const customLayoutPrefixes = ['/dashboard', '/educator', '/admin', '/auth/'];
 
-export default function MyApp({ Component, pageProps: { session, ...pageProps } }: AppProps) {
+function AnalyticsInit() {
   const router = useRouter();
-  const usesCustomLayout = customLayoutPrefixes.some((p) => router.pathname.startsWith(p));
+  const { data: session } = useSession();
 
-  // Internal analytics — tracks page views, clicks, and session time
   useEffect(() => {
     tracker.init();
     const handleRoute = (url: string) => tracker.pageview(url);
@@ -25,12 +24,22 @@ export default function MyApp({ Component, pageProps: { session, ...pageProps } 
     };
   }, [router.events]);
 
-  // All pages get SessionProvider so auth state persists across navigation.
-  // Only public pages get the Layout wrapper.
+  useEffect(() => {
+    tracker.setUserId((session?.user as any)?.id || undefined);
+  }, [session]);
+
+  return null;
+}
+
+export default function MyApp({ Component, pageProps: { session, ...pageProps } }: AppProps) {
+  const router = useRouter();
+  const usesCustomLayout = customLayoutPrefixes.some((p) => router.pathname.startsWith(p));
+
   if (!usesCustomLayout) {
     return (
       <ThemeProvider>
         <SessionProvider session={session}>
+          <AnalyticsInit />
           <Layout>
             <Component {...pageProps} />
           </Layout>
@@ -42,6 +51,7 @@ export default function MyApp({ Component, pageProps: { session, ...pageProps } 
   return (
     <ThemeProvider>
       <SessionProvider session={session}>
+        <AnalyticsInit />
         <Component {...pageProps} />
       </SessionProvider>
     </ThemeProvider>

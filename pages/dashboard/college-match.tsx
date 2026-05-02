@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import DashboardLayout from '../../components/DashboardLayout';
+import { tracker } from '../../lib/analytics';
 
 /* ──────────────────────── TYPES ──────────────────────── */
 
@@ -165,6 +166,7 @@ export default function CollegeMatchPage() {
       apps.push(newApp);
       localStorage.setItem('admitsonly_applications', JSON.stringify(apps));
       setSavedSchools(prev => { const next = new Set(Array.from(prev)); next.add(college.name.toLowerCase()); return next; });
+      tracker.feature('college-match', 'add_to_tracker', { college: college.name });
     } catch {}
   }
 
