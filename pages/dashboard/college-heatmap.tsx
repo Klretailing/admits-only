@@ -18,21 +18,12 @@ interface HeatmapTile {
   isSaved: boolean;
 }
 
-interface GalaxyNode {
+interface RadarNode {
   tile: HeatmapTile;
   x: number;
   y: number;
-  z: number;
-  size: number;
-}
-
-interface Star {
-  x: number;
-  y: number;
-  size: number;
-  brightness: number;
-  speed: number;
-  phase: number;
+  baseRadius: number;
+  ring: number;
 }
 
 /* ──────────────────────── SCORING ──────────────────────── */
@@ -129,65 +120,53 @@ const sortOptions: { key: SortKey; label: string }[] = [
   { key: 'acceptance', label: 'Most Selective' },
 ];
 
-/* ──────────────────────── GALAXY HELPERS ──────────────────────── */
+/* ──────────────────────── RADAR LAYOUT ──────────────────────── */
 
-const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
+function layoutRadarNodes(tiles: HeatmapTile[]): RadarNode[] {
+  const groups: Record<string, HeatmapTile[]> = { safety: [], match: [], reach: [] };
+  tiles.forEach(t => groups[t.tier].push(t));
 
-function layoutNodes(tiles: HeatmapTile[]): GalaxyNode[] {
-  const sorted = [...tiles].sort((a, b) => b.overallFit - a.overallFit);
-  return sorted.map((tile, i) => {
-    const fitNorm = tile.overallFit / 100;
-    const radius = 40 + (1 - fitNorm) * 260;
-    const angle = i * GOLDEN_ANGLE;
-    const spread = Math.sqrt((i + 1) / sorted.length);
-    const r = radius * (0.4 + 0.6 * spread);
-    const ySpread = (1 - fitNorm) * 60;
-    const pseudoRandom = Math.sin(i * 127.1 + 311.7) * 0.5 + 0.5;
-    return {
-      tile,
-      x: Math.cos(angle) * r,
-      y: (pseudoRandom - 0.5) * ySpread,
-      z: Math.sin(angle) * r,
-      size: 3 + fitNorm * 10,
-    };
-  });
-}
+  const config = [
+    { tier: 'safety', baseR: 110, bandWidth: 40, ring: 0 },
+    { tier: 'match', baseR: 210, bandWidth: 40, ring: 1 },
+    { tier: 'reach', baseR: 300, bandWidth: 40, ring: 2 },
+  ];
 
-function generateStars(count: number): Star[] {
-  const stars: Star[] = [];
-  for (let i = 0; i < count; i++) {
-    stars.push({
-      x: Math.random(),
-      y: Math.random(),
-      size: 0.3 + Math.random() * 1.5,
-      brightness: 0.3 + Math.random() * 0.7,
-      speed: 0.5 + Math.random() * 2,
-      phase: Math.random() * Math.PI * 2,
+  const nodes: RadarNode[] = [];
+
+  for (const { tier, baseR, bandWidth, ring } of config) {
+    const group = [...groups[tier]].sort((a, b) => b.overallFit - a.overallFit);
+    const count = group.length;
+    if (!count) continue;
+
+    const rows = count > 30 ? 3 : count > 15 ? 2 : 1;
+
+    group.forEach((tile, i) => {
+      const row = i % rows;
+      const indexInRow = Math.floor(i / rows);
+      const countInRow = Math.ceil(count / rows);
+      const angle = (indexInRow / countInRow) * Math.PI * 2 - Math.PI / 2;
+      const rowOffset = rows === 1 ? 0 : ((row / (rows - 1)) - 0.5) * bandWidth;
+      const jitterR = Math.sin(i * 127.1 + 311.7) * 6;
+      const jitterA = Math.cos(i * 269.5 + 183.3) * 0.02;
+      const r = baseR + rowOffset + jitterR;
+
+      nodes.push({
+        tile,
+        x: Math.cos(angle + jitterA) * r,
+        y: Math.sin(angle + jitterA) * r,
+        baseRadius: 5 + (tile.overallFit / 100) * 4,
+        ring,
+      });
     });
   }
-  return stars;
+
+  return nodes;
 }
 
-function project3D(
-  x: number, y: number, z: number,
-  theta: number, phi: number, zoom: number,
-  cx: number, cy: number
-): { sx: number; sy: number; scale: number; depth: number } {
-  const cosT = Math.cos(theta), sinT = Math.sin(theta);
-  let rx = x * cosT - z * sinT;
-  let rz = x * sinT + z * cosT;
-  const cosP = Math.cos(phi), sinP = Math.sin(phi);
-  const ry = y * cosP - rz * sinP;
-  rz = y * sinP + rz * cosP;
-  const fov = 500;
-  const d = fov + rz * zoom;
-  const scale = d > 50 ? fov / d : fov / 50;
-  return { sx: cx + rx * scale * zoom, sy: cy + ry * scale * zoom, scale, depth: rz };
-}
+/* ──────────────────────── RADAR VIEW COMPONENT ──────────────────────── */
 
-/* ──────────────────────── GALAXY VIEW COMPONENT ──────────────────────── */
-
-function GalaxyView({
+function RadarView({
   tiles,
   onSelect,
 }: {
@@ -199,24 +178,19 @@ function GalaxyView({
   const [hoveredTile, setHoveredTile] = useState<HeatmapTile | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
 
-  const nodes = useMemo(() => layoutNodes(tiles), [tiles]);
-  const stars = useMemo(() => generateStars(250), []);
+  const nodes = useMemo(() => layoutRadarNodes(tiles), [tiles]);
 
   const cameraRef = useRef({
-    theta: 0.3,
-    phi: 0.35,
+    panX: 0,
+    panY: 0,
     zoom: 1,
-    autoRotateSpeed: 0.0015,
     isDragging: false,
     lastX: 0,
     lastY: 0,
-    velocityTheta: 0,
-    velocityPhi: 0,
-    dragStartTime: 0,
     dragDistance: 0,
   });
 
-  const projectedRef = useRef<{ sx: number; sy: number; scale: number; depth: number; node: GalaxyNode }[]>([]);
+  const screenNodesRef = useRef<{ sx: number; sy: number; radius: number; node: RadarNode }[]>([]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -227,7 +201,7 @@ function GalaxyView({
     if (!ctx) return;
 
     let raf: number;
-    let startTime = performance.now();
+    const startTime = performance.now();
 
     function resize() {
       if (!canvas || !container) return;
@@ -243,242 +217,285 @@ function GalaxyView({
     resize();
     window.addEventListener('resize', resize);
 
+    function toScreen(wx: number, wy: number): [number, number] {
+      const rect = container!.getBoundingClientRect();
+      const cam = cameraRef.current;
+      const baseScale = Math.min(rect.width, rect.height) / 750;
+      const scale = baseScale * cam.zoom;
+      return [
+        rect.width / 2 + (wx + cam.panX) * scale,
+        rect.height / 2 + (wy + cam.panY) * scale,
+      ];
+    }
+
+    function screenRadius(r: number): number {
+      const rect = container!.getBoundingClientRect();
+      const baseScale = Math.min(rect.width, rect.height) / 750;
+      return r * baseScale * cameraRef.current.zoom;
+    }
+
     function render(timestamp: number) {
       if (!canvas || !ctx || !container) return;
       const rect = container.getBoundingClientRect();
       const w = rect.width;
       const h = rect.height;
-      const cx = w / 2;
-      const cy = h / 2;
       const cam = cameraRef.current;
       const elapsed = (timestamp - startTime) / 1000;
 
-      // Auto-rotate when not dragging
-      if (!cam.isDragging) {
-        cam.theta += cam.autoRotateSpeed;
-        cam.theta += cam.velocityTheta;
-        cam.phi += cam.velocityPhi;
-        cam.velocityTheta *= 0.96;
-        cam.velocityPhi *= 0.96;
-      }
+      const entrance = Math.min(1, elapsed / 1.0);
+      const eased = 1 - Math.pow(1 - entrance, 3);
 
-      cam.phi = Math.max(-0.8, Math.min(0.8, cam.phi));
-
-      // Clear with deep space gradient
-      const bgGrad = ctx.createRadialGradient(cx, cy * 0.8, 0, cx, cy, Math.max(w, h) * 0.8);
-      bgGrad.addColorStop(0, '#0d0a1a');
-      bgGrad.addColorStop(0.5, '#080510');
-      bgGrad.addColorStop(1, '#030108');
+      // Background — app primary color with radial gradient
+      const bgGrad = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, Math.max(w, h) * 0.7);
+      bgGrad.addColorStop(0, '#151d30');
+      bgGrad.addColorStop(0.5, '#0f172a');
+      bgGrad.addColorStop(1, '#0b1120');
       ctx.fillStyle = bgGrad;
       ctx.fillRect(0, 0, w, h);
 
-      // Twinkling stars
-      for (const star of stars) {
-        const twinkle = 0.4 + 0.6 * Math.sin(elapsed * star.speed + star.phase);
-        ctx.globalAlpha = star.brightness * twinkle * 0.8;
-        ctx.fillStyle = '#fff';
-        ctx.beginPath();
-        ctx.arc(star.x * w, star.y * h, star.size, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
+      const [ccx, ccy] = toScreen(0, 0);
 
-      // Draw zone rings (projected circles on the XZ plane)
-      const zoneRadii = [
-        { r: 100, label: 'Safety', color: 'rgba(34,197,94,0.12)' },
-        { r: 200, label: 'Match', color: 'rgba(234,179,8,0.08)' },
-        { r: 300, label: 'Reach', color: 'rgba(59,130,246,0.06)' },
+      // Subtle radial grid
+      const gridRadii = [60, 120, 180, 240, 300, 360];
+      for (const gr of gridRadii) {
+        const sr = screenRadius(gr);
+        if (sr < 3) continue;
+        ctx.beginPath();
+        ctx.arc(ccx, ccy, sr, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(255,255,255,0.025)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      // Cross axes
+      ctx.strokeStyle = 'rgba(255,255,255,0.025)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, ccy);
+      ctx.lineTo(w, ccy);
+      ctx.moveTo(ccx, 0);
+      ctx.lineTo(ccx, h);
+      ctx.stroke();
+
+      // Diagonal axes
+      const diagLen = Math.max(w, h);
+      ctx.beginPath();
+      ctx.moveTo(ccx - diagLen, ccy - diagLen);
+      ctx.lineTo(ccx + diagLen, ccy + diagLen);
+      ctx.moveTo(ccx + diagLen, ccy - diagLen);
+      ctx.lineTo(ccx - diagLen, ccy + diagLen);
+      ctx.stroke();
+
+      // Zone bands — filled circles outer to inner
+      const zones = [
+        { r: 345, fill: 'rgba(244,63,94,0.025)', stroke: 'rgba(244,63,94,0.12)', label: 'Reach', labelColor: '#fda4af' },
+        { r: 255, fill: 'rgba(245,158,11,0.03)', stroke: 'rgba(245,158,11,0.14)', label: 'Match', labelColor: '#fcd34d' },
+        { r: 155, fill: 'rgba(16,185,129,0.04)', stroke: 'rgba(16,185,129,0.16)', label: 'Safety', labelColor: '#6ee7b7' },
       ];
 
-      for (const zone of zoneRadii) {
+      for (const z of zones) {
+        const sr = screenRadius(z.r);
         ctx.beginPath();
-        const ringSegments = 72;
-        for (let i = 0; i <= ringSegments; i++) {
-          const a = (i / ringSegments) * Math.PI * 2;
-          const px = Math.cos(a) * zone.r;
-          const pz = Math.sin(a) * zone.r;
-          const p = project3D(px, 0, pz, cam.theta, cam.phi, cam.zoom, cx, cy);
-          if (i === 0) ctx.moveTo(p.sx, p.sy);
-          else ctx.lineTo(p.sx, p.sy);
-        }
-        ctx.closePath();
-        ctx.strokeStyle = zone.color;
+        ctx.arc(ccx, ccy, sr, 0, Math.PI * 2);
+        ctx.fillStyle = z.fill;
+        ctx.fill();
+      }
+
+      for (const z of zones) {
+        const sr = screenRadius(z.r);
+        ctx.beginPath();
+        ctx.arc(ccx, ccy, sr, 0, Math.PI * 2);
+        ctx.setLineDash([6, 8]);
+        ctx.strokeStyle = z.stroke;
         ctx.lineWidth = 1;
-        ctx.setLineDash([4, 6]);
         ctx.stroke();
         ctx.setLineDash([]);
+
+        if (cam.zoom > 0.3) {
+          const fontSize = Math.max(9, Math.min(12, 11 * cam.zoom));
+          ctx.font = `600 ${fontSize}px "DM Sans", system-ui, sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.globalAlpha = 0.4;
+          ctx.fillStyle = z.labelColor;
+          ctx.fillText(z.label, ccx, ccy - sr + fontSize + 4);
+          ctx.globalAlpha = 1;
+        }
       }
 
-      // Draw connection lines from saved schools to center
-      const centerProj = project3D(0, 0, 0, cam.theta, cam.phi, cam.zoom, cx, cy);
+      // Scanning sweep line (radar animation)
+      const sweepAngle = elapsed * 0.4;
+      const sweepLen = screenRadius(360);
+      const sweepGrad = ctx.createLinearGradient(
+        ccx, ccy,
+        ccx + Math.cos(sweepAngle) * sweepLen,
+        ccy + Math.sin(sweepAngle) * sweepLen
+      );
+      sweepGrad.addColorStop(0, 'rgba(99,102,241,0.08)');
+      sweepGrad.addColorStop(1, 'rgba(99,102,241,0)');
+      ctx.beginPath();
+      ctx.moveTo(ccx, ccy);
+      ctx.lineTo(
+        ccx + Math.cos(sweepAngle) * sweepLen,
+        ccy + Math.sin(sweepAngle) * sweepLen
+      );
+      ctx.strokeStyle = sweepGrad;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Sweep cone (subtle fill behind sweep line)
+      ctx.beginPath();
+      ctx.moveTo(ccx, ccy);
+      ctx.arc(ccx, ccy, sweepLen, sweepAngle - 0.3, sweepAngle, false);
+      ctx.closePath();
+      const coneGrad = ctx.createRadialGradient(ccx, ccy, 0, ccx, ccy, sweepLen);
+      coneGrad.addColorStop(0, 'rgba(99,102,241,0.04)');
+      coneGrad.addColorStop(1, 'rgba(99,102,241,0)');
+      ctx.fillStyle = coneGrad;
+      ctx.fill();
+
+      // Connection lines for saved schools
       for (const node of nodes) {
         if (!node.tile.isSaved) continue;
-        const p = project3D(node.x, node.y, node.z, cam.theta, cam.phi, cam.zoom, cx, cy);
-        const grad = ctx.createLinearGradient(centerProj.sx, centerProj.sy, p.sx, p.sy);
-        const [cr, cg, cb] = getTempRGB(node.tile.overallFit);
-        grad.addColorStop(0, `rgba(99,102,241,0.15)`);
-        grad.addColorStop(1, `rgba(${cr},${cg},${cb},0.25)`);
+        const [sx, sy] = toScreen(node.x * eased, node.y * eased);
+        const grad = ctx.createLinearGradient(ccx, ccy, sx, sy);
+        grad.addColorStop(0, 'rgba(99,102,241,0.08)');
+        grad.addColorStop(1, 'rgba(99,102,241,0.2)');
         ctx.beginPath();
-        ctx.moveTo(centerProj.sx, centerProj.sy);
-        ctx.lineTo(p.sx, p.sy);
+        ctx.moveTo(ccx, ccy);
+        ctx.lineTo(sx, sy);
         ctx.strokeStyle = grad;
-        ctx.lineWidth = 0.5;
+        ctx.lineWidth = 0.7;
         ctx.stroke();
       }
 
-      // Project all nodes
-      const projected = nodes.map(node => {
-        const p = project3D(node.x, node.y, node.z, cam.theta, cam.phi, cam.zoom, cx, cy);
-        return { ...p, node };
-      });
-
-      // Sort back-to-front
-      projected.sort((a, b) => b.depth - a.depth);
-      projectedRef.current = projected;
-
       // Draw nodes
-      for (const p of projected) {
-        const { sx, sy, scale, node } = p;
+      const screenNodes: typeof screenNodesRef.current = [];
+
+      for (const node of nodes) {
+        const nx = node.x * eased;
+        const ny = node.y * eased;
+        const [sx, sy] = toScreen(nx, ny);
+
+        if (sx < -30 || sx > w + 30 || sy < -30 || sy > h + 30) continue;
+
         const [r, g, b] = getTempRGB(node.tile.overallFit);
-        const visualSize = node.size * scale * cam.zoom;
-        if (visualSize < 0.5) continue;
-
+        const radius = screenRadius(node.baseRadius) * eased;
         const fitNorm = node.tile.overallFit / 100;
-        const pulse = 1 + 0.08 * Math.sin(elapsed * 1.5 + node.tile.overallFit * 0.1);
-        const glowRadius = visualSize * (2.5 + fitNorm * 2) * pulse;
 
-        // Outer glow
-        const outerGlow = ctx.createRadialGradient(sx, sy, 0, sx, sy, glowRadius);
-        outerGlow.addColorStop(0, `rgba(${r},${g},${b},${0.15 + fitNorm * 0.2})`);
-        outerGlow.addColorStop(0.4, `rgba(${r},${g},${b},${0.05 + fitNorm * 0.1})`);
-        outerGlow.addColorStop(1, `rgba(${r},${g},${b},0)`);
-        ctx.fillStyle = outerGlow;
+        const breathe = 1 + 0.03 * Math.sin(elapsed * 1.2 + node.ring * 2 + node.tile.overallFit * 0.05);
+        const finalRadius = Math.max(2, radius * breathe);
+
+        screenNodes.push({ sx, sy, radius: finalRadius, node });
+
+        // Glow
+        const glowR = finalRadius * (1.8 + fitNorm * 0.8);
+        const glow = ctx.createRadialGradient(sx, sy, 0, sx, sy, glowR);
+        glow.addColorStop(0, `rgba(${r},${g},${b},${0.12 + fitNorm * 0.08})`);
+        glow.addColorStop(1, `rgba(${r},${g},${b},0)`);
+        ctx.fillStyle = glow;
         ctx.beginPath();
-        ctx.arc(sx, sy, glowRadius, 0, Math.PI * 2);
+        ctx.arc(sx, sy, glowR, 0, Math.PI * 2);
         ctx.fill();
 
-        // Core sphere with gradient for 3D look
-        const coreGrad = ctx.createRadialGradient(
-          sx - visualSize * 0.25, sy - visualSize * 0.25, 0,
-          sx, sy, visualSize
-        );
-        coreGrad.addColorStop(0, `rgba(${Math.min(255, r + 80)},${Math.min(255, g + 80)},${Math.min(255, b + 80)},0.95)`);
-        coreGrad.addColorStop(0.6, `rgba(${r},${g},${b},0.9)`);
-        coreGrad.addColorStop(1, `rgba(${Math.max(0, r - 40)},${Math.max(0, g - 40)},${Math.max(0, b - 40)},0.8)`);
-        ctx.fillStyle = coreGrad;
+        // Dot
         ctx.beginPath();
-        ctx.arc(sx, sy, visualSize, 0, Math.PI * 2);
+        ctx.arc(sx, sy, finalRadius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${r},${g},${b},0.9)`;
         ctx.fill();
 
-        // Specular highlight
-        ctx.fillStyle = `rgba(255,255,255,${0.2 + fitNorm * 0.4})`;
-        ctx.beginPath();
-        ctx.arc(sx - visualSize * 0.25, sy - visualSize * 0.3, visualSize * 0.3, 0, Math.PI * 2);
-        ctx.fill();
+        // Tiny specular
+        if (finalRadius > 3) {
+          ctx.beginPath();
+          ctx.arc(sx - finalRadius * 0.2, sy - finalRadius * 0.25, finalRadius * 0.35, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255,255,255,0.25)';
+          ctx.fill();
+        }
 
         // Saved school ring
         if (node.tile.isSaved) {
-          ctx.strokeStyle = `rgba(255,255,255,${0.5 + 0.3 * Math.sin(elapsed * 2)})`;
-          ctx.lineWidth = 1.5;
           ctx.beginPath();
-          ctx.arc(sx, sy, visualSize + 4, 0, Math.PI * 2);
+          ctx.arc(sx, sy, finalRadius + 3, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(255,255,255,${0.45 + 0.2 * Math.sin(elapsed * 2)})`;
+          ctx.lineWidth = 1.2;
           ctx.stroke();
         }
 
-        // Name label for larger/closer nodes
-        if (visualSize > 6) {
-          ctx.font = `${Math.max(9, Math.min(13, visualSize * 0.9))}px "DM Sans", system-ui, sans-serif`;
+        // Labels when zoomed
+        if (cam.zoom > 1.2 && finalRadius > 4) {
+          const labelAlpha = Math.min(0.75, (cam.zoom - 1.2) * 1.5);
+          ctx.font = `500 ${Math.max(8, Math.min(11, 9 * cam.zoom))}px "DM Sans", system-ui, sans-serif`;
           ctx.textAlign = 'center';
-          ctx.fillStyle = `rgba(255,255,255,${Math.min(0.9, (visualSize - 6) * 0.1)})`;
-          ctx.fillText(node.tile.college.name, sx, sy + visualSize + 14);
-
-          ctx.font = `bold ${Math.max(8, Math.min(11, visualSize * 0.7))}px "DM Sans", system-ui, sans-serif`;
-          ctx.fillStyle = `rgba(${r},${g},${b},${Math.min(0.9, (visualSize - 6) * 0.15)})`;
-          ctx.fillText(`${node.tile.overallFit} · ${getTempLabel(node.tile.overallFit)}`, sx, sy + visualSize + 26);
+          ctx.fillStyle = `rgba(255,255,255,${labelAlpha})`;
+          ctx.fillText(node.tile.college.name, sx, sy + finalRadius + 11);
         }
       }
 
-      // Center "YOU" beacon
-      const youPulse = 1 + 0.15 * Math.sin(elapsed * 2);
-      const youGlow = ctx.createRadialGradient(centerProj.sx, centerProj.sy, 0, centerProj.sx, centerProj.sy, 35 * youPulse);
-      youGlow.addColorStop(0, 'rgba(99,102,241,0.6)');
-      youGlow.addColorStop(0.3, 'rgba(99,102,241,0.2)');
-      youGlow.addColorStop(0.6, 'rgba(147,51,234,0.08)');
-      youGlow.addColorStop(1, 'rgba(147,51,234,0)');
-      ctx.fillStyle = youGlow;
-      ctx.beginPath();
-      ctx.arc(centerProj.sx, centerProj.sy, 35 * youPulse, 0, Math.PI * 2);
-      ctx.fill();
+      screenNodesRef.current = screenNodes;
 
-      const youCore = ctx.createRadialGradient(
-        centerProj.sx - 2, centerProj.sy - 2, 0,
-        centerProj.sx, centerProj.sy, 7
-      );
-      youCore.addColorStop(0, '#c4b5fd');
-      youCore.addColorStop(0.5, '#818cf8');
-      youCore.addColorStop(1, '#6366f1');
-      ctx.fillStyle = youCore;
-      ctx.beginPath();
-      ctx.arc(centerProj.sx, centerProj.sy, 7, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = '#fff';
-      ctx.beginPath();
-      ctx.arc(centerProj.sx - 1.5, centerProj.sy - 2, 2, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.font = 'bold 10px "DM Sans", system-ui, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillStyle = 'rgba(199,210,254,0.8)';
-      ctx.fillText('YOU', centerProj.sx, centerProj.sy + 20);
-
-      // Expanding rings from center
+      // Center "YOU" marker
+      // Pulse rings
       for (let ring = 0; ring < 3; ring++) {
-        const ringPhase = ((elapsed * 0.3 + ring * 0.33) % 1);
-        const ringR = ringPhase * 50;
-        ctx.globalAlpha = (1 - ringPhase) * 0.15;
+        const phase = ((elapsed * 0.4 + ring * 0.33) % 1);
+        const ringR = phase * 25 * Math.max(1, cam.zoom * 0.7);
+        ctx.globalAlpha = (1 - phase) * 0.12;
+        ctx.beginPath();
+        ctx.arc(ccx, ccy, ringR, 0, Math.PI * 2);
         ctx.strokeStyle = '#818cf8';
         ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.arc(centerProj.sx, centerProj.sy, ringR, 0, Math.PI * 2);
         ctx.stroke();
       }
       ctx.globalAlpha = 1;
+
+      const youR = Math.max(4, 5 * cam.zoom);
+      const youGrad = ctx.createRadialGradient(ccx - 1, ccy - 1, 0, ccx, ccy, youR);
+      youGrad.addColorStop(0, '#c4b5fd');
+      youGrad.addColorStop(0.5, '#818cf8');
+      youGrad.addColorStop(1, '#6366f1');
+      ctx.fillStyle = youGrad;
+      ctx.beginPath();
+      ctx.arc(ccx, ccy, youR, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.beginPath();
+      ctx.arc(ccx - youR * 0.2, ccy - youR * 0.3, youR * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.font = `bold ${Math.max(9, Math.min(11, 10 * cam.zoom))}px "DM Sans", system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = 'rgba(199,210,254,0.65)';
+      ctx.fillText('YOU', ccx, ccy + youR + 13);
 
       raf = requestAnimationFrame(render);
     }
 
     raf = requestAnimationFrame(render);
 
-    // Mouse interaction
+    // Mouse handlers
     function handleMouseDown(e: MouseEvent) {
       const cam = cameraRef.current;
       cam.isDragging = true;
       cam.lastX = e.clientX;
       cam.lastY = e.clientY;
-      cam.velocityTheta = 0;
-      cam.velocityPhi = 0;
-      cam.dragStartTime = Date.now();
       cam.dragDistance = 0;
     }
 
     function handleMouseMove(e: MouseEvent) {
       const cam = cameraRef.current;
       if (!cam.isDragging) {
-        // Hover detection
         if (!container) return;
         const rect = container.getBoundingClientRect();
         const mx = e.clientX - rect.left;
         const my = e.clientY - rect.top;
-        let closest: typeof projectedRef.current[0] | null = null;
+        let closest: typeof screenNodesRef.current[0] | null = null;
         let closestDist = Infinity;
 
-        for (const p of projectedRef.current) {
+        for (const p of screenNodesRef.current) {
           const dx = p.sx - mx;
           const dy = p.sy - my;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          const hitRadius = Math.max(12, p.node.size * p.scale * cam.zoom + 5);
-          if (dist < hitRadius && dist < closestDist) {
+          const hitR = Math.max(14, p.radius + 4);
+          if (dist < hitR && dist < closestDist) {
             closest = p;
             closestDist = dist;
           }
@@ -499,10 +516,11 @@ function GalaxyView({
       const dx = e.clientX - cam.lastX;
       const dy = e.clientY - cam.lastY;
       cam.dragDistance += Math.abs(dx) + Math.abs(dy);
-      cam.theta -= dx * 0.005;
-      cam.phi += dy * 0.005;
-      cam.velocityTheta = -dx * 0.002;
-      cam.velocityPhi = dy * 0.002;
+      const rect = container!.getBoundingClientRect();
+      const baseScale = Math.min(rect.width, rect.height) / 750;
+      const scale = baseScale * cam.zoom;
+      cam.panX += dx / scale;
+      cam.panY += dy / scale;
       cam.lastX = e.clientX;
       cam.lastY = e.clientY;
     }
@@ -513,16 +531,15 @@ function GalaxyView({
       cam.isDragging = false;
 
       if (!wasDrag && container) {
-        // Click — find and select node
         const rect = container.getBoundingClientRect();
         const mx = e.clientX - rect.left;
         const my = e.clientY - rect.top;
-        for (const p of projectedRef.current) {
+        for (const p of screenNodesRef.current) {
           const dx = p.sx - mx;
           const dy = p.sy - my;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          const hitRadius = Math.max(12, p.node.size * p.scale * cam.zoom + 5);
-          if (dist < hitRadius) {
+          const hitR = Math.max(14, p.radius + 4);
+          if (dist < hitR) {
             onSelect(p.node.tile);
             break;
           }
@@ -535,11 +552,11 @@ function GalaxyView({
     function handleWheel(e: WheelEvent) {
       e.preventDefault();
       const cam = cameraRef.current;
-      cam.zoom = Math.max(0.4, Math.min(3, cam.zoom - e.deltaY * 0.001));
+      cam.zoom = Math.max(0.4, Math.min(4, cam.zoom - e.deltaY * 0.001));
     }
 
-    // Touch interaction
-    let touchStartX = 0, touchStartY = 0, touchDist = 0;
+    // Touch
+    let touchDist = 0;
 
     function handleTouchStart(e: TouchEvent) {
       if (e.touches.length === 1) {
@@ -547,12 +564,7 @@ function GalaxyView({
         cam.isDragging = true;
         cam.lastX = e.touches[0].clientX;
         cam.lastY = e.touches[0].clientY;
-        cam.velocityTheta = 0;
-        cam.velocityPhi = 0;
-        cam.dragStartTime = Date.now();
         cam.dragDistance = 0;
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
       } else if (e.touches.length === 2) {
         const dx = e.touches[0].clientX - e.touches[1].clientX;
         const dy = e.touches[0].clientY - e.touches[1].clientY;
@@ -567,10 +579,11 @@ function GalaxyView({
         const dx = e.touches[0].clientX - cam.lastX;
         const dy = e.touches[0].clientY - cam.lastY;
         cam.dragDistance += Math.abs(dx) + Math.abs(dy);
-        cam.theta -= dx * 0.005;
-        cam.phi += dy * 0.005;
-        cam.velocityTheta = -dx * 0.002;
-        cam.velocityPhi = dy * 0.002;
+        const rect = container!.getBoundingClientRect();
+        const baseScale = Math.min(rect.width, rect.height) / 750;
+        const scale = baseScale * cam.zoom;
+        cam.panX += dx / scale;
+        cam.panY += dy / scale;
         cam.lastX = e.touches[0].clientX;
         cam.lastY = e.touches[0].clientY;
       } else if (e.touches.length === 2) {
@@ -578,7 +591,7 @@ function GalaxyView({
         const dy = e.touches[0].clientY - e.touches[1].clientY;
         const newDist = Math.sqrt(dx * dx + dy * dy);
         if (touchDist > 0) {
-          cam.zoom = Math.max(0.4, Math.min(3, cam.zoom * (newDist / touchDist)));
+          cam.zoom = Math.max(0.4, Math.min(4, cam.zoom * (newDist / touchDist)));
         }
         touchDist = newDist;
       }
@@ -593,12 +606,12 @@ function GalaxyView({
         const rect = container.getBoundingClientRect();
         const mx = e.changedTouches[0].clientX - rect.left;
         const my = e.changedTouches[0].clientY - rect.top;
-        for (const p of projectedRef.current) {
+        for (const p of screenNodesRef.current) {
           const dx = p.sx - mx;
           const dy = p.sy - my;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          const hitRadius = Math.max(16, p.node.size * p.scale * cam.zoom + 8);
-          if (dist < hitRadius) {
+          const hitR = Math.max(16, p.radius + 6);
+          if (dist < hitR) {
             onSelect(p.node.tile);
             break;
           }
@@ -626,10 +639,10 @@ function GalaxyView({
       canvas.removeEventListener('touchmove', handleTouchMove);
       canvas.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [nodes, stars, onSelect]);
+  }, [nodes, onSelect]);
 
   return (
-    <div ref={containerRef} className="relative rounded-2xl overflow-hidden select-none" style={{ height: 'clamp(400px, 60vh, 650px)' }}>
+    <div ref={containerRef} className="relative rounded-2xl overflow-hidden select-none border border-slate-700/30" style={{ height: 'clamp(400px, 60vh, 650px)' }}>
       <canvas ref={canvasRef} className="w-full h-full" style={{ cursor: 'grab' }} />
 
       {/* Hover tooltip */}
@@ -637,11 +650,11 @@ function GalaxyView({
         <div
           className="absolute pointer-events-none z-10 transition-opacity duration-150"
           style={{
-            left: Math.min(tooltipPos.x + 16, (containerRef.current?.offsetWidth || 300) - 220),
-            top: tooltipPos.y - 30,
+            left: Math.min(tooltipPos.x + 16, (containerRef.current?.offsetWidth || 300) - 240),
+            top: Math.max(8, tooltipPos.y - 40),
           }}
         >
-          <div className="bg-black/80 backdrop-blur-md rounded-xl px-3.5 py-2.5 border border-white/10 shadow-2xl">
+          <div className="bg-slate-900/90 backdrop-blur-md rounded-xl px-3.5 py-2.5 border border-white/10 shadow-2xl">
             <div className="flex items-center gap-2.5">
               <div
                 className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-xs shrink-0"
@@ -662,30 +675,32 @@ function GalaxyView({
       )}
 
       {/* Legend overlay */}
-      <div className="absolute bottom-4 left-4 flex flex-col gap-1 pointer-events-none">
-        <div className="flex items-center gap-2 text-[10px]">
-          <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/50" />
-          <span className="text-white/50">Safety Zone (inner)</span>
-        </div>
-        <div className="flex items-center gap-2 text-[10px]">
-          <div className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-sm shadow-amber-400/50" />
-          <span className="text-white/50">Match Zone (middle)</span>
-        </div>
-        <div className="flex items-center gap-2 text-[10px]">
-          <div className="w-2.5 h-2.5 rounded-full bg-blue-400 shadow-sm shadow-blue-400/50" />
-          <span className="text-white/50">Reach Zone (outer)</span>
+      <div className="absolute bottom-4 left-4 flex flex-col gap-1.5 pointer-events-none">
+        <div className="bg-slate-900/60 backdrop-blur-sm rounded-lg px-2.5 py-2 border border-white/5">
+          <div className="flex items-center gap-2 text-[10px] mb-1">
+            <div className="w-2 h-2 rounded-full bg-emerald-400" />
+            <span className="text-white/50">Safety (inner)</span>
+          </div>
+          <div className="flex items-center gap-2 text-[10px] mb-1">
+            <div className="w-2 h-2 rounded-full bg-amber-400" />
+            <span className="text-white/50">Match (middle)</span>
+          </div>
+          <div className="flex items-center gap-2 text-[10px]">
+            <div className="w-2 h-2 rounded-full bg-rose-400" />
+            <span className="text-white/50">Reach (outer)</span>
+          </div>
         </div>
       </div>
 
       {/* Controls hint */}
-      <div className="absolute bottom-4 right-4 text-[10px] text-white/30 pointer-events-none text-right">
-        <p>Drag to rotate &middot; Scroll to zoom</p>
-        <p>Click a star to explore</p>
+      <div className="absolute bottom-4 right-4 text-[10px] text-white/25 pointer-events-none text-right">
+        <p>Drag to pan &middot; Scroll to zoom</p>
+        <p>Click a dot to explore</p>
       </div>
 
-      {/* Zoom indicator */}
-      <div className="absolute top-4 right-4 flex items-center gap-1.5 pointer-events-none">
-        <div className="bg-black/50 backdrop-blur-sm rounded-lg px-2.5 py-1 border border-white/10">
+      {/* School count */}
+      <div className="absolute top-4 right-4 pointer-events-none">
+        <div className="bg-slate-900/60 backdrop-blur-sm rounded-lg px-2.5 py-1 border border-white/5">
           <span className="text-[10px] text-white/40 font-medium tabular-nums">
             {tiles.length} schools
           </span>
@@ -836,23 +851,21 @@ export default function CollegeHeatmapPage() {
           {/* View toggle */}
           <div className="flex items-center bg-slate-100 rounded-xl p-1 gap-1">
             <button
-              onClick={() => { setViewMode('galaxy'); tracker.feature('college-heatmap', 'view_toggle', { mode: 'galaxy' }); }}
+              onClick={() => { setViewMode('galaxy'); tracker.feature('college-heatmap', 'view_toggle', { mode: 'radar' }); }}
               className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
                 viewMode === 'galaxy'
                   ? 'bg-gradient-to-r from-accent to-purple-600 text-white shadow-md shadow-accent/20'
                   : 'text-slate-500 hover:text-slate-700'
               }`}
             >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor">
-                <circle cx="8" cy="8" r="2" />
-                <circle cx="3" cy="5" r="1.2" opacity="0.6" />
-                <circle cx="13" cy="4" r="1" opacity="0.5" />
-                <circle cx="5" cy="12" r="1.3" opacity="0.7" />
-                <circle cx="12" cy="11" r="0.8" opacity="0.4" />
-                <circle cx="2" cy="9" r="0.6" opacity="0.3" />
-                <circle cx="14" cy="8" r="0.9" opacity="0.5" />
+              <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2">
+                <circle cx="8" cy="8" r="3" opacity="0.7" />
+                <circle cx="8" cy="8" r="5.5" opacity="0.4" />
+                <circle cx="8" cy="8" r="7.5" opacity="0.25" />
+                <line x1="8" y1="0.5" x2="8" y2="15.5" opacity="0.15" />
+                <line x1="0.5" y1="8" x2="15.5" y2="8" opacity="0.15" />
               </svg>
-              Galaxy
+              Radar
             </button>
             <button
               onClick={() => { setViewMode('grid'); tracker.feature('college-heatmap', 'view_toggle', { mode: 'grid' }); }}
@@ -967,7 +980,7 @@ export default function CollegeHeatmapPage() {
 
         {/* GALAXY VIEW */}
         {viewMode === 'galaxy' && (
-          <GalaxyView tiles={visibleTiles} onSelect={setSelectedTile} />
+          <RadarView tiles={visibleTiles} onSelect={setSelectedTile} />
         )}
 
         {/* GRID VIEW */}
