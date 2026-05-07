@@ -710,6 +710,275 @@ function RadarView({
   );
 }
 
+/* ──────────────────────── TRENDS DATA ──────────────────────── */
+
+const ADMISSIONS_DATA = [
+  // Sources: CDC NVSS births (→ +18yr = college year), WICHE projections, Common App end-of-season reports, IIE Open Doors
+  { year: 2022, label: "'22–'23", birthCohort: 4112, hsGrads: 3740, commonAppVolume: 8569, intlStudents: 1057, appsPerStudent: 6.41, actual: true },
+  { year: 2023, label: "'23–'24", birthCohort: 4138, hsGrads: 3790, commonAppVolume: 9472, intlStudents: 1127, appsPerStudent: 6.64, actual: true },
+  { year: 2024, label: "'24–'25", birthCohort: 4266, hsGrads: 3870, commonAppVolume: 10194, intlStudents: 1178, appsPerStudent: 6.80, actual: true },
+  { year: 2025, label: "'25–'26", birthCohort: 4316, hsGrads: 3900, commonAppVolume: 10700, intlStudents: 1170, appsPerStudent: 6.90, actual: false },
+  { year: 2026, label: "'26–'27", birthCohort: 4248, hsGrads: 3830, commonAppVolume: 10900, intlStudents: 1160, appsPerStudent: 7.00, actual: false },
+  { year: 2027, label: "'27–'28", birthCohort: 4131, hsGrads: 3720, commonAppVolume: 10800, intlStudents: 1150, appsPerStudent: 7.05, actual: false },
+  { year: 2028, label: "'28–'29", birthCohort: 3999, hsGrads: 3600, commonAppVolume: 10500, intlStudents: 1140, appsPerStudent: 7.10, actual: false },
+  { year: 2029, label: "'29–'30", birthCohort: 3954, hsGrads: 3560, commonAppVolume: 10200, intlStudents: 1130, appsPerStudent: 7.10, actual: false },
+  { year: 2030, label: "'30–'31", birthCohort: 3953, hsGrads: 3540, commonAppVolume: 10000, intlStudents: 1120, appsPerStudent: 7.15, actual: false },
+  { year: 2031, label: "'31–'32", birthCohort: 3933, hsGrads: 3510, commonAppVolume: 9800, intlStudents: 1110, appsPerStudent: 7.15, actual: false },
+];
+
+type TrendMetric = 'pool' | 'apps' | 'intl';
+
+const TREND_CONFIGS: Record<TrendMetric, { label: string; description: string; barKey: string; maxKey: string; color: string; colorDark: string; format: (v: number) => string }> = {
+  pool: {
+    label: 'Applicant Pool Size',
+    description: 'HS graduates + international students entering the applicant pool each year',
+    barKey: 'pool',
+    maxKey: 'pool',
+    color: '#f97316',
+    colorDark: '#ea580c',
+    format: (v: number) => `${(v / 1000).toFixed(1)}M`,
+  },
+  apps: {
+    label: 'Application Volume',
+    description: 'Total Common App applications submitted per cycle (thousands)',
+    barKey: 'commonAppVolume',
+    maxKey: 'commonAppVolume',
+    color: '#10b981',
+    colorDark: '#059669',
+    format: (v: number) => `${(v / 1000).toFixed(1)}M`,
+  },
+  intl: {
+    label: 'Domestic vs International',
+    description: 'Domestic HS grads (orange) overlaid with international enrollment (green)',
+    barKey: 'split',
+    maxKey: 'split',
+    color: '#f97316',
+    colorDark: '#ea580c',
+    format: (v: number) => `${(v / 1000).toFixed(1)}M`,
+  },
+};
+
+function TrendsView() {
+  const [metric, setMetric] = useState<TrendMetric>('pool');
+  const config = TREND_CONFIGS[metric];
+
+  const enriched = useMemo(() => {
+    return ADMISSIONS_DATA.map(d => ({
+      ...d,
+      pool: d.hsGrads + d.intlStudents,
+    }));
+  }, []);
+
+  const peakYear = enriched.reduce((best, d) => (d.pool > best.pool ? d : best), enriched[0]);
+  const currentYear = enriched.find(d => d.year === 2025)!;
+  const lastYear = enriched[enriched.length - 1];
+  const poolDrop = (((lastYear.pool - peakYear.pool) / peakYear.pool) * 100).toFixed(1);
+
+  const getBarValue = (d: typeof enriched[0]): number => {
+    if (metric === 'pool') return d.pool;
+    if (metric === 'apps') return d.commonAppVolume;
+    return d.hsGrads + d.intlStudents;
+  };
+
+  const maxVal = Math.max(...enriched.map(getBarValue));
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+      {/* Header */}
+      <div className="p-5 pb-0">
+        <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+          <div className="flex items-center gap-3 flex-1">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-md shadow-orange-500/20">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-lg font-bold font-display text-primary">Admissions Forecast</h2>
+              <p className="text-xs text-slate-400 mt-0.5">10-year outlook based on CDC birth data, WICHE projections &amp; Common App trends</p>
+            </div>
+          </div>
+
+          {/* Metric toggle */}
+          <div className="flex items-center bg-slate-100 rounded-lg p-0.5 gap-0.5">
+            {(Object.keys(TREND_CONFIGS) as TrendMetric[]).map(key => (
+              <button
+                key={key}
+                onClick={() => setMetric(key)}
+                className={`px-3 py-1.5 rounded-md text-[11px] font-semibold transition-all ${
+                  metric === key
+                    ? 'bg-white text-primary shadow-sm'
+                    : 'text-slate-400 hover:text-slate-600'
+                }`}
+              >
+                {key === 'pool' ? 'Pool Size' : key === 'apps' ? 'App Volume' : 'Dom. vs Intl.'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <p className="text-xs text-slate-500 mt-3 mb-1">{config.description}</p>
+      </div>
+
+      {/* KPI row */}
+      <div className="grid grid-cols-3 gap-3 px-5 py-3">
+        <div className="text-center p-2.5 rounded-xl bg-orange-50/60">
+          <div className="text-lg font-bold text-orange-600 tabular-nums">{currentYear.hsGrads.toLocaleString()}K</div>
+          <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">2025 HS Grads</div>
+          <div className="text-[10px] text-orange-500 font-semibold mt-0.5">Peak Year</div>
+        </div>
+        <div className="text-center p-2.5 rounded-xl bg-emerald-50/60">
+          <div className="text-lg font-bold text-emerald-600 tabular-nums">{currentYear.intlStudents.toLocaleString()}K</div>
+          <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Intl. Students</div>
+          <div className="text-[10px] text-emerald-500 font-semibold mt-0.5">Record High</div>
+        </div>
+        <div className="text-center p-2.5 rounded-xl bg-rose-50/60">
+          <div className="text-lg font-bold text-rose-600 tabular-nums">{poolDrop}%</div>
+          <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Pool Drop by '31</div>
+          <div className="text-[10px] text-rose-500 font-semibold mt-0.5">Demographic Cliff</div>
+        </div>
+      </div>
+
+      {/* Histogram */}
+      <div className="px-5 pb-2">
+        <div className="flex items-end gap-1.5 sm:gap-2" style={{ height: '220px' }}>
+          {enriched.map((d, i) => {
+            const barVal = getBarValue(d);
+            const pct = (barVal / maxVal) * 100;
+            const isCurrentYear = d.year === 2025;
+            const isPeak = d.pool === peakYear.pool && metric === 'pool';
+
+            if (metric === 'intl') {
+              const totalVal = d.hsGrads + d.intlStudents;
+              const totalPct = (totalVal / maxVal) * 100;
+              const domesticPct = (d.hsGrads / totalVal) * totalPct;
+              const intlPct = (d.intlStudents / totalVal) * totalPct;
+
+              return (
+                <div key={d.year} className="flex-1 flex flex-col items-center gap-1 h-full justify-end group relative">
+                  {/* Tooltip */}
+                  <div className="absolute -top-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
+                    <div className="bg-slate-800 text-white rounded-lg px-2.5 py-1.5 text-[10px] whitespace-nowrap shadow-lg">
+                      <div className="font-semibold">{d.label}</div>
+                      <div className="text-orange-300">Domestic: {d.hsGrads.toLocaleString()}K</div>
+                      <div className="text-emerald-300">International: {d.intlStudents.toLocaleString()}K</div>
+                      {!d.actual && <div className="text-white/40 mt-0.5">Projected</div>}
+                    </div>
+                  </div>
+                  <div className="w-full flex flex-col items-stretch" style={{ height: `${totalPct}%` }}>
+                    <div
+                      className="w-full rounded-t-md transition-all duration-500"
+                      style={{ height: `${intlPct / totalPct * 100}%`, backgroundColor: '#10b981', opacity: d.actual ? 1 : 0.5 }}
+                    />
+                    <div
+                      className="w-full rounded-b-md transition-all duration-500"
+                      style={{ height: `${domesticPct / totalPct * 100}%`, backgroundColor: '#f97316', opacity: d.actual ? 1 : 0.5 }}
+                    />
+                  </div>
+                  <span className={`text-[9px] sm:text-[10px] tabular-nums shrink-0 ${isCurrentYear ? 'font-bold text-primary' : 'text-slate-400'}`}>{d.label}</span>
+                </div>
+              );
+            }
+
+            return (
+              <div key={d.year} className="flex-1 flex flex-col items-center gap-1 h-full justify-end group relative">
+                {/* Tooltip */}
+                <div className="absolute -top-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
+                  <div className="bg-slate-800 text-white rounded-lg px-2.5 py-1.5 text-[10px] whitespace-nowrap shadow-lg">
+                    <div className="font-semibold">{d.label}</div>
+                    <div>{config.format(barVal)}</div>
+                    {metric === 'pool' && <div className="text-white/50">HS: {d.hsGrads}K + Intl: {d.intlStudents}K</div>}
+                    {metric === 'apps' && <div className="text-white/50">{d.appsPerStudent} apps/student</div>}
+                    {!d.actual && <div className="text-white/40 mt-0.5">Projected</div>}
+                  </div>
+                </div>
+                {isPeak && (
+                  <div className="text-[8px] text-orange-500 font-bold uppercase tracking-wider mb-0.5">Peak</div>
+                )}
+                <div
+                  className={`w-full rounded-t-md transition-all duration-500 ${isCurrentYear ? 'ring-2 ring-primary/20 ring-offset-1' : ''}`}
+                  style={{
+                    height: `${pct}%`,
+                    backgroundColor: metric === 'apps' ? config.color : config.color,
+                    opacity: d.actual ? 1 : 0.5,
+                    background: d.actual
+                      ? `linear-gradient(to top, ${config.colorDark}, ${config.color})`
+                      : `repeating-linear-gradient(135deg, ${config.color}22 0px, ${config.color}22 4px, ${config.color}44 4px, ${config.color}44 8px)`,
+                  }}
+                />
+                <span className={`text-[9px] sm:text-[10px] tabular-nums shrink-0 ${isCurrentYear ? 'font-bold text-primary' : 'text-slate-400'}`}>{d.label}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Legend & insights */}
+      <div className="px-5 pb-5 pt-2">
+        {/* Legend */}
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 mb-3">
+          {metric === 'intl' ? (
+            <>
+              <div className="flex items-center gap-1.5 text-[10px]">
+                <div className="w-3 h-3 rounded-sm bg-orange-500" />
+                <span className="text-slate-500">Domestic HS Graduates</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px]">
+                <div className="w-3 h-3 rounded-sm bg-emerald-500" />
+                <span className="text-slate-500">International Students</span>
+              </div>
+            </>
+          ) : (
+            <div className="flex items-center gap-1.5 text-[10px]">
+              <div className="w-3 h-3 rounded-sm" style={{ background: `linear-gradient(to top, ${config.colorDark}, ${config.color})` }} />
+              <span className="text-slate-500">Actual</span>
+            </div>
+          )}
+          <div className="flex items-center gap-1.5 text-[10px]">
+            <div className="w-3 h-3 rounded-sm" style={{ background: `repeating-linear-gradient(135deg, ${metric === 'intl' ? '#f97316' : config.color}22 0px, ${metric === 'intl' ? '#f97316' : config.color}22 4px, ${metric === 'intl' ? '#f97316' : config.color}44 4px, ${metric === 'intl' ? '#f97316' : config.color}44 8px)` }} />
+            <span className="text-slate-500">Projected</span>
+          </div>
+        </div>
+
+        {/* Insight cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div className="flex gap-2.5 p-3 rounded-xl bg-amber-50/60 border border-amber-100">
+            <div className="shrink-0 w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center">
+              <svg className="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-amber-800">The Demographic Cliff</p>
+              <p className="text-[10px] text-amber-700/70 leading-relaxed mt-0.5">
+                2007 birth peak (4.3M) hits college in 2025. After that, each class shrinks — 363K fewer students by 2030. Source: CDC NVSS, WICHE.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2.5 p-3 rounded-xl bg-emerald-50/60 border border-emerald-100">
+            <div className="shrink-0 w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center">
+              <svg className="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-emerald-800">What This Means For You</p>
+              <p className="text-[10px] text-emerald-700/70 leading-relaxed mt-0.5">
+                Less competition at most schools post-2026. But top-25 schools stay ultra-competitive — apps/student rose 47% since 2014 (Common App).
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Source attribution */}
+        <p className="text-[9px] text-slate-300 mt-3">
+          Sources: CDC National Vital Statistics System &middot; WICHE Knocking at the College Door (11th Ed.) &middot; Common App End-of-Season Reports &middot; IIE Open Doors
+        </p>
+      </div>
+    </div>
+  );
+}
+
 /* ──────────────────────── MAIN COMPONENT ──────────────────────── */
 
 export default function CollegeHeatmapPage() {
@@ -718,7 +987,7 @@ export default function CollegeHeatmapPage() {
 
   const [gpa, setGpa] = useState(3.5);
   const [sat, setSat] = useState(1200);
-  const [viewMode, setViewMode] = useState<'grid' | 'galaxy'>('galaxy');
+  const [viewMode, setViewMode] = useState<'grid' | 'galaxy' | 'trends'>('galaxy');
   const sliderDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedTile, setSelectedTile] = useState<HeatmapTile | null>(null);
   const [savedSchools, setSavedSchools] = useState<Set<string>>(new Set());
@@ -880,11 +1149,27 @@ export default function CollegeHeatmapPage() {
               </svg>
               Grid
             </button>
+            <button
+              onClick={() => { setViewMode('trends'); tracker.feature('college-heatmap', 'view_toggle', { mode: 'trends' }); }}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+                viewMode === 'trends'
+                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md shadow-orange-500/20'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              </svg>
+              Trends
+            </button>
           </div>
         </div>
 
-        {/* What-If Simulator */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-5">
+        {/* TRENDS VIEW */}
+        {viewMode === 'trends' && <TrendsView />}
+
+        {/* What-If Simulator (hidden in trends view) */}
+        {viewMode !== 'trends' && <div className="bg-white rounded-2xl border border-slate-100 p-5">
           <div className="flex items-center gap-2 mb-4">
             <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
@@ -928,10 +1213,10 @@ export default function CollegeHeatmapPage() {
               <div className="flex justify-between text-[10px] text-slate-400 mt-1"><span>800</span><span>1200</span><span>1600</span></div>
             </div>
           </div>
-        </div>
+        </div>}
 
         {/* Filters */}
-        <div className="flex flex-wrap items-center gap-3">
+        {viewMode !== 'trends' && <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 mr-4">
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: getTempColor(0) }} />
@@ -976,9 +1261,9 @@ export default function CollegeHeatmapPage() {
               {sortOptions.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
             </select>
           )}
-        </div>
+        </div>}
 
-        {/* GALAXY VIEW */}
+        {/* RADAR VIEW */}
         {viewMode === 'galaxy' && (
           <RadarView tiles={visibleTiles} onSelect={setSelectedTile} />
         )}
