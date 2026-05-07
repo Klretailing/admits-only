@@ -511,6 +511,18 @@ export async function ensureSchema() {
     `);
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "pod_activities_podId_idx" ON "pod_activities"("podId");`);
 
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "saved_applications" (
+        "id"        TEXT NOT NULL,
+        "userId"    TEXT NOT NULL,
+        "data"      JSONB NOT NULL DEFAULT '[]',
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "saved_applications_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "saved_applications_userId_key" UNIQUE ("userId"),
+        CONSTRAINT "saved_applications_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+
     globalForPrisma.schemaReady = true;
   } catch (e) {
     // Tables likely already exist — mark as ready

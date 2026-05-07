@@ -87,15 +87,21 @@ export default function CollegeMatchPage() {
     if (status === 'unauthenticated') router.push('/auth/login');
   }, [status, router]);
 
-  // Load saved schools from localStorage
+  // Load saved schools from server + localStorage
   useEffect(() => {
+    let localApps: any[] = [];
     try {
       const stored = localStorage.getItem('admitsonly_applications');
-      if (stored) {
-        const apps = JSON.parse(stored);
-        setSavedSchools(new Set(apps.map((a: any) => a.name.toLowerCase())));
-      }
+      if (stored) localApps = JSON.parse(stored);
     } catch {}
+    if (localApps.length > 0) {
+      setSavedSchools(new Set(localApps.map((a: any) => a.name.toLowerCase())));
+    }
+    fetch('/api/applications').then(r => r.ok ? r.json() : null).then(data => {
+      if (data?.applications?.length) {
+        setSavedSchools(new Set(data.applications.map((a: any) => a.name.toLowerCase())));
+      }
+    }).catch(() => {});
   }, []);
 
   // Fetch matches
@@ -141,7 +147,7 @@ export default function CollegeMatchPage() {
     return counts;
   }, [matches]);
 
-  // Add school to application tracker
+  // Add school to application tracker (localStorage + server)
   function addToTracker(college: College) {
     try {
       const stored = localStorage.getItem('admitsonly_applications');
@@ -167,6 +173,11 @@ export default function CollegeMatchPage() {
       localStorage.setItem('admitsonly_applications', JSON.stringify(apps));
       setSavedSchools(prev => { const next = new Set(Array.from(prev)); next.add(college.name.toLowerCase()); return next; });
       tracker.feature('college-match', 'add_to_tracker', { college: college.name });
+      fetch('/api/applications', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ applications: apps }),
+      }).catch(() => {});
     } catch {}
   }
 

@@ -1,6 +1,6 @@
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import DashboardLayout from '../../components/DashboardLayout';
@@ -69,25 +69,86 @@ export default function Applications() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [expandedApp, setExpandedApp] = useState<string | null>(null);
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
+  const syncingRef = useRef(false);
 
   // Form state
   const [newName, setNewName] = useState('');
   const [newDeadline, setNewDeadline] = useState('');
   const [newType, setNewType] = useState<CollegeApp['type']>('RD');
 
-  // Load from localStorage
+  // Load from server first, fall back to localStorage, merge
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) setApps(JSON.parse(stored));
-    } catch {}
-    setLoaded(true);
+    let cancelled = false;
+    async function loadApps() {
+      let serverApps: CollegeApp[] = [];
+      let localApps: CollegeApp[] = [];
+
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) localApps = JSON.parse(stored);
+      } catch {}
+
+      try {
+        const res = await fetch('/api/applications');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.applications)) serverApps = data.applications;
+        }
+      } catch {}
+
+      if (cancelled) return;
+
+      // Merge: use server as source of truth, add any local-only entries
+      let merged: CollegeApp[];
+      if (serverApps.length > 0 && localApps.length > 0) {
+        const serverIds = new Set(serverApps.map(a => a.id));
+        const serverNames = new Set(serverApps.map(a => a.name.toLowerCase()));
+        const localOnly = localApps.filter(a => !serverIds.has(a.id) && !serverNames.has(a.name.toLowerCase()));
+        merged = [...serverApps, ...localOnly];
+      } else if (serverApps.length > 0) {
+        merged = serverApps;
+      } else {
+        merged = localApps;
+      }
+
+      setApps(merged);
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(merged)); } catch {}
+      // If we merged local-only items into server data, push the merged result back
+      if (merged.length > serverApps.length && merged.length > 0) {
+        fetch('/api/applications', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ applications: merged }),
+        }).catch(() => {});
+      }
+      setLoaded(true);
+    }
+    loadApps();
+    return () => { cancelled = true; };
   }, []);
 
-  // Save to localStorage on change
+  // Cross-tab sync: when another tab updates localStorage, reflect it here
+  useEffect(() => {
+    function onStorage(e: StorageEvent) {
+      if (e.key !== STORAGE_KEY || !e.newValue) return;
+      try { setApps(JSON.parse(e.newValue)); } catch {}
+    }
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  // Save to both localStorage and server
   const save = useCallback((updated: CollegeApp[]) => {
     setApps(updated);
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(updated)); } catch {}
+    if (!syncingRef.current) {
+      syncingRef.current = true;
+      fetch('/api/applications', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ applications: updated }),
+      }).catch(() => {}).finally(() => { syncingRef.current = false; });
+    }
   }, []);
 
   const addApp = () => {
