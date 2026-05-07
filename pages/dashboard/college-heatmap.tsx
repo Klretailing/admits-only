@@ -1001,13 +1001,19 @@ export default function CollegeHeatmapPage() {
   }, [status, router]);
 
   useEffect(() => {
+    let localApps: any[] = [];
     try {
       const stored = localStorage.getItem('admitsonly_applications');
-      if (stored) {
-        const apps = JSON.parse(stored);
-        setSavedSchools(new Set(apps.map((a: any) => a.name.toLowerCase())));
-      }
+      if (stored) localApps = JSON.parse(stored);
     } catch {}
+    if (localApps.length > 0) {
+      setSavedSchools(new Set(localApps.map((a: any) => a.name.toLowerCase())));
+    }
+    fetch('/api/applications').then(r => r.ok ? r.json() : null).then(data => {
+      if (data?.applications?.length) {
+        setSavedSchools(new Set(data.applications.map((a: any) => a.name.toLowerCase())));
+      }
+    }).catch(() => {});
 
     if (status === 'authenticated' && !profileLoaded) {
       fetch('/api/college-match')
@@ -1078,6 +1084,11 @@ export default function CollegeHeatmapPage() {
       localStorage.setItem('admitsonly_applications', JSON.stringify(apps));
       setSavedSchools(prev => { const next = new Set(Array.from(prev)); next.add(college.name.toLowerCase()); return next; });
       tracker.feature('college-heatmap', 'add_to_tracker', { college: college.name, acceptanceRate: college.acceptanceRate });
+      fetch('/api/applications', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ applications: apps }),
+      }).catch(() => {});
     } catch {}
   }, []);
 
