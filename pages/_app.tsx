@@ -8,7 +8,7 @@ import { tracker } from '../lib/analytics'
 import { ThemeProvider } from '../lib/themeContext'
 
 // Pages that use their own layout (no Layout wrapper)
-const customLayoutPrefixes = ['/dashboard', '/educator', '/admin', '/auth/'];
+const customLayoutPrefixes = ['/dashboard', '/educator', '/parent', '/admin', '/auth/'];
 
 function AnalyticsInit() {
   const router = useRouter();

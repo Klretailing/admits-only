@@ -523,6 +523,36 @@ export async function ensureSchema() {
       );
     `);
 
+    // ─── Connection codes for linking accounts ───
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "connection_codes" (
+        "id"        TEXT NOT NULL,
+        "userId"    TEXT NOT NULL,
+        "code"      TEXT NOT NULL,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "connection_codes_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "connection_codes_userId_key" UNIQUE ("userId"),
+        CONSTRAINT "connection_codes_code_key" UNIQUE ("code"),
+        CONSTRAINT "connection_codes_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+
+    // ─── Account connections (parent/tutor linked to student) ───
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "account_connections" (
+        "id"              TEXT NOT NULL,
+        "studentId"       TEXT NOT NULL,
+        "connectedUserId" TEXT NOT NULL,
+        "role"            TEXT NOT NULL,
+        "createdAt"       TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "account_connections_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "account_connections_unique" UNIQUE ("studentId", "connectedUserId"),
+        CONSTRAINT "account_connections_student_fkey" FOREIGN KEY ("studentId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "account_connections_connected_fkey" FOREIGN KEY ("connectedUserId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "account_connections_studentId_idx" ON "account_connections"("studentId");`);
+
     globalForPrisma.schemaReady = true;
   } catch (e) {
     // Tables likely already exist — mark as ready

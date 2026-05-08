@@ -1184,7 +1184,109 @@ export default function StudentProfile() {
             )}
           </div>
         </div>
+
+        {/* Connection Code Section */}
+        <ConnectionCodeSection />
       </div>
     </DashboardLayout>
+  );
+}
+
+/* ──────────────────────── CONNECTION CODE ──────────────────────── */
+
+function ConnectionCodeSection() {
+  const [code, setCode] = useState('');
+  const [connections, setConnections] = useState<any[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/connection-code')
+      .then(r => r.json())
+      .then(data => {
+        setCode(data.code || '');
+        setConnections(data.connectionsAsStudent || []);
+      })
+      .catch(() => {})
+      .finally(() => setLoaded(true));
+  }, []);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(code).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const handleRemove = async (id: string) => {
+    await fetch('/api/connection-code', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ connectionId: id }),
+    });
+    setConnections(prev => prev.filter(c => c.id !== id));
+  };
+
+  if (!loaded) return null;
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 p-5">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent to-purple-600 flex items-center justify-center">
+          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+          </svg>
+        </div>
+        <div>
+          <h3 className="text-lg font-bold text-primary">Your Connection Code</h3>
+          <p className="text-xs text-slate-400">Share with parents or tutors so they can track your progress</p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 mb-4">
+        <div className="flex-1 bg-slate-50 rounded-xl border border-slate-200 px-5 py-3 text-center">
+          <p className="text-xl font-mono font-bold text-primary tracking-[0.3em]">{code}</p>
+        </div>
+        <button
+          onClick={handleCopy}
+          className={`px-5 py-3 rounded-xl text-sm font-semibold transition-all ${
+            copied ? 'bg-emerald-50 text-emerald-600' : 'bg-accent text-white hover:bg-accent/90'
+          }`}
+        >
+          {copied ? 'Copied!' : 'Copy'}
+        </button>
+      </div>
+
+      {connections.length > 0 && (
+        <div>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Connected Accounts</p>
+          <div className="space-y-2">
+            {connections.map((conn: any) => (
+              <div key={conn.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
+                <div className="flex items-center gap-2">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs ${
+                    conn.role === 'parent' ? 'bg-teal-500' : 'bg-purple-500'
+                  }`}>
+                    {(conn.connectedName || 'U')[0].toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-primary">{conn.connectedName}</p>
+                    <p className="text-[10px] text-slate-400">{conn.role === 'parent' ? 'Parent' : 'Tutor'}</p>
+                  </div>
+                </div>
+                <button onClick={() => handleRemove(conn.id)} className="text-xs text-slate-400 hover:text-red-500">Remove</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-4 p-3 bg-accent/5 rounded-xl border border-accent/10">
+        <p className="text-xs text-slate-500">
+          <span className="font-semibold">What they&apos;ll see:</span> Parents see your application progress, deadlines, and task completion.
+          Tutors see essay titles and scores. Neither can see your essay content or personal notes.
+        </p>
+      </div>
+    </div>
   );
 }
