@@ -21,6 +21,8 @@ async function seedAccounts() {
       { name: 'James Williams', email: 'james@beta.admitsonly.com', password: 'Beta@2026', role: 'student' },
       { name: 'Robert Chen', email: 'robert@beta.admitsonly.com', password: 'Beta@2026', role: 'parent' },
       { name: 'Sarah Mitchell', email: 'demo.educator@admitsonly.com', password: 'Educator@2026', role: 'educator' },
+      { name: 'Linda Park', email: 'parent@demo.admitsonly.com', password: 'Parent@2026', role: 'parent' },
+      { name: 'Marcus Thompson', email: 'tutor@demo.admitsonly.com', password: 'Tutor@2026', role: 'educator' },
     ];
 
     for (const acct of accounts) {
@@ -36,9 +38,41 @@ async function seedAccounts() {
         });
       }
     }
+
+    // Pre-wire demo connections: link parent & tutor accounts to Maya Johnson
+    await seedDemoConnections();
   } catch (e) {
     // Log but don't crash — allows login to proceed if users table exists
     console.error('Seed error (non-fatal):', (e as Error).message);
+  }
+}
+
+async function seedDemoConnections() {
+  try {
+    const student = await prisma.user.findUnique({ where: { email: 'maya@beta.admitsonly.com' } });
+    const parent = await prisma.user.findUnique({ where: { email: 'parent@demo.admitsonly.com' } });
+    const tutor = await prisma.user.findUnique({ where: { email: 'tutor@demo.admitsonly.com' } });
+    if (!student || !parent || !tutor) return;
+
+    // Create connection code for the student if missing
+    const existingCode: any[] = await prisma.$queryRaw`SELECT * FROM "connection_codes" WHERE "userId" = ${student.id}`;
+    if (existingCode.length === 0) {
+      await prisma.$executeRaw`INSERT INTO "connection_codes" ("id", "userId", "code") VALUES (${`cc_demo_maya`}, ${student.id}, ${'DEMO-MAYA'})`;
+    }
+
+    // Connect parent → student
+    const existingParent: any[] = await prisma.$queryRaw`SELECT * FROM "account_connections" WHERE "studentId" = ${student.id} AND "connectedUserId" = ${parent.id}`;
+    if (existingParent.length === 0) {
+      await prisma.$executeRaw`INSERT INTO "account_connections" ("id", "studentId", "connectedUserId", "role") VALUES (${`ac_demo_parent`}, ${student.id}, ${parent.id}, ${'parent'})`;
+    }
+
+    // Connect tutor → student
+    const existingTutor: any[] = await prisma.$queryRaw`SELECT * FROM "account_connections" WHERE "studentId" = ${student.id} AND "connectedUserId" = ${tutor.id}`;
+    if (existingTutor.length === 0) {
+      await prisma.$executeRaw`INSERT INTO "account_connections" ("id", "studentId", "connectedUserId", "role") VALUES (${`ac_demo_tutor`}, ${student.id}, ${tutor.id}, ${'tutor'})`;
+    }
+  } catch (e) {
+    console.error('Demo connections seed (non-fatal):', (e as Error).message);
   }
 }
 
