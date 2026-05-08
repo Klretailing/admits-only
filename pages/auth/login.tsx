@@ -31,7 +31,7 @@ export default function Login() {
       const { getSession } = await import('next-auth/react');
       const sess = await getSession();
       const role = (sess?.user as any)?.role;
-      router.push(role === 'educator' ? '/educator' : '/dashboard');
+      router.push(role === 'parent' ? '/parent' : role === 'educator' ? '/educator' : '/dashboard');
     }
   };
 
