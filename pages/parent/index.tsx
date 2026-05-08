@@ -109,8 +109,8 @@ export default function ParentDashboard() {
     );
   }
 
-  /* Not connected state */
-  if (data && !data.connected) {
+  /* Not connected or no data state */
+  if (!data || !data.connected) {
     return (
       <ParentLayout>
         <Head>
@@ -149,15 +149,15 @@ export default function ParentDashboard() {
   const schoolsCount = apps.length;
   const submittedCount = apps.filter((a) => ['submitted', 'accepted', 'rejected', 'waitlisted', 'deferred'].includes(a.status)).length;
   const acceptedCount = apps.filter((a) => a.status === 'accepted').length;
-  const totalTasks = apps.reduce((sum, a) => sum + a.tasks.length, 0);
-  const doneTasks = apps.reduce((sum, a) => sum + a.tasks.filter((t) => t.done).length, 0);
+  const totalTasks = apps.reduce((sum, a) => sum + (a.tasks?.length || 0), 0);
+  const doneTasks = apps.reduce((sum, a) => sum + (a.tasks?.filter((t: any) => t.done).length || 0), 0);
 
   /* Upcoming deadlines */
   const upcomingDeadlines = useMemo(() => {
     return apps
-      .filter((a) => !['submitted', 'accepted', 'rejected'].includes(a.status))
+      .filter((a) => a.deadline && !['submitted', 'accepted', 'rejected'].includes(a.status))
       .map((a) => ({ ...a, days: daysUntil(a.deadline) }))
-      .filter((a) => a.days >= 0)
+      .filter((a) => a.days >= 0 && isFinite(a.days))
       .sort((a, b) => a.days - b.days)
       .slice(0, 5);
   }, [apps]);

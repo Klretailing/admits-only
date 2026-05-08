@@ -194,8 +194,8 @@ export default function CollegeComparison() {
   if (selectedApps.length >= 2) {
     const entries = selectedApps.map((app) => {
       const college = findCollegeByName(app.name);
-      const totalTasks = app.tasks.length;
-      const doneTasks = app.tasks.filter((t) => t.done).length;
+      const totalTasks = app.tasks?.length || 0;
+      const doneTasks = app.tasks?.filter((t: any) => t.done).length || 0;
       const taskPct = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
       const annualCost = college ? (college.type === 'Private' ? 62000 : 28000) : null;
       return { app, college, taskPct, annualCost };
