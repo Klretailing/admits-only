@@ -96,6 +96,8 @@ export default function Layout({ children }: LayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { data: session, status } = useSession();
   const isLoggedIn = status === 'authenticated' && !!session;
+  const userRole = (session?.user as any)?.role;
+  const dashboardHref = userRole === 'parent' ? '/parent' : userRole === 'educator' ? '/educator' : '/dashboard';
 
   return (
     <>
@@ -133,7 +135,7 @@ export default function Layout({ children }: LayoutProps) {
                 </Link>
               ))}
               {isLoggedIn ? (
-                <Link href="/dashboard" className="ml-2 btn-primary text-sm !py-2.5 !px-5">
+                <Link href={dashboardHref} className="ml-2 btn-primary text-sm !py-2.5 !px-5">
                   Dashboard
                 </Link>
               ) : (
@@ -184,7 +186,7 @@ export default function Layout({ children }: LayoutProps) {
               ))}
               {isLoggedIn ? (
                 <Link
-                  href="/dashboard"
+                  href={dashboardHref}
                   onClick={() => setMobileOpen(false)}
                   className="block mt-2 btn-primary text-sm text-center"
                 >
