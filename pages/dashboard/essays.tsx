@@ -2412,6 +2412,11 @@ export default function Essays() {
   const [ecs, setEcs] = useState<Extracurricular[]>([]);
   const [ecsLoading, setEcsLoading] = useState(true);
 
+  const [essayReviews, setEssayReviews] = useState<Record<string, any>>({});
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewNote, setReviewNote] = useState('');
+  const [showReviewModal, setShowReviewModal] = useState(false);
+
   // ─── Motifs state ───
   const [mode, setMode] = useState<'essays' | 'motifs' | 'supplementals'>('essays');
   const [motifInput, setMotifInput] = useState('');
@@ -2495,6 +2500,12 @@ export default function Essays() {
     fetch('/api/essays').then(r => r.json()).then(d => { setEssays(d.essays || []); setLoading(false); }).catch(() => setLoading(false));
     fetch('/api/profile').then(r => r.json()).then(d => { if (d.profile?.extracurriculars) setEcs(d.profile.extracurriculars as Extracurricular[]); setEcsLoading(false); }).catch(() => setEcsLoading(false));
     fetch('/api/motifs').then(r => r.json()).then(d => setSavedBoards(d.boards || [])).catch(() => {});
+    fetch('/api/essays/submit-for-review').then(r => r.json()).then(d => {
+      var map: Record<string, any> = {};
+      var revs = d.reviews || [];
+      for (var i = 0; i < revs.length; i++) { map[revs[i].essayId] = revs[i]; }
+      setEssayReviews(map);
+    }).catch(() => {});
   }, [status]);
 
   // EC insights (debounced via content)
@@ -2553,6 +2564,25 @@ export default function Essays() {
     setSaving(true);
     try { const res = await fetch('/api/essays', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: activeEssay.id, status: 'Complete' }) }); const data = await res.json(); if (data.essay) { setActiveEssay(data.essay); setEssays(prev => prev.map(e => e.id === data.essay.id ? data.essay : e)); } } catch (e) {}
     setSaving(false);
+  };
+
+  const submitForReview = async () => {
+    if (!activeEssay) return;
+    setSubmittingReview(true);
+    try {
+      var res = await fetch('/api/essays/submit-for-review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ essayId: activeEssay.id, note: reviewNote }),
+      });
+      var data = await res.json();
+      if (data.review) {
+        setEssayReviews(function(prev) { var next = Object.assign({}, prev); next[activeEssay.id] = data.review; return next; });
+        setShowReviewModal(false);
+        setReviewNote('');
+      }
+    } catch (e) {}
+    setSubmittingReview(false);
   };
 
   // ─── Motif actions ───
@@ -3433,6 +3463,18 @@ export default function Essays() {
                         </span>
                       )}
                       <span className="text-[10px] text-slate-300">{essayWords}w</span>
+                      {essayReviews[essay.id] && (
+                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                          essayReviews[essay.id].status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
+                          essayReviews[essay.id].status === 'in_review' ? 'bg-blue-100 text-blue-700' :
+                          essayReviews[essay.id].status === 'returned' ? 'bg-purple-100 text-purple-700' :
+                          'bg-amber-100 text-amber-700'
+                        }`}>
+                          {essayReviews[essay.id].status === 'completed' ? 'Reviewed' :
+                           essayReviews[essay.id].status === 'in_review' ? 'In Review' :
+                           essayReviews[essay.id].status === 'returned' ? 'Returned' : 'Pending'}
+                        </span>
+                      )}
                     </div>
                     {/* Mini score indicators on essay cards */}
                     {essay.overallScore != null && (
@@ -3502,6 +3544,21 @@ export default function Essays() {
                       {showSentenceAnalysis ? 'Analysis On' : 'Analyze'}
                     </button>
                     <button onClick={markComplete} disabled={wordCount < 50} className="hidden sm:block px-3 py-1.5 text-xs font-semibold text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all">Mark Complete</button>
+                    {activeEssay && !essayReviews[activeEssay.id] ? (
+                      <button onClick={() => setShowReviewModal(true)} disabled={wordCount < 50} className="hidden sm:block px-3 py-1.5 text-xs font-semibold text-white bg-accent rounded-lg hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all">Submit for Review</button>
+                    ) : activeEssay && essayReviews[activeEssay.id] ? (
+                      <span className={`hidden sm:block px-3 py-1.5 text-[10px] font-bold rounded-lg ${
+                        essayReviews[activeEssay.id].status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
+                        essayReviews[activeEssay.id].status === 'in_review' ? 'bg-blue-100 text-blue-700' :
+                        essayReviews[activeEssay.id].status === 'returned' ? 'bg-purple-100 text-purple-700' :
+                        'bg-amber-100 text-amber-700'
+                      }`}>
+                        {essayReviews[activeEssay.id].status === 'completed' ? 'Review Complete' :
+                         essayReviews[activeEssay.id].status === 'in_review' ? 'Under Review' :
+                         essayReviews[activeEssay.id].status === 'returned' ? 'Returned' :
+                         'Pending Review'}
+                      </span>
+                    ) : null}
                   </div>
                 </div>
 
@@ -3820,6 +3877,81 @@ export default function Essays() {
                   </div>
                 </div>
 
+                {/* Tutor Review Feedback */}
+                {activeEssay && essayReviews[activeEssay.id] && essayReviews[activeEssay.id].status === 'completed' && (
+                  <div className="bg-white rounded-xl border border-emerald-200 p-4">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <svg className="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      <h4 className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">Tutor Feedback</h4>
+                    </div>
+                    {essayReviews[activeEssay.id].tutorFeedback && (
+                      <p className="text-xs text-slate-600 leading-relaxed mb-3">{essayReviews[activeEssay.id].tutorFeedback}</p>
+                    )}
+                    {essayReviews[activeEssay.id].scores && Object.keys(essayReviews[activeEssay.id].scores).length > 0 && (
+                      <div className="space-y-1.5">
+                        {[
+                          { key: 'structure', label: 'Structure' },
+                          { key: 'voice', label: 'Voice' },
+                          { key: 'argument', label: 'Argument' },
+                          { key: 'grammar', label: 'Grammar' },
+                          { key: 'impact', label: 'Impact' },
+                        ].map(function(dim) {
+                          var val = essayReviews[activeEssay.id].scores[dim.key];
+                          if (val == null) return null;
+                          return (
+                            <div key={dim.key} className="flex items-center gap-2">
+                              <span className="text-[10px] text-slate-500 w-16">{dim.label}</span>
+                              <div className="flex-1 h-1.5 rounded-full bg-slate-100">
+                                <div className="h-full rounded-full transition-all" style={{ width: (val * 10) + '%', backgroundColor: val >= 8 ? '#10b981' : val >= 5 ? '#f59e0b' : '#ef4444' }} />
+                              </div>
+                              <span className="text-[10px] font-bold text-primary w-4 text-right">{val}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {essayReviews[activeEssay.id].annotations && essayReviews[activeEssay.id].annotations.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-emerald-100">
+                        <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-2">{essayReviews[activeEssay.id].annotations.length} Annotation{essayReviews[activeEssay.id].annotations.length !== 1 ? 's' : ''}</p>
+                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                          {essayReviews[activeEssay.id].annotations.map(function(ann: any) {
+                            var colors: Record<string, string> = { strength: 'bg-emerald-100 text-emerald-700', suggestion: 'bg-blue-100 text-blue-700', issue: 'bg-rose-100 text-rose-700', question: 'bg-amber-100 text-amber-700' };
+                            return (
+                              <div key={ann.id} className="p-2 rounded-lg bg-slate-50">
+                                <div className="flex items-center gap-1.5 mb-1">
+                                  <span className={'px-1.5 py-0.5 rounded text-[9px] font-bold ' + (colors[ann.type] || 'bg-slate-100 text-slate-500')}>{ann.type}</span>
+                                  <span className="text-[9px] text-slate-400">P{(ann.paragraphIndex || 0) + 1}</span>
+                                </div>
+                                <p className="text-[10px] text-slate-600">{ann.comment}</p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {activeEssay && essayReviews[activeEssay.id] && essayReviews[activeEssay.id].status === 'returned' && (
+                  <div className="bg-white rounded-xl border border-purple-200 p-4">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <svg className="w-3.5 h-3.5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg>
+                      <h4 className="text-[11px] font-bold text-purple-700 uppercase tracking-wider">Returned for Revision</h4>
+                    </div>
+                    {essayReviews[activeEssay.id].tutorFeedback && (
+                      <p className="text-xs text-slate-600 leading-relaxed">{essayReviews[activeEssay.id].tutorFeedback}</p>
+                    )}
+                    <button
+                      onClick={() => {
+                        setEssayReviews(function(prev) { var next = Object.assign({}, prev); delete next[activeEssay.id]; return next; });
+                      }}
+                      className="mt-2 px-3 py-1.5 text-xs font-semibold text-accent bg-accent/10 rounded-lg hover:bg-accent/20 transition-colors"
+                    >
+                      Resubmit for Review
+                    </button>
+                  </div>
+                )}
+
                 {/* Live Writing Tips */}
                 {liveTips.length > 0 && (
                   <div className="bg-white rounded-xl border border-amber-200 p-4">
@@ -3899,6 +4031,30 @@ export default function Essays() {
           </div>
         </div>}
       </div>
+      {/* Submit for Review Modal */}
+      {showReviewModal && activeEssay && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setShowReviewModal(false)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <h2 className="text-lg font-bold font-display text-primary mb-1">Submit for Tutor Review</h2>
+            <p className="text-sm text-slate-500 mb-4">Your tutor will review &ldquo;{activeEssay.title}&rdquo; and provide detailed feedback.</p>
+            <div className="mb-4">
+              <label className="block mb-1.5 text-sm font-semibold text-primary">Note for your tutor (optional)</label>
+              <textarea
+                value={reviewNote}
+                onChange={function(e) { setReviewNote(e.target.value); }}
+                placeholder="Any specific areas you'd like feedback on?"
+                rows={3}
+                className="w-full border border-slate-200 bg-surface p-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent resize-none"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setShowReviewModal(false)} className="flex-1 py-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-500 hover:bg-slate-50">Cancel</button>
+              <button onClick={submitForReview} disabled={submittingReview} className="flex-1 py-3 rounded-xl text-sm font-semibold text-white bg-accent hover:bg-accent/90 disabled:opacity-60 transition-colors">{submittingReview ? 'Submitting...' : 'Submit'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }
