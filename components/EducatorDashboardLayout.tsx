@@ -46,6 +46,36 @@ const sidebarLinks = [
     ),
   },
   {
+    href: '/educator/essay-reviews',
+    label: 'Essay Reviews',
+    mobileLabel: 'Essays',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    ),
+  },
+  {
+    href: '/educator/student-progress',
+    label: 'Student Progress',
+    mobileLabel: 'Progress',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+    ),
+  },
+  {
+    href: '/educator/session-notes',
+    label: 'Session Notes',
+    mobileLabel: 'Notes',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+      </svg>
+    ),
+  },
+  {
     href: '/educator/services',
     label: 'Services',
     mobileLabel: 'Services',
@@ -82,7 +112,7 @@ export default function EducatorDashboardLayout({ children }: { children: ReactN
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-slate-100">
         <div className="p-5 border-b border-slate-100">
-          <Link href="/" className="flex items-center gap-2.5 group">
+          <Link href="/educator" className="flex items-center gap-2.5 group">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md shadow-emerald-500/20 group-hover:shadow-lg group-hover:shadow-emerald-500/30 transition-shadow">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                 <path d="M12 2L2 9L12 16L22 9L12 2Z" fill="white" opacity="0.9" />
@@ -154,7 +184,7 @@ export default function EducatorDashboardLayout({ children }: { children: ReactN
           <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)} />
           <aside className="absolute left-0 top-0 bottom-0 w-72 bg-white shadow-2xl flex flex-col animate-fade-in">
             <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-              <Link href="/" className="flex items-center gap-2.5" onClick={() => setMobileMenuOpen(false)}>
+              <Link href="/educator" className="flex items-center gap-2.5" onClick={() => setMobileMenuOpen(false)}>
                 <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                     <path d="M12 2L2 9L12 16L22 9L12 2Z" fill="white" opacity="0.9" />
@@ -279,10 +309,10 @@ export default function EducatorDashboardLayout({ children }: { children: ReactN
         </main>
       </div>
 
-      {/* Mobile bottom tab bar */}
+      {/* Mobile bottom tab bar — show only 5 key items */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-slate-200 safe-area-pb">
         <div className="flex items-center justify-around h-14">
-          {sidebarLinks.map((link) => {
+          {sidebarLinks.filter((l) => ['/educator', '/educator/students', '/educator/essay-reviews', '/educator/schedule', '/educator/session-notes'].includes(l.href)).map((link) => {
             const active = router.pathname === link.href;
             return (
               <Link

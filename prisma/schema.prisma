@@ -44,6 +44,10 @@ model User {
   // Essay library
   uploadedEssayDocs  EssayDocument[]      @relation("EssayDocumentUploader")
 
+  // Essay reviews & session notes
+  essayReviewsAsStudent EssayReview[]     @relation("EssayReviewStudent")
+  tutorSessionNotes     TutorSessionNote[] @relation("TutorNotes")
+
   // Engagement features
   messageReactions   PodMessageReaction[]
   createdPolls       PodPoll[]            @relation("PollCreator")
@@ -90,7 +94,8 @@ model Essay {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviews EssayReview[]
 
   @@map("essays")
 }
@@ -520,4 +525,51 @@ model EssayDocument {
   uploadedBy User @relation("EssayDocumentUploader", fields: [uploadedById], references: [id], onDelete: Cascade)
 
   @@map("essay_documents")
+}
+
+// ─── Essay Reviews (tutor review queue) ───
+
+model EssayReview {
+  id            String    @id @default(cuid())
+  essayId       String
+  studentId     String
+  tutorId       String?
+  status        String    @default("pending") // pending | in_review | completed | returned
+  priority      String    @default("normal")
+  studentNote   String    @default("")
+  tutorFeedback String    @default("")
+  annotations   Json      @default("[]")
+  scores        Json      @default("{}")
+  submittedAt   DateTime  @default(now())
+  reviewedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  essay   Essay @relation(fields: [essayId], references: [id], onDelete: Cascade)
+  student User  @relation("EssayReviewStudent", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([tutorId])
+  @@index([status])
+  @@map("essay_reviews")
+}
+
+// ─── Tutor Session Notes ───
+
+model TutorSessionNote {
+  id         String   @id @default(cuid())
+  educatorId String
+  title      String   @default("Untitled")
+  content    String   @default("")
+  color      String   @default("default")
+  pinned     Boolean  @default(false)
+  archived   Boolean  @default(false)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  educator User @relation("TutorNotes", fields: [educatorId], references: [id], onDelete: Cascade)
+
+  @@index([educatorId])
+  @@map("tutor_session_notes")
 }

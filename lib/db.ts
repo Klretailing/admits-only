@@ -553,6 +553,51 @@ export async function ensureSchema() {
     `);
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "account_connections_studentId_idx" ON "account_connections"("studentId");`);
 
+    // ─── Essay Reviews (tutor review queue) ───
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "essay_reviews" (
+        "id"              TEXT NOT NULL,
+        "essayId"         TEXT NOT NULL,
+        "studentId"       TEXT NOT NULL,
+        "tutorId"         TEXT,
+        "status"          TEXT NOT NULL DEFAULT 'pending',
+        "priority"        TEXT NOT NULL DEFAULT 'normal',
+        "studentNote"     TEXT NOT NULL DEFAULT '',
+        "tutorFeedback"   TEXT NOT NULL DEFAULT '',
+        "annotations"     JSONB NOT NULL DEFAULT '[]',
+        "scores"          JSONB NOT NULL DEFAULT '{}',
+        "submittedAt"     TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "reviewedAt"      TIMESTAMP(3),
+        "createdAt"       TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt"       TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "essay_reviews_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "essay_reviews_essayId_fkey" FOREIGN KEY ("essayId") REFERENCES "essays"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "essay_reviews_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "essay_reviews_studentId_idx" ON "essay_reviews"("studentId");`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "essay_reviews_tutorId_idx" ON "essay_reviews"("tutorId");`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "essay_reviews_status_idx" ON "essay_reviews"("status");`);
+
+    // ─── Tutor Session Notes (Notion-like notepad) ───
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "tutor_session_notes" (
+        "id"          TEXT NOT NULL,
+        "educatorId"  TEXT NOT NULL,
+        "title"       TEXT NOT NULL DEFAULT 'Untitled',
+        "content"     TEXT NOT NULL DEFAULT '',
+        "color"       TEXT NOT NULL DEFAULT 'default',
+        "pinned"      BOOLEAN NOT NULL DEFAULT false,
+        "archived"    BOOLEAN NOT NULL DEFAULT false,
+        "sortOrder"   INTEGER NOT NULL DEFAULT 0,
+        "createdAt"   TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt"   TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "tutor_session_notes_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "tutor_session_notes_educatorId_fkey" FOREIGN KEY ("educatorId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "tutor_session_notes_educatorId_idx" ON "tutor_session_notes"("educatorId");`);
+
     globalForPrisma.schemaReady = true;
   } catch (e) {
     // Tables likely already exist — mark as ready
