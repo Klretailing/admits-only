@@ -184,6 +184,7 @@ function RadarView({
     panX: 0,
     panY: 0,
     zoom: 1,
+    targetZoom: 1,
     isDragging: false,
     lastX: 0,
     lastY: 0,
@@ -242,6 +243,8 @@ function RadarView({
       const cam = cameraRef.current;
       const elapsed = (timestamp - startTime) / 1000;
 
+      cam.zoom += (cam.targetZoom - cam.zoom) * 0.12;
+
       const entrance = Math.min(1, elapsed / 1.0);
       const eased = 1 - Math.pow(1 - entrance, 3);
 
@@ -262,13 +265,13 @@ function RadarView({
         if (sr < 3) continue;
         ctx.beginPath();
         ctx.arc(ccx, ccy, sr, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(255,255,255,0.025)';
+        ctx.strokeStyle = 'rgba(255,255,255,0.05)';
         ctx.lineWidth = 1;
         ctx.stroke();
       }
 
       // Cross axes
-      ctx.strokeStyle = 'rgba(255,255,255,0.025)';
+      ctx.strokeStyle = 'rgba(255,255,255,0.05)';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(0, ccy);
@@ -288,9 +291,9 @@ function RadarView({
 
       // Zone bands — filled circles outer to inner
       const zones = [
-        { r: 345, fill: 'rgba(244,63,94,0.025)', stroke: 'rgba(244,63,94,0.12)', label: 'Reach', labelColor: '#fda4af' },
-        { r: 255, fill: 'rgba(245,158,11,0.03)', stroke: 'rgba(245,158,11,0.14)', label: 'Match', labelColor: '#fcd34d' },
-        { r: 155, fill: 'rgba(16,185,129,0.04)', stroke: 'rgba(16,185,129,0.16)', label: 'Safety', labelColor: '#6ee7b7' },
+        { r: 345, fill: 'rgba(244,63,94,0.06)', stroke: 'rgba(244,63,94,0.22)', label: 'Reach', labelColor: '#fda4af' },
+        { r: 255, fill: 'rgba(245,158,11,0.08)', stroke: 'rgba(245,158,11,0.24)', label: 'Match', labelColor: '#fcd34d' },
+        { r: 155, fill: 'rgba(16,185,129,0.10)', stroke: 'rgba(16,185,129,0.28)', label: 'Safety', labelColor: '#6ee7b7' },
       ];
 
       for (const z of zones) {
@@ -400,7 +403,7 @@ function RadarView({
         // Dot
         ctx.beginPath();
         ctx.arc(sx, sy, finalRadius, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${r},${g},${b},0.9)`;
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
         ctx.fill();
 
         // Tiny specular
@@ -534,15 +537,20 @@ function RadarView({
         const rect = container.getBoundingClientRect();
         const mx = e.clientX - rect.left;
         const my = e.clientY - rect.top;
+        let closest: typeof screenNodesRef.current[0] | null = null;
+        let closestDist = Infinity;
         for (const p of screenNodesRef.current) {
           const dx = p.sx - mx;
           const dy = p.sy - my;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          const hitR = Math.max(14, p.radius + 4);
-          if (dist < hitR) {
-            onSelect(p.node.tile);
-            break;
+          if (dist < closestDist) {
+            closest = p;
+            closestDist = dist;
           }
+        }
+        const maxHitDist = Math.max(16, Math.min(30, 20 * cam.zoom));
+        if (closest && closestDist <= maxHitDist) {
+          onSelect(closest.node.tile);
         }
       }
 
@@ -552,7 +560,9 @@ function RadarView({
     function handleWheel(e: WheelEvent) {
       e.preventDefault();
       const cam = cameraRef.current;
-      cam.zoom = Math.max(0.4, Math.min(4, cam.zoom - e.deltaY * 0.001));
+      const delta = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+      const zoomFactor = 1 - delta * 0.0015;
+      cam.targetZoom = Math.max(0.4, Math.min(4, cam.targetZoom * zoomFactor));
     }
 
     // Touch
@@ -591,7 +601,7 @@ function RadarView({
         const dy = e.touches[0].clientY - e.touches[1].clientY;
         const newDist = Math.sqrt(dx * dx + dy * dy);
         if (touchDist > 0) {
-          cam.zoom = Math.max(0.4, Math.min(4, cam.zoom * (newDist / touchDist)));
+          cam.targetZoom = Math.max(0.4, Math.min(4, cam.targetZoom * (newDist / touchDist)));
         }
         touchDist = newDist;
       }
@@ -606,15 +616,20 @@ function RadarView({
         const rect = container.getBoundingClientRect();
         const mx = e.changedTouches[0].clientX - rect.left;
         const my = e.changedTouches[0].clientY - rect.top;
+        let closest: typeof screenNodesRef.current[0] | null = null;
+        let closestDist = Infinity;
         for (const p of screenNodesRef.current) {
           const dx = p.sx - mx;
           const dy = p.sy - my;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          const hitR = Math.max(16, p.radius + 6);
-          if (dist < hitR) {
-            onSelect(p.node.tile);
-            break;
+          if (dist < closestDist) {
+            closest = p;
+            closestDist = dist;
           }
+        }
+        const maxHitDist = Math.max(20, Math.min(35, 24 * cam.zoom));
+        if (closest && closestDist <= maxHitDist) {
+          onSelect(closest.node.tile);
         }
       }
     }
@@ -692,8 +707,33 @@ function RadarView({
         </div>
       </div>
 
+      {/* Zoom controls */}
+      <div className="absolute top-4 left-4 flex flex-col gap-1.5">
+        <button
+          onClick={() => { cameraRef.current.targetZoom = Math.min(4, cameraRef.current.targetZoom * 1.4); }}
+          className="w-8 h-8 rounded-lg bg-slate-900/70 backdrop-blur-sm border border-white/10 text-white/70 hover:text-white hover:bg-slate-800/80 transition-all flex items-center justify-center text-lg font-medium"
+        >
+          +
+        </button>
+        <button
+          onClick={() => { cameraRef.current.targetZoom = Math.max(0.4, cameraRef.current.targetZoom / 1.4); }}
+          className="w-8 h-8 rounded-lg bg-slate-900/70 backdrop-blur-sm border border-white/10 text-white/70 hover:text-white hover:bg-slate-800/80 transition-all flex items-center justify-center text-lg font-medium"
+        >
+          −
+        </button>
+        <button
+          onClick={() => { cameraRef.current.targetZoom = 1; cameraRef.current.panX = 0; cameraRef.current.panY = 0; }}
+          className="w-8 h-8 rounded-lg bg-slate-900/70 backdrop-blur-sm border border-white/10 text-white/70 hover:text-white hover:bg-slate-800/80 transition-all flex items-center justify-center"
+          title="Reset view"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </button>
+      </div>
+
       {/* Controls hint */}
-      <div className="absolute bottom-4 right-4 text-[10px] text-white/25 pointer-events-none text-right">
+      <div className="absolute bottom-4 right-4 text-[10px] text-white/30 pointer-events-none text-right">
         <p>Drag to pan &middot; Scroll to zoom</p>
         <p>Click a dot to explore</p>
       </div>
@@ -987,7 +1027,7 @@ export default function CollegeHeatmapPage() {
 
   const [gpa, setGpa] = useState(3.5);
   const [sat, setSat] = useState(1200);
-  const [viewMode, setViewMode] = useState<'grid' | 'galaxy' | 'trends'>('galaxy');
+  const [viewMode, setViewMode] = useState<'grid' | 'galaxy' | 'list' | 'trends'>('galaxy');
   const sliderDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedTile, setSelectedTile] = useState<HeatmapTile | null>(null);
   const [savedSchools, setSavedSchools] = useState<Set<string>>(new Set());
@@ -995,6 +1035,12 @@ export default function CollegeHeatmapPage() {
   const [filterTier, setFilterTier] = useState<'' | 'safety' | 'match' | 'reach'>('');
   const [showSavedOnly, setShowSavedOnly] = useState(false);
   const [profileLoaded, setProfileLoaded] = useState(false);
+  const [listSearch, setListSearch] = useState('');
+  const [listTypeFilter, setListTypeFilter] = useState<'Private' | 'Public' | ''>('');
+  const [listSizeFilter, setListSizeFilter] = useState<'Small' | 'Medium' | 'Large' | ''>('');
+  const [listStrengthFilter, setListStrengthFilter] = useState('');
+  const [listStateFilter, setListStateFilter] = useState('');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/login');
@@ -1061,6 +1107,35 @@ export default function CollegeHeatmapPage() {
       .sort((a, b) => b.overallFit - a.overallFit)
       .slice(0, 6);
   }, [tiles]);
+
+  const allStrengths = useMemo(() => {
+    const set = new Set<string>();
+    tiles.forEach(t => t.college.strengths.forEach(s => set.add(s)));
+    return Array.from(set).sort();
+  }, [tiles]);
+
+  const allStates = useMemo(() => {
+    const set = new Set<string>();
+    tiles.forEach(t => set.add(t.college.state));
+    return Array.from(set).sort();
+  }, [tiles]);
+
+  const listTiles = useMemo(() => {
+    let result = [...visibleTiles];
+    if (listTypeFilter) result = result.filter(t => t.college.type === listTypeFilter);
+    if (listSizeFilter) result = result.filter(t => t.college.size === listSizeFilter);
+    if (listStrengthFilter) result = result.filter(t => t.college.strengths.includes(listStrengthFilter));
+    if (listStateFilter) result = result.filter(t => t.college.state === listStateFilter);
+    if (listSearch.trim()) {
+      const q = listSearch.toLowerCase();
+      result = result.filter(t =>
+        t.college.name.toLowerCase().includes(q) ||
+        t.college.location.toLowerCase().includes(q) ||
+        t.college.strengths.some(s => s.toLowerCase().includes(q))
+      );
+    }
+    return result;
+  }, [visibleTiles, listTypeFilter, listSizeFilter, listStrengthFilter, listStateFilter, listSearch]);
 
   const addToTracker = useCallback((college: College) => {
     try {
@@ -1161,6 +1236,19 @@ export default function CollegeHeatmapPage() {
               Grid
             </button>
             <button
+              onClick={() => { setViewMode('list'); tracker.feature('college-heatmap', 'view_toggle', { mode: 'list' }); }}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+                viewMode === 'list'
+                  ? 'bg-white text-slate-800 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+              </svg>
+              List
+            </button>
+            <button
               onClick={() => { setViewMode('trends'); tracker.feature('college-heatmap', 'view_toggle', { mode: 'trends' }); }}
               className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
                 viewMode === 'trends'
@@ -1179,8 +1267,8 @@ export default function CollegeHeatmapPage() {
         {/* TRENDS VIEW */}
         {viewMode === 'trends' && <TrendsView />}
 
-        {/* What-If Simulator (hidden in trends view) */}
-        {viewMode !== 'trends' && <div className="bg-white rounded-2xl border border-slate-100 p-5">
+        {/* What-If Simulator (hidden in trends and list views) */}
+        {viewMode !== 'trends' && viewMode !== 'list' && <div className="bg-white rounded-2xl border border-slate-100 p-5">
           <div className="flex items-center gap-2 mb-4">
             <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
@@ -1227,7 +1315,7 @@ export default function CollegeHeatmapPage() {
         </div>}
 
         {/* Filters */}
-        {viewMode !== 'trends' && <div className="flex flex-wrap items-center gap-3">
+        {viewMode !== 'trends' && viewMode !== 'list' && <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 mr-4">
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: getTempColor(0) }} />
@@ -1317,7 +1405,173 @@ export default function CollegeHeatmapPage() {
           </div>
         )}
 
-        {visibleTiles.length === 0 && (
+        {/* LIST VIEW */}
+        {viewMode === 'list' && (
+          <div className="space-y-4">
+            {/* Tier summary cards */}
+            <div className="grid grid-cols-3 gap-3">
+              {(['reach', 'match', 'safety'] as const).map(tier => {
+                const cfg = { reach: { label: 'Reach', color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200', ring: 'ring-rose-500/20', desc: 'Ambitious — your stats are below their typical admits' }, match: { label: 'Match', color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200', ring: 'ring-amber-500/20', desc: 'Competitive — your stats align with their typical admits' }, safety: { label: 'Safety', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', ring: 'ring-emerald-500/20', desc: 'Strong fit — your stats exceed their typical admits' } }[tier];
+                const count = tierCounts[tier];
+                const isActive = filterTier === tier;
+                return (
+                  <button
+                    key={tier}
+                    onClick={() => setFilterTier(isActive ? '' : tier)}
+                    className={`relative p-4 sm:p-5 rounded-2xl border-2 transition-all text-left ${
+                      isActive ? `${cfg.border} ${cfg.bg} ring-2 ${cfg.ring}` : 'border-slate-100 bg-white hover:border-slate-200'
+                    }`}
+                  >
+                    <div className={`text-2xl sm:text-3xl font-bold font-display ${cfg.color}`}>{count}</div>
+                    <div className={`text-sm font-semibold mt-1 ${isActive ? cfg.color : 'text-slate-600'}`}>{cfg.label}</div>
+                    <div className="text-xs text-slate-400 mt-0.5 hidden sm:block">{cfg.desc}</div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Filters bar */}
+            <div className="bg-white rounded-2xl border border-slate-100 p-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="relative flex-1 min-w-[200px]">
+                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Search schools, locations, programs..."
+                    value={listSearch}
+                    onChange={e => setListSearch(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
+                  />
+                </div>
+                <select value={listTypeFilter} onChange={e => setListTypeFilter(e.target.value as any)} className="px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-accent/20">
+                  <option value="">All Types</option>
+                  <option value="Private">Private</option>
+                  <option value="Public">Public</option>
+                </select>
+                <select value={listSizeFilter} onChange={e => setListSizeFilter(e.target.value as any)} className="px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-accent/20">
+                  <option value="">All Sizes</option>
+                  <option value="Small">Small</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Large">Large</option>
+                </select>
+                <select value={listStrengthFilter} onChange={e => setListStrengthFilter(e.target.value)} className="px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-accent/20 max-w-[160px]">
+                  <option value="">All Programs</option>
+                  {allStrengths.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <select value={listStateFilter} onChange={e => setListStateFilter(e.target.value)} className="px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-accent/20">
+                  <option value="">All States</option>
+                  {allStates.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                {(listSearch || listTypeFilter || listSizeFilter || listStrengthFilter || listStateFilter || filterTier) && (
+                  <button onClick={() => { setListSearch(''); setListTypeFilter(''); setListSizeFilter(''); setListStrengthFilter(''); setListStateFilter(''); setFilterTier(''); }} className="text-xs font-semibold text-accent hover:underline whitespace-nowrap">Clear all</button>
+                )}
+              </div>
+            </div>
+
+            {/* Results */}
+            {listTiles.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center">
+                <div className="w-12 h-12 mx-auto rounded-2xl bg-slate-50 flex items-center justify-center mb-3">
+                  <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <p className="text-sm text-slate-500">No schools match your current filters.</p>
+                <p className="text-xs text-slate-400 mt-1">Try adjusting your search or filters.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-slate-400 font-medium">{listTiles.length} schools found</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-400">GPA: <span className="font-semibold text-primary">{gpa.toFixed(2)}</span></span>
+                    <span className="text-xs text-slate-400">SAT: <span className="font-semibold text-primary">{sat}</span></span>
+                  </div>
+                </div>
+                {listTiles.map(tile => {
+                  const tierCfg = { reach: { label: 'Reach', color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200' }, match: { label: 'Match', color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200' }, safety: { label: 'Safety', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' } }[tile.tier];
+                  const isExpanded = expandedId === tile.college.id;
+                  return (
+                    <div key={tile.college.id} className="bg-white rounded-2xl border border-slate-100 hover:border-slate-200 dash-card-hover transition-all overflow-hidden">
+                      <div className="flex items-center gap-4 p-4 sm:p-5 cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : tile.college.id)}>
+                        <div className={`shrink-0 w-16 sm:w-20 py-1.5 rounded-xl text-center ${tierCfg.bg} ${tierCfg.border} border`}>
+                          <div className={`text-xs font-bold ${tierCfg.color}`}>{tierCfg.label}</div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm sm:text-base font-bold text-primary truncate">{tile.college.name}</h3>
+                          <p className="text-xs text-slate-400 mt-0.5">{tile.college.location} &middot; {tile.college.type} &middot; {tile.college.size}</p>
+                        </div>
+                        <div className="hidden sm:flex items-center gap-4 shrink-0">
+                          <div className="text-center"><div className="text-xs text-slate-400">Accept</div><div className="text-sm font-bold text-primary">{tile.college.acceptanceRate}%</div></div>
+                          <div className="text-center"><div className="text-xs text-slate-400">Avg GPA</div><div className="text-sm font-bold text-primary">{tile.college.avgGPA.toFixed(2)}</div></div>
+                          <div className="text-center"><div className="text-xs text-slate-400">SAT Range</div><div className="text-sm font-bold text-primary">{tile.college.satRange[0]}-{tile.college.satRange[1]}</div></div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {tile.isSaved ? (
+                            <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg">Added</span>
+                          ) : (
+                            <button onClick={e => { e.stopPropagation(); addToTracker(tile.college); }} className="text-xs font-semibold text-accent bg-accent/10 hover:bg-accent/20 px-3 py-1.5 rounded-lg transition-all">+ Track</button>
+                          )}
+                          <svg className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                      </div>
+                      {isExpanded && (
+                        <div className="border-t border-slate-100 px-4 sm:px-5 py-4 bg-slate-50/50">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div>
+                              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Your Fit</h4>
+                              <div className="space-y-2">
+                                <ListFitBar label="GPA" value={tile.gpaFit} studentVal={gpa.toFixed(2)} schoolVal={tile.college.avgGPA.toFixed(2)} />
+                                <ListFitBar label="SAT" value={tile.satFit} studentVal={String(sat)} schoolVal={`${tile.college.satRange[0]}-${tile.college.satRange[1]}`} />
+                              </div>
+                            </div>
+                            <div>
+                              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Known For</h4>
+                              <div className="flex flex-wrap gap-1.5">
+                                {tile.college.strengths.map(s => (
+                                  <span key={s} className="text-xs px-2 py-1 rounded-lg bg-white border border-slate-200 text-slate-600">{s}</span>
+                                ))}
+                              </div>
+                            </div>
+                            <div>
+                              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Recommendation</h4>
+                              <p className="text-xs text-slate-600 leading-relaxed">
+                                {tile.tier === 'reach' && 'Focus your application on standout essays and strong extracurriculars. Consider applying Early Decision for a competitive edge.'}
+                                {tile.tier === 'match' && 'You\'re well-positioned for this school. Ensure your essays showcase unique qualities and genuine interest in their specific programs.'}
+                                {tile.tier === 'safety' && 'Your academics are strong for this school. Still craft a compelling application — demonstrate why this school is a great fit for you.'}
+                              </p>
+                              {!tile.isSaved && (
+                                <button onClick={() => addToTracker(tile.college)} className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-accent hover:underline">
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                                  Add to Application Tracker
+                                </button>
+                              )}
+                            </div>
+                            {/* Mobile stats */}
+                            <div className="sm:hidden">
+                              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Stats</h4>
+                              <div className="flex gap-4 text-sm">
+                                <div><span className="text-slate-400">Accept: </span><span className="font-bold text-primary">{tile.college.acceptanceRate}%</span></div>
+                                <div><span className="text-slate-400">GPA: </span><span className="font-bold text-primary">{tile.college.avgGPA.toFixed(2)}</span></div>
+                                <div><span className="text-slate-400">SAT: </span><span className="font-bold text-primary">{tile.college.satRange[0]}-{tile.college.satRange[1]}</span></div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {visibleTiles.length === 0 && viewMode !== 'list' && (
           <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center">
             <p className="text-sm text-slate-500">No schools match your current filters.</p>
             <button onClick={() => { setFilterTier(''); setShowSavedOnly(false); }} className="text-xs text-accent font-semibold mt-2 hover:underline">Clear filters</button>
@@ -1449,9 +1703,9 @@ export default function CollegeHeatmapPage() {
                   Add to Tracker
                 </button>
               )}
-              <Link href="/dashboard/college-match" className="text-xs font-semibold text-accent hover:underline ml-auto">
-                View in College Match &rarr;
-              </Link>
+              <button onClick={() => { setSelectedTile(null); setViewMode('list'); }} className="text-xs font-semibold text-accent hover:underline ml-auto">
+                View in List &rarr;
+              </button>
             </div>
           </div>
         </div>
@@ -1511,6 +1765,25 @@ function SimilarHotSchools({ currentCollege, tiles, onSelect, onAdd }: { current
             )}
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+/* ──────────────────────── LIST FIT BAR ──────────────────────── */
+
+function ListFitBar({ label, value, studentVal, schoolVal }: { label: string; value: number; studentVal: string; schoolVal: string }) {
+  const pct = Math.round((value + 1) * 50);
+  const barColor = value >= 0.2 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' : value >= -0.2 ? 'bg-gradient-to-r from-amber-400 to-amber-500' : 'bg-gradient-to-r from-rose-400 to-rose-500';
+  return (
+    <div>
+      <div className="flex items-center justify-between text-xs mb-1">
+        <span className="text-slate-500">{label}</span>
+        <span className="text-slate-400">You: <span className="font-semibold text-primary">{studentVal}</span> &middot; School: {schoolVal}</span>
+      </div>
+      <div className="h-2 rounded-full bg-slate-100 relative overflow-hidden">
+        <div className="absolute left-1/2 top-0 bottom-0 w-px bg-slate-300 z-10" />
+        <div className={`absolute top-0 bottom-0 rounded-full transition-all ${barColor}`} style={{ left: pct < 50 ? `${pct}%` : '50%', width: `${Math.abs(pct - 50)}%` }} />
       </div>
     </div>
   );
