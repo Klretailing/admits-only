@@ -51,7 +51,7 @@ export default function EducatorSchedule() {
   const [sessionNotes, setSessionNotes] = useState('');
   const [newBooking, setNewBooking] = useState({
     title: '', studentId: '', serviceId: '', date: '', time: '',
-    duration: 60, platform: 'zoom', meetingLink: '', amount: 0,
+    duration: 60, platform: 'zoom', meetingLink: '', amount: 0, paid: false,
   });
 
   useEffect(() => {
@@ -91,14 +91,23 @@ export default function EducatorSchedule() {
     const res = await fetch('/api/educator/bookings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...newBooking, date: dateTime }),
+      body: JSON.stringify({ ...newBooking, date: dateTime, paid: newBooking.paid }),
     });
     if (res.ok) {
       setShowAddModal(false);
-      setNewBooking({ title: '', studentId: '', serviceId: '', date: '', time: '', duration: 60, platform: 'zoom', meetingLink: '', amount: 0 });
+      setNewBooking({ title: '', studentId: '', serviceId: '', date: '', time: '', duration: 60, platform: 'zoom', meetingLink: '', amount: 0, paid: false });
       fetchBookings();
     }
     setSaving(false);
+  };
+
+  const handleTogglePaid = async (bookingId: string, currentPaid: boolean) => {
+    await fetch(`/api/educator/bookings/${bookingId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paid: !currentPaid }),
+    });
+    fetchBookings();
   };
 
   const handleUpdateStatus = async (bookingId: string, newStatus: string) => {
@@ -214,13 +223,25 @@ export default function EducatorSchedule() {
                           <span>{booking.duration}min</span>
                           <span>&middot;</span>
                           <span className="capitalize">{booking.platform.replace('_', ' ')}</span>
-                          {booking.amount > 0 && (
-                            <>
-                              <span>&middot;</span>
-                              <span className={booking.paid ? 'text-emerald-600' : 'text-amber-600'}>
-                                ${booking.amount}{booking.paid ? ' paid' : ' unpaid'}
-                              </span>
-                            </>
+                          <span>&middot;</span>
+                          {booking.amount > 0 ? (
+                            <button
+                              onClick={e => { e.stopPropagation(); handleTogglePaid(booking.id, booking.paid); }}
+                              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold transition-all ${
+                                booking.paid
+                                  ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                                  : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                              }`}
+                            >
+                              {booking.paid ? (
+                                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                              ) : (
+                                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 8v4m0 4h.01" /></svg>
+                              )}
+                              ${booking.amount} {booking.paid ? 'paid' : 'unpaid'}
+                            </button>
+                          ) : (
+                            <span className="text-slate-400">Free</span>
                           )}
                         </div>
                       </div>
@@ -362,6 +383,31 @@ export default function EducatorSchedule() {
                     min={0}
                     step={5}
                   />
+                </div>
+              </div>
+              <div>
+                <label className="block mb-1.5 text-sm font-semibold text-primary">Payment Status</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setNewBooking(p => ({ ...p, paid: false }))}
+                    className={`p-2.5 rounded-xl text-xs font-semibold border transition-all flex items-center justify-center gap-1.5 ${
+                      !newBooking.paid ? 'border-amber-300 bg-amber-50 text-amber-700' : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                    }`}
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01" /></svg>
+                    Unpaid
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewBooking(p => ({ ...p, paid: true }))}
+                    className={`p-2.5 rounded-xl text-xs font-semibold border transition-all flex items-center justify-center gap-1.5 ${
+                      newBooking.paid ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                    }`}
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    Paid
+                  </button>
                 </div>
               </div>
               <div>

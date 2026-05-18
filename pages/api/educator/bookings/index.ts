@@ -29,7 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'POST') {
-    const { title, studentId, serviceId, date, duration, platform, meetingLink, amount } = req.body;
+    const { title, studentId, serviceId, date, duration, platform, meetingLink, amount, paid } = req.body;
     if (!title || !date) return res.status(400).json({ error: 'Title and date are required' });
 
     try {
@@ -44,6 +44,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           platform: platform || 'zoom',
           meetingLink: meetingLink || '',
           amount: amount || 0,
+          paid: paid || false,
         },
         include: {
           student: { select: { id: true, studentName: true } },
