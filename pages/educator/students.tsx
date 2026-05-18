@@ -33,6 +33,9 @@ export default function EducatorStudents() {
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [newStudent, setNewStudent] = useState({ studentName: '', studentEmail: '', tags: [] as string[] });
+  const [connectionCode, setConnectionCode] = useState('');
+  const [connectionResult, setConnectionResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [connectingCode, setConnectingCode] = useState(false);
   const [noteText, setNoteText] = useState('');
   const [saving, setSaving] = useState(false);
   const [addError, setAddError] = useState('');
@@ -76,6 +79,29 @@ export default function EducatorStudents() {
       setAddError('Network error. Please try again.');
     }
     setSaving(false);
+  };
+
+  const handleConnectCode = async () => {
+    if (!connectionCode.trim()) return;
+    setConnectingCode(true);
+    setConnectionResult(null);
+    try {
+      const res = await fetch('/api/connection-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: connectionCode.toUpperCase().trim(), role: 'tutor' }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setConnectionResult({ ok: true, message: `Connected to ${data.studentName}! They now appear in your Student Progress view.` });
+        setConnectionCode('');
+      } else {
+        setConnectionResult({ ok: false, message: data.error || 'Failed to connect' });
+      }
+    } catch {
+      setConnectionResult({ ok: false, message: 'Network error. Please try again.' });
+    }
+    setConnectingCode(false);
   };
 
   const handleAddNote = async () => {
@@ -131,7 +157,7 @@ export default function EducatorStudents() {
             <h1 className="text-2xl font-bold font-display text-primary">My Students</h1>
             <p className="mt-1 text-slate-500">{students.length} student{students.length !== 1 ? 's' : ''} in your roster</p>
           </div>
-          <button onClick={() => setShowAddModal(true)} className="btn-primary text-sm flex items-center gap-2 self-start">
+          <button onClick={() => { setShowAddModal(true); setConnectionCode(''); setConnectionResult(null); setAddError(''); }} className="btn-primary text-sm flex items-center gap-2 self-start">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
             Add Student
           </button>
@@ -173,7 +199,7 @@ export default function EducatorStudents() {
             </div>
             <p className="text-sm text-slate-600 font-medium mb-1">No students yet</p>
             <p className="text-xs text-slate-400 mb-4">Add your first student to start tracking sessions and notes.</p>
-            <button onClick={() => setShowAddModal(true)} className="btn-primary text-sm">Add Your First Student</button>
+            <button onClick={() => { setShowAddModal(true); setConnectionCode(''); setConnectionResult(null); setAddError(''); }} className="btn-primary text-sm">Add Your First Student</button>
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -222,8 +248,52 @@ export default function EducatorStudents() {
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setShowAddModal(false)} />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
-            <h2 className="text-lg font-bold font-display text-primary mb-4">Add New Student</h2>
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[85vh] overflow-y-auto p-6">
+            <h2 className="text-lg font-bold font-display text-primary mb-4">Add Student</h2>
+
+            {/* Connect with Student Code */}
+            <div className="p-4 rounded-xl bg-emerald-50/60 border border-emerald-100 mb-5">
+              <div className="flex items-center gap-2 mb-2">
+                <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                <h3 className="text-sm font-bold text-emerald-800">Link with Student Code</h3>
+              </div>
+              <p className="text-xs text-emerald-700/70 mb-3">Ask your student for their connection code (found on their Profile page) to link accounts and view their progress.</p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={connectionCode}
+                  onChange={e => {
+                    let v = e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '');
+                    if (v.length === 4 && !v.includes('-') && connectionCode.length < v.length) v = v + '-';
+                    if (v.length > 9) v = v.slice(0, 9);
+                    setConnectionCode(v);
+                  }}
+                  className="flex-1 border border-emerald-200 bg-white p-2.5 rounded-xl text-sm font-mono tracking-widest text-center uppercase focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  placeholder="XXXX-XXXX"
+                  maxLength={9}
+                />
+                <button
+                  type="button"
+                  onClick={handleConnectCode}
+                  disabled={connectingCode || connectionCode.replace('-', '').length < 8}
+                  className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                >
+                  {connectingCode ? 'Linking...' : 'Link'}
+                </button>
+              </div>
+              {connectionResult && (
+                <div className={`mt-2 p-2.5 rounded-lg text-xs font-medium ${connectionResult.ok ? 'bg-emerald-100 text-emerald-800' : 'bg-red-50 text-red-700'}`}>
+                  {connectionResult.message}
+                </div>
+              )}
+            </div>
+
+            <div className="relative flex items-center mb-5">
+              <div className="flex-1 border-t border-slate-200" />
+              <span className="px-3 text-xs text-slate-400 font-medium">or add manually</span>
+              <div className="flex-1 border-t border-slate-200" />
+            </div>
+
             {addError && (
               <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700 mb-4">{addError}</div>
             )}

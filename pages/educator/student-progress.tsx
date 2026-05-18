@@ -242,8 +242,8 @@ function ListView({
           </div>
           <p className="text-sm font-medium text-slate-600 mb-1">No connected students yet</p>
           <p className="text-xs text-slate-400 max-w-sm mx-auto">
-            Students can connect with you using your Connection Code. Share it from{' '}
-            <span className="font-medium text-emerald-600">Settings &gt; Connection Code</span>.
+            Ask your students for their connection code, then enter it in{' '}
+            <span className="font-medium text-emerald-600">My Students &gt; Add Student</span> to link accounts.
           </p>
         </div>
       ) : (
