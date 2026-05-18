@@ -1,6 +1,6 @@
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import Head from 'next/head';
 import EducatorDashboardLayout from '../../components/EducatorDashboardLayout';
 
@@ -55,7 +55,6 @@ function formatCompact(amount: number) {
 function BarChart({ data, valueKey, gradientFrom, gradientTo }: {
   data: MonthlyData[];
   valueKey: 'earnings' | 'cumulative';
-  color?: string;
   gradientFrom: string;
   gradientTo: string;
 }) {
@@ -110,17 +109,125 @@ function BarChart({ data, valueKey, gradientFrom, gradientTo }: {
   );
 }
 
+function StudentBreakdown({ payments }: { payments: EarningsData['payments'] }) {
+  const breakdown = useMemo(() => {
+    const map: Record<string, { name: string; total: number; sessions: number; paid: number; unpaid: number }> = {};
+    payments.forEach(p => {
+      if (p.status !== 'completed') return;
+      const key = p.studentName || 'Unassigned';
+      if (!map[key]) map[key] = { name: key, total: 0, sessions: 0, paid: 0, unpaid: 0 };
+      map[key].total += p.amount;
+      map[key].sessions += 1;
+      if (p.paid) map[key].paid += p.amount;
+      else map[key].unpaid += p.amount;
+    });
+    return Object.values(map).sort((a, b) => b.total - a.total);
+  }, [payments]);
+
+  if (breakdown.length === 0) return null;
+  const max = Math.max(...breakdown.map(s => s.total), 1);
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 p-5">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center">
+          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+        </div>
+        <div>
+          <h3 className="text-sm font-bold text-primary">Revenue by Student</h3>
+          <p className="text-xs text-slate-400">Earnings breakdown per student</p>
+        </div>
+      </div>
+      <div className="space-y-3">
+        {breakdown.map(s => {
+          const pct = (s.total / max) * 100;
+          const paidPct = s.total > 0 ? (s.paid / s.total) * 100 : 0;
+          return (
+            <div key={s.name}>
+              <div className="flex items-center justify-between text-xs mb-1.5">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-accent to-purple-600 flex items-center justify-center text-white text-[10px] font-bold shrink-0">
+                    {s.name[0].toUpperCase()}
+                  </div>
+                  <span className="font-semibold text-primary truncate">{s.name}</span>
+                  <span className="text-slate-400 shrink-0">{s.sessions} session{s.sessions !== 1 ? 's' : ''}</span>
+                </div>
+                <span className="font-bold text-primary shrink-0 ml-2">{formatCurrency(s.total)}</span>
+              </div>
+              <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full rounded-full relative" style={{ width: `${pct}%` }}>
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500" style={{ width: `${paidPct}%` }} />
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-amber-400 to-orange-400" style={{ left: `${paidPct}%`, width: `${100 - paidPct}%` }} />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-100">
+        <div className="flex items-center gap-1.5 text-[10px]">
+          <div className="w-2.5 h-2.5 rounded-sm bg-gradient-to-r from-emerald-500 to-teal-500" />
+          <span className="text-slate-400">Paid</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px]">
+          <div className="w-2.5 h-2.5 rounded-sm bg-gradient-to-r from-amber-400 to-orange-400" />
+          <span className="text-slate-400">Unpaid</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function EducatorEarnings() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [data, setData] = useState<EarningsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'paid' | 'unpaid'>('all');
-  const [chartModal, setChartModal] = useState<'monthly' | 'total' | null>(null);
   const [showAddEarning, setShowAddEarning] = useState(false);
   const [earningForm, setEarningForm] = useState({ description: '', hours: '', amount: '', date: '' });
   const [earningError, setEarningError] = useState('');
   const [savingEarning, setSavingEarning] = useState(false);
+  const [chartView, setChartView] = useState<'monthly' | 'cumulative'>('monthly');
+
+  const exportCSV = useCallback(() => {
+    if (!data) return;
+    const rows: string[][] = [['Date', 'Type', 'Title/Description', 'Student', 'Duration (min)', 'Amount', 'Status', 'Paid']];
+    data.payments.forEach(p => {
+      rows.push([
+        new Date(p.date).toLocaleDateString('en-US'),
+        'Session',
+        `"${p.title.replace(/"/g, '""')}"`,
+        `"${p.studentName.replace(/"/g, '""')}"`,
+        '',
+        p.amount.toFixed(2),
+        p.status,
+        p.paid ? 'Yes' : 'No',
+      ]);
+    });
+    data.manualEarnings.forEach(e => {
+      rows.push([
+        new Date(e.date).toLocaleDateString('en-US'),
+        'Manual',
+        `"${e.description.replace(/"/g, '""')}"`,
+        '',
+        String(Math.round(e.hours * 60)),
+        e.amount.toFixed(2),
+        'completed',
+        'Yes',
+      ]);
+    });
+    const csv = rows.map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `admitsonly-earnings-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [data]);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/login');
@@ -209,45 +316,65 @@ export default function EducatorEarnings() {
             <h1 className="text-2xl font-bold font-display text-primary">Earnings</h1>
             <p className="mt-1 text-slate-500">Track your revenue and payment history</p>
           </div>
-          <button onClick={() => setShowAddEarning(true)} className="btn-primary text-sm flex items-center gap-2 self-start">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-            Log Earnings
-          </button>
+          <div className="flex items-center gap-2 self-start">
+            <button onClick={exportCSV} disabled={!data || (data.payments.length === 0 && data.manualEarnings.length === 0)} className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-all flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+              Export CSV
+            </button>
+            <button onClick={() => setShowAddEarning(true)} className="btn-primary text-sm flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+              Log Earnings
+            </button>
+          </div>
         </div>
 
         {/* Revenue Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'Total Revenue', value: formatCurrency(data?.totalRevenue || 0), gradient: 'from-emerald-500 to-teal-600', clickable: 'total' as const },
-            { label: 'This Month', value: formatCurrency(data?.monthRevenue || 0), gradient: 'from-blue-500 to-indigo-600', clickable: 'monthly' as const },
-            { label: 'Collected', value: formatCurrency(data?.paidAmount || 0), gradient: 'from-green-500 to-emerald-600', clickable: null },
-            { label: 'Outstanding', value: formatCurrency(data?.unpaidAmount || 0), gradient: 'from-amber-500 to-orange-600', clickable: null },
+            { label: 'Total Revenue', value: formatCurrency(data?.totalRevenue || 0), gradient: 'from-emerald-500 to-teal-600' },
+            { label: 'This Month', value: formatCurrency(data?.monthRevenue || 0), gradient: 'from-blue-500 to-indigo-600' },
+            { label: 'Collected', value: formatCurrency(data?.paidAmount || 0), gradient: 'from-green-500 to-emerald-600' },
+            { label: 'Outstanding', value: formatCurrency(data?.unpaidAmount || 0), gradient: 'from-amber-500 to-orange-600' },
           ].map(stat => (
-            <div
-              key={stat.label}
-              className={`bg-white rounded-2xl border border-slate-100 p-5 transition-all ${
-                stat.clickable ? 'cursor-pointer hover:shadow-lg hover:border-slate-200 hover:-translate-y-0.5 active:translate-y-0' : ''
-              }`}
-              onClick={() => stat.clickable && setChartModal(stat.clickable)}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-slate-500 font-medium">{stat.label}</p>
-                {stat.clickable && (
-                  <svg className="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                )}
-              </div>
+            <div key={stat.label} className="bg-white rounded-2xl border border-slate-100 p-5">
+              <p className="text-sm text-slate-500 font-medium mb-2">{stat.label}</p>
               <div className="flex items-center gap-2">
                 <div className={`w-2 h-2 rounded-full bg-gradient-to-br ${stat.gradient}`} />
                 <span className="text-xl font-bold font-display text-primary">{stat.value}</span>
               </div>
-              {stat.clickable && (
-                <p className="text-[10px] text-slate-400 mt-2">Click to view chart</p>
-              )}
             </div>
           ))}
         </div>
+
+        {/* Inline Revenue Chart */}
+        {data?.monthlyBreakdown && data.monthlyBreakdown.some(d => d.earnings > 0) && (
+          <div className="bg-white rounded-2xl border border-slate-100 p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-primary">{chartView === 'monthly' ? 'Monthly Earnings' : 'Cumulative Revenue'}</h3>
+                  <p className="text-xs text-slate-400">{chartView === 'monthly' ? 'Revenue earned each month' : 'Total revenue growth over time'}</p>
+                </div>
+              </div>
+              <div className="flex items-center bg-slate-100 rounded-lg p-0.5 gap-0.5">
+                <button onClick={() => setChartView('monthly')} className={`px-3 py-1.5 rounded-md text-[11px] font-semibold transition-all ${chartView === 'monthly' ? 'bg-white text-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Monthly</button>
+                <button onClick={() => setChartView('cumulative')} className={`px-3 py-1.5 rounded-md text-[11px] font-semibold transition-all ${chartView === 'cumulative' ? 'bg-white text-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Cumulative</button>
+              </div>
+            </div>
+            <BarChart
+              data={data.monthlyBreakdown}
+              valueKey={chartView === 'monthly' ? 'earnings' : 'cumulative'}
+              gradientFrom={chartView === 'monthly' ? '#ea580c' : '#059669'}
+              gradientTo={chartView === 'monthly' ? '#f97316' : '#34d399'}
+            />
+          </div>
+        )}
+
+        {/* Student Breakdown */}
+        {data && data.payments.length > 0 && <StudentBreakdown payments={data.payments} />}
 
         {/* Avg Hourly Rate & Hours Card */}
         <div className="bg-white rounded-2xl border border-slate-100 p-6">
@@ -453,75 +580,6 @@ export default function EducatorEarnings() {
         </div>
       )}
 
-      {/* Monthly Earnings Chart Modal */}
-      {chartModal === 'monthly' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setChartModal(null)} />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-lg font-bold font-display text-primary">Monthly Earnings</h2>
-                <p className="text-sm text-slate-400 mt-0.5">Revenue earned each month over the last 12 months</p>
-              </div>
-              <button onClick={() => setChartModal(null)} className="p-2 rounded-lg text-slate-400 hover:text-primary hover:bg-slate-50 transition-colors">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-            {data?.monthlyBreakdown && data.monthlyBreakdown.length > 0 ? (
-              <BarChart
-                data={data.monthlyBreakdown}
-                valueKey="earnings"
-                gradientFrom="#ea580c"
-                gradientTo="#f97316"
-              />
-            ) : (
-              <div className="flex items-center justify-center h-64 text-slate-400 text-sm">
-                No earnings data available yet
-              </div>
-            )}
-            <div className="mt-4 pt-4 border-t border-slate-100 flex items-center gap-3">
-              <div className="w-3 h-3 rounded-sm" style={{ background: 'linear-gradient(to top, #ea580c, #f97316)' }} />
-              <span className="text-xs text-slate-500 font-medium">Monthly earnings</span>
-              <span className="text-xs text-slate-400 ml-auto">Hover bars for exact amounts</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Total Revenue Chart Modal */}
-      {chartModal === 'total' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setChartModal(null)} />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-lg font-bold font-display text-primary">Cumulative Revenue</h2>
-                <p className="text-sm text-slate-400 mt-0.5">Total revenue growth over the last 12 months</p>
-              </div>
-              <button onClick={() => setChartModal(null)} className="p-2 rounded-lg text-slate-400 hover:text-primary hover:bg-slate-50 transition-colors">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-            {data?.monthlyBreakdown && data.monthlyBreakdown.length > 0 ? (
-              <BarChart
-                data={data.monthlyBreakdown}
-                valueKey="cumulative"
-                gradientFrom="#059669"
-                gradientTo="#34d399"
-              />
-            ) : (
-              <div className="flex items-center justify-center h-64 text-slate-400 text-sm">
-                No revenue data available yet
-              </div>
-            )}
-            <div className="mt-4 pt-4 border-t border-slate-100 flex items-center gap-3">
-              <div className="w-3 h-3 rounded-sm" style={{ background: 'linear-gradient(to top, #059669, #34d399)' }} />
-              <span className="text-xs text-slate-500 font-medium">Cumulative revenue</span>
-              <span className="text-xs text-slate-400 ml-auto">Hover bars for exact amounts</span>
-            </div>
-          </div>
-        </div>
-      )}
     </EducatorDashboardLayout>
   );
 }
