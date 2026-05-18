@@ -88,10 +88,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const totalHours = bookingHours + manualHours;
     const avgHourlyRate = totalHours > 0 ? totalRevenue / totalHours : 0;
 
-    // Build monthly breakdown for charts (last 12 months)
+    // Build monthly breakdown for charts (last 24 months for client-side range filtering)
     const monthlyBreakdown: { month: string; label: string; earnings: number; cumulative: number }[] = [];
     let cumulative = 0;
-    for (let i = 11; i >= 0; i--) {
+    for (let i = 23; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59);
       const label = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });

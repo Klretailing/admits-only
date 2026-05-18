@@ -189,6 +189,9 @@ export default function EducatorEarnings() {
   const [earningError, setEarningError] = useState('');
   const [savingEarning, setSavingEarning] = useState(false);
   const [chartView, setChartView] = useState<'monthly' | 'cumulative'>('monthly');
+  const [chartRange, setChartRange] = useState<'3m' | '6m' | '1y' | 'all' | 'custom'>('1y');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
 
   const exportCSV = useCallback(() => {
     if (!data) return;
@@ -228,6 +231,31 @@ export default function EducatorEarnings() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   }, [data]);
+
+  const chartData = useMemo(() => {
+    if (!data?.monthlyBreakdown) return [];
+    const all = data.monthlyBreakdown;
+    let sliced: MonthlyData[];
+
+    if (chartRange === 'all') {
+      sliced = all;
+    } else if (chartRange === 'custom' && customFrom) {
+      const from = customFrom;
+      const to = customTo || '9999-12';
+      sliced = all.filter(d => d.month >= from && d.month <= to);
+    } else {
+      const months = chartRange === '3m' ? 3 : chartRange === '6m' ? 6 : 12;
+      sliced = all.slice(-months);
+    }
+
+    if (sliced.length === 0) return [];
+
+    let cum = 0;
+    return sliced.map(d => {
+      cum += d.earnings;
+      return { ...d, cumulative: cum };
+    });
+  }, [data, chartRange, customFrom, customTo]);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/login');
@@ -349,7 +377,8 @@ export default function EducatorEarnings() {
         {/* Inline Revenue Chart */}
         {data?.monthlyBreakdown && data.monthlyBreakdown.some(d => d.earnings > 0) && (
           <div className="bg-white rounded-2xl border border-slate-100 p-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            {/* Chart header row */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
                   <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
@@ -364,12 +393,66 @@ export default function EducatorEarnings() {
                 <button onClick={() => setChartView('cumulative')} className={`px-3 py-1.5 rounded-md text-[11px] font-semibold transition-all ${chartView === 'cumulative' ? 'bg-white text-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Cumulative</button>
               </div>
             </div>
-            <BarChart
-              data={data.monthlyBreakdown}
-              valueKey={chartView === 'monthly' ? 'earnings' : 'cumulative'}
-              gradientFrom={chartView === 'monthly' ? '#ea580c' : '#059669'}
-              gradientTo={chartView === 'monthly' ? '#f97316' : '#34d399'}
-            />
+
+            {/* Date range selector */}
+            <div className="flex flex-wrap items-center gap-2 mb-4 pb-3 border-b border-slate-100">
+              {([
+                { key: '3m' as const, label: '3 Months' },
+                { key: '6m' as const, label: '6 Months' },
+                { key: '1y' as const, label: '1 Year' },
+                { key: 'all' as const, label: 'All Time' },
+                { key: 'custom' as const, label: 'Custom' },
+              ]).map(opt => (
+                <button
+                  key={opt.key}
+                  onClick={() => setChartRange(opt.key)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    chartRange === opt.key
+                      ? 'bg-accent text-white shadow-sm'
+                      : 'bg-slate-50 text-slate-500 hover:bg-slate-100 border border-slate-200'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+              {chartRange === 'custom' && (
+                <div className="flex items-center gap-2 ml-1">
+                  <input
+                    type="month"
+                    value={customFrom}
+                    onChange={e => setCustomFrom(e.target.value)}
+                    className="px-2 py-1.5 rounded-lg border border-slate-200 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
+                  />
+                  <span className="text-xs text-slate-400">to</span>
+                  <input
+                    type="month"
+                    value={customTo}
+                    onChange={e => setCustomTo(e.target.value)}
+                    className="px-2 py-1.5 rounded-lg border border-slate-200 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
+                  />
+                </div>
+              )}
+              {chartData.length > 0 && (
+                <span className="text-[10px] text-slate-400 ml-auto">
+                  {chartData[0].label} — {chartData[chartData.length - 1].label}
+                  {' · '}
+                  {formatCurrency(chartData.reduce((s, d) => s + d.earnings, 0))} total
+                </span>
+              )}
+            </div>
+
+            {chartData.length > 0 ? (
+              <BarChart
+                data={chartData}
+                valueKey={chartView === 'monthly' ? 'earnings' : 'cumulative'}
+                gradientFrom={chartView === 'monthly' ? '#ea580c' : '#059669'}
+                gradientTo={chartView === 'monthly' ? '#f97316' : '#34d399'}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-48 text-sm text-slate-400">
+                No data for the selected range
+              </div>
+            )}
           </div>
         )}
 
