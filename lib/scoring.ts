@@ -15,8 +15,10 @@ export interface Extracurricular {
 export interface ProfileInput {
   gpa: string | number;
   gpaScale: '4.0' | '5.0';
+  gpaWeighted?: string | number | null;
   satMath: string | number;
   satRW: string | number;
+  actScore?: string | number | null;
   extracurriculars: Extracurricular[];
 }
 
@@ -29,6 +31,9 @@ export interface ScoringResult {
   ecFeedback: string;
   totalSAT: number;
   normalizedGpa: number;
+  actEquivalent: number;
+  rigorBonus: number;
+  bestTestScore: number;
 }
 
 const CATEGORY_MAP: Record<string, string> = {
@@ -44,6 +49,44 @@ const CATEGORY_MAP: Record<string, string> = {
 
 export function normalizeBucket(category: string): string {
   return CATEGORY_MAP[category] || category;
+}
+
+// ACT-to-SAT concordance table (College Board 2018 concordance)
+const ACT_TO_SAT: [number, number][] = [
+  [36, 1590], [35, 1540], [34, 1500], [33, 1460], [32, 1430],
+  [31, 1400], [30, 1370], [29, 1340], [28, 1310], [27, 1280],
+  [26, 1240], [25, 1210], [24, 1180], [23, 1140], [22, 1110],
+  [21, 1080], [20, 1040], [19, 1010], [18, 970], [17, 930],
+  [16, 890], [15, 850], [14, 810], [13, 760], [12, 710],
+  [11, 670],
+];
+
+export function actToSat(act: number): number {
+  if (act >= 36) return 1590;
+  if (act <= 11) return 670;
+  const entry = ACT_TO_SAT.find(([a]) => a === Math.round(act));
+  if (entry) return entry[1];
+  const higher = ACT_TO_SAT.find(([a]) => a <= act);
+  const lower = ACT_TO_SAT.find(([a]) => a >= act);
+  if (higher && lower && higher !== lower) {
+    const ratio = (act - lower[0]) / (higher[0] - lower[0]);
+    return Math.round(lower[1] + ratio * (higher[1] - lower[1]));
+  }
+  return Math.round(act * 40 + 150);
+}
+
+export function satToAct(sat: number): number {
+  if (sat >= 1590) return 36;
+  if (sat <= 670) return 11;
+  for (let i = 0; i < ACT_TO_SAT.length - 1; i++) {
+    const [actHigh, satHigh] = ACT_TO_SAT[i];
+    const [actLow, satLow] = ACT_TO_SAT[i + 1];
+    if (sat >= satLow && sat <= satHigh) {
+      const ratio = (sat - satLow) / (satHigh - satLow);
+      return Math.round((actLow + ratio * (actHigh - actLow)) * 10) / 10;
+    }
+  }
+  return Math.round((sat - 150) / 40);
 }
 
 export const comparativeData = [
@@ -123,10 +166,19 @@ export function computeHolisticScore(profile: ProfileInput): ScoringResult {
   const satRW = typeof profile.satRW === 'string' ? parseInt(profile.satRW) || 0 : profile.satRW || 0;
   const totalSAT = satMath + satRW;
 
+  const actRaw = profile.actScore != null ? (typeof profile.actScore === 'string' ? parseInt(profile.actScore) || 0 : profile.actScore) : 0;
+  const actSatEquivalent = actRaw > 0 ? actToSat(actRaw) : 0;
+  const bestTestSAT = Math.max(totalSAT, actSatEquivalent);
+
+  // Course rigor bonus: weighted GPA > unweighted suggests AP/honors coursework
+  const gpaW = profile.gpaWeighted != null ? (typeof profile.gpaWeighted === 'string' ? parseFloat(profile.gpaWeighted) || 0 : profile.gpaWeighted) : 0;
+  const rigorBonus = (gpaW > 0 && normalizedGpa > 0 && gpaW > normalizedGpa) ? Math.min((gpaW - normalizedGpa) * 8, 5) : 0;
+
   const gpaScore = Math.min((normalizedGpa / 4.0) * 100, 100);
-  const satScore = Math.min(((totalSAT - 400) / 1200) * 100, 100);
+  const testScore = bestTestSAT > 0 ? Math.min(((bestTestSAT - 400) / 1200) * 100, 100) : 0;
   const ecEval = evaluateExtracurriculars(profile.extracurriculars);
-  const holistic = Math.round(gpaScore * 0.35 + satScore * 0.30 + ecEval.score * 0.35);
+
+  const holistic = Math.min(Math.round(gpaScore * 0.33 + testScore * 0.28 + ecEval.score * 0.34 + rigorBonus), 100);
   const betterThan = comparativeData.filter((d) => holistic > d.score).length;
   const percentile = Math.round((betterThan / comparativeData.length) * 100);
 
@@ -134,10 +186,13 @@ export function computeHolisticScore(profile: ProfileInput): ScoringResult {
     holistic,
     percentile,
     gpaScore: Math.round(gpaScore),
-    satScore: Math.round(satScore),
+    satScore: Math.round(testScore),
     ecScore: ecEval.score,
     ecFeedback: ecEval.feedback,
     totalSAT,
     normalizedGpa,
+    actEquivalent: actRaw > 0 ? actRaw : (totalSAT > 0 ? Math.round(satToAct(totalSAT)) : 0),
+    rigorBonus: Math.round(rigorBonus * 10) / 10,
+    bestTestScore: bestTestSAT,
   };
 }

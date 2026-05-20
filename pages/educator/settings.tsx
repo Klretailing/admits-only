@@ -1,8 +1,20 @@
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
 import EducatorDashboardLayout from '../../components/EducatorDashboardLayout';
+
+interface Connection {
+  id: string;
+  studentId?: string;
+  connectedUserId?: string;
+  role: string;
+  createdAt: string;
+  studentName?: string;
+  studentEmail?: string;
+  connectedName?: string;
+  connectedEmail?: string;
+}
 
 interface EducatorProfile {
   bio: string;
@@ -38,6 +50,21 @@ export default function EducatorSettings() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [newCred, setNewCred] = useState({ title: '', institution: '', year: '' });
+  const [myCode, setMyCode] = useState('');
+  const [connectionsAsStudent, setConnectionsAsStudent] = useState<Connection[]>([]);
+  const [connectionsAsParent, setConnectionsAsParent] = useState<Connection[]>([]);
+  const [copied, setCopied] = useState(false);
+
+  const fetchConnections = useCallback(() => {
+    fetch('/api/connection-code')
+      .then(r => r.json())
+      .then(data => {
+        setMyCode(data.code || '');
+        setConnectionsAsStudent(data.connectionsAsStudent || []);
+        setConnectionsAsParent(data.connectionsAsParentOrTutor || []);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/login');
@@ -46,6 +73,7 @@ export default function EducatorSettings() {
 
   useEffect(() => {
     if (status !== 'authenticated') return;
+    fetchConnections();
     fetch('/api/educator/profile')
       .then(r => r.json())
       .then(d => {
@@ -53,7 +81,7 @@ export default function EducatorSettings() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [status]);
+  }, [status, fetchConnections]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -85,6 +113,24 @@ export default function EducatorSettings() {
     }));
   };
 
+  const handleCopy = () => {
+    navigator.clipboard.writeText(myCode).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const handleRemoveConnection = async (connectionId: string) => {
+    try {
+      await fetch('/api/connection-code', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ connectionId }),
+      });
+      fetchConnections();
+    } catch {}
+  };
+
   if (status === 'loading' || loading) {
     return <div className="min-h-screen flex items-center justify-center bg-surface"><div className="animate-pulse text-slate-400">Loading...</div></div>;
   }
@@ -113,6 +159,99 @@ export default function EducatorSettings() {
             Profile saved successfully!
           </div>
         )}
+
+        {/* Connection Code */}
+        <section className="bg-white rounded-2xl border border-slate-100 p-6 space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-primary">Your Connection Code</h2>
+              <p className="text-xs text-slate-400">Share this code so students can find and connect with you</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="flex-1 bg-slate-50 rounded-xl border border-slate-200 px-5 py-4 text-center">
+              <p className="text-2xl font-mono font-bold text-primary tracking-[0.3em]">{myCode}</p>
+            </div>
+            <button
+              onClick={handleCopy}
+              className={`px-5 py-4 rounded-xl text-sm font-semibold transition-all ${
+                copied
+                  ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                  : 'bg-emerald-500 text-white hover:bg-emerald-600'
+              }`}
+            >
+              {copied ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+
+          <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100">
+            <p className="text-xs text-emerald-700">
+              <span className="font-bold">How it works:</span> Share this code with students so they can find you, or enter a student&apos;s code in My Students to link accounts.
+            </p>
+          </div>
+
+          {/* Active Connections */}
+          <div>
+            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Active Connections</h3>
+            {connectionsAsStudent.length === 0 && connectionsAsParent.length === 0 ? (
+              <div className="text-center py-6">
+                <div className="w-12 h-12 mx-auto rounded-2xl bg-slate-50 flex items-center justify-center mb-2">
+                  <svg className="w-6 h-6 text-slate-300" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                  </svg>
+                </div>
+                <p className="text-sm text-slate-400">No connections yet. Share your code with students to get started.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {connectionsAsStudent.map(conn => (
+                  <div key={conn.id} className="flex items-center justify-between p-3 rounded-xl bg-emerald-50/50 border border-emerald-100">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center text-white font-bold text-sm">
+                        {(conn.connectedName || 'S')[0].toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-primary">{conn.connectedName}</p>
+                        <p className="text-xs text-slate-400">{conn.role === 'parent' ? 'Parent' : 'Tutor'} &middot; Connected {new Date(conn.createdAt).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveConnection(conn.id)}
+                      className="text-xs text-slate-400 hover:text-red-500 transition-colors"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                {connectionsAsParent.map(conn => (
+                  <div key={conn.id} className="flex items-center justify-between p-3 rounded-xl bg-green-50/50 border border-green-100">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold text-sm">
+                        {(conn.studentName || 'S')[0].toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-primary">{conn.studentName}</p>
+                        <p className="text-xs text-slate-400">Student &middot; Connected {new Date(conn.createdAt).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveConnection(conn.id)}
+                      className="text-xs text-slate-400 hover:text-red-500 transition-colors"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
 
         {/* Profile Info */}
         <section className="bg-white rounded-2xl border border-slate-100 p-6 space-y-5">

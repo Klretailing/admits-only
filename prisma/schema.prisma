@@ -63,8 +63,10 @@ model StudentProfile {
   userId           String   @unique
   gpa              Float?
   gpaScale         String   @default("4.0")
+  gpaWeighted      Float?
   satMath          Int?
   satRW            Int?
+  actScore         Int?
   extracurriculars Json     @default("[]") // Array of EC objects
   holisticScore    Int?
   percentile       Int?

@@ -23,8 +23,10 @@ interface Extracurricular {
 interface ProfileData {
   gpa: string;
   gpaScale: '4.0' | '5.0';
+  gpaWeighted: string;
   satMath: string;
   satRW: string;
+  actScore: string;
   extracurriculars: Extracurricular[];
 }
 
@@ -204,8 +206,10 @@ interface PersonaSuggestion {
 interface ProfileContext {
   gpa: string;
   gpaScale: '4.0' | '5.0';
+  gpaWeighted: string;
   satMath: string;
   satRW: string;
+  actScore: string;
   ecs: Extracurricular[];
 }
 
@@ -598,7 +602,7 @@ export default function StudentProfile() {
   }, [status, router]);
 
   const [profile, setProfile] = useState<ProfileData>({
-    gpa: '', gpaScale: '4.0', satMath: '', satRW: '', extracurriculars: [],
+    gpa: '', gpaScale: '4.0', gpaWeighted: '', satMath: '', satRW: '', actScore: '', extracurriculars: [],
   });
 
   const [showAddEC, setShowAddEC] = useState(false);
@@ -624,8 +628,10 @@ export default function StudentProfile() {
           setProfile({
             gpa: p.gpa != null ? p.gpa.toString() : '',
             gpaScale: (p.gpaScale as '4.0' | '5.0') || '4.0',
+            gpaWeighted: p.gpaWeighted != null ? p.gpaWeighted.toString() : '',
             satMath: p.satMath != null ? p.satMath.toString() : '',
             satRW: p.satRW != null ? p.satRW.toString() : '',
+            actScore: p.actScore != null ? p.actScore.toString() : '',
             extracurriculars: (p.extracurriculars as Extracurricular[]) || [],
           });
           if (p.holisticScore != null) setScored(true);
@@ -635,14 +641,20 @@ export default function StudentProfile() {
       .catch(() => setLoaded(true));
   }, [status]);
 
-  const results = useMemo(() => computeHolisticScore(profile), [profile]);
+  const results = useMemo(() => computeHolisticScore({
+    ...profile,
+    gpaWeighted: profile.gpaWeighted || null,
+    actScore: profile.actScore || null,
+  }), [profile]);
   const diversity = useMemo(() => computeDiversityScore(profile.extracurriculars), [profile.extracurriculars]);
   const depth = useMemo(() => computeDepthScore(profile.extracurriculars), [profile.extracurriculars]);
   const personaSuggestions = useMemo(() => generatePersonaSuggestions({
     gpa: profile.gpa,
     gpaScale: profile.gpaScale,
+    gpaWeighted: profile.gpaWeighted,
     satMath: profile.satMath,
     satRW: profile.satRW,
+    actScore: profile.actScore,
     ecs: profile.extracurriculars,
   }), [profile]);
 
@@ -668,8 +680,10 @@ export default function StudentProfile() {
         body: JSON.stringify({
           gpa: profile.gpa || null,
           gpaScale: profile.gpaScale,
+          gpaWeighted: profile.gpaWeighted || null,
           satMath: profile.satMath || null,
           satRW: profile.satRW || null,
+          actScore: profile.actScore || null,
           extracurriculars: profile.extracurriculars,
           holisticScore: showScore ? res.holistic : null,
           percentile: showScore ? res.percentile : null,
@@ -773,18 +787,21 @@ export default function StudentProfile() {
             <div className="bg-white rounded-2xl border border-slate-100 p-6">
               <h3 className="text-lg font-bold font-display text-primary mb-5">Academic Stats</h3>
               <div className="space-y-4">
-                <div className="grid grid-cols-[1fr_auto] gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-primary mb-1.5">GPA</label>
-                    <input type="number" step="0.01" min="0" max={profile.gpaScale === '5.0' ? '5.0' : '4.0'} value={profile.gpa} onChange={(e) => setProfile({ ...profile, gpa: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent" placeholder="e.g. 3.85" />
+                <div>
+                  <label className="block text-sm font-medium text-primary mb-1.5">GPA</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <input type="number" step="0.01" min="0" max="4.0" value={profile.gpa} onChange={(e) => setProfile({ ...profile, gpa: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent" placeholder="e.g. 3.85" />
+                      <p className="text-[11px] text-slate-400 mt-1">Unweighted (out of 4.0)</p>
+                    </div>
+                    <div>
+                      <input type="number" step="0.01" min="0" max="5.0" value={profile.gpaWeighted} onChange={(e) => setProfile({ ...profile, gpaWeighted: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent" placeholder="e.g. 4.35" />
+                      <p className="text-[11px] text-slate-400 mt-1">Weighted (out of 5.0)</p>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-primary mb-1.5">Scale</label>
-                    <select value={profile.gpaScale} onChange={(e) => setProfile({ ...profile, gpaScale: e.target.value as '4.0' | '5.0' })} className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent">
-                      <option value="4.0">/ 4.0</option>
-                      <option value="5.0">/ 5.0</option>
-                    </select>
-                  </div>
+                  {parseFloat(profile.gpaWeighted) > parseFloat(profile.gpa) && parseFloat(profile.gpa) > 0 && (
+                    <p className="text-[11px] text-accent font-semibold mt-2">Course rigor bonus applied for AP/Honors coursework</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-primary mb-1.5">SAT Scores</label>
@@ -799,6 +816,13 @@ export default function StudentProfile() {
                     </div>
                   </div>
                   {totalSAT > 0 && <p className="text-xs text-accent font-semibold mt-2">Total: {totalSAT} / 1600</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-primary mb-1.5">ACT Composite</label>
+                  <input type="number" min="1" max="36" value={profile.actScore} onChange={(e) => setProfile({ ...profile, actScore: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent" placeholder="1-36" />
+                  {parseInt(profile.actScore) > 0 && totalSAT > 0 && (
+                    <p className="text-[11px] text-slate-400 mt-1">Best score used for matching (SAT {totalSAT} vs ACT {profile.actScore})</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -1138,9 +1162,9 @@ export default function StudentProfile() {
                     <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Score Breakdown</p>
                     <div className="space-y-3">
                       {[
-                        { label: 'GPA', score: results.gpaScore, weight: '35%', gradient: 'from-violet-500 to-indigo-500', glow: '#8b5cf6' },
-                        { label: 'SAT', score: results.satScore, weight: '30%', gradient: 'from-fuchsia-500 to-purple-500', glow: '#d946ef' },
-                        { label: 'Extracurriculars', score: results.ecScore, weight: '35%', gradient: 'from-emerald-400 to-teal-500', glow: '#34d399' },
+                        { label: 'GPA', score: results.gpaScore, weight: '33%', gradient: 'from-violet-500 to-indigo-500', glow: '#8b5cf6' },
+                        { label: 'Test Scores', score: results.satScore, weight: '28%', gradient: 'from-fuchsia-500 to-purple-500', glow: '#d946ef' },
+                        { label: 'Extracurriculars', score: results.ecScore, weight: '34%', gradient: 'from-emerald-400 to-teal-500', glow: '#34d399' },
                       ].map(item => (
                         <div key={item.label}>
                           <div className="flex justify-between text-sm mb-1.5">
@@ -1154,6 +1178,26 @@ export default function StudentProfile() {
                       ))}
                     </div>
                   </div>
+
+                  {(results.rigorBonus > 0 || results.actEquivalent > 0) && (
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {results.rigorBonus > 0 && (
+                        <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-violet-500/20 text-violet-300 border border-violet-500/20">
+                          +{results.rigorBonus} rigor bonus
+                        </span>
+                      )}
+                      {results.actEquivalent > 0 && (
+                        <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/20">
+                          ACT {results.actEquivalent} equivalent
+                        </span>
+                      )}
+                      {results.bestTestScore > 0 && results.bestTestScore !== results.totalSAT && (
+                        <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/20">
+                          Best: {results.bestTestScore} SAT-eq
+                        </span>
+                      )}
+                    </div>
+                  )}
 
                   <div className="relative mt-4 p-4 rounded-xl bg-gradient-to-r from-violet-500/10 to-indigo-500/10 border border-violet-500/20">
                     <p className="text-sm font-semibold text-white">
