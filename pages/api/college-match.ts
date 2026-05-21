@@ -27,6 +27,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const gpa = profile.gpa ?? 0;
   const totalSAT = (profile.satMath ?? 0) + (profile.satRW ?? 0);
+  const actScore = (profile as any).actScore ?? 0;
+  const gpaWeighted = (profile as any).gpaWeighted ?? null;
 
   // Normalize GPA to 4.0 scale if on 5.0
   const normalizedGPA = profile.gpaScale === '5.0' ? (gpa / 5) * 4 : gpa;
@@ -54,7 +56,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   return res.json({
     matches,
     needsProfile: false,
-    studentStats: { gpa: normalizedGPA, totalSAT },
+    studentStats: { gpa: normalizedGPA, totalSAT, actScore, gpaWeighted },
     strengths: getAllStrengths(),
     states: getAllStates(),
   });

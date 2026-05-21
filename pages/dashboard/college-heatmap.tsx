@@ -5,6 +5,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import DashboardLayout from '../../components/DashboardLayout';
 import { colleges, type College } from '../../lib/colleges';
+import { actToSat, satToAct } from '../../lib/scoring';
 import { tracker } from '../../lib/analytics';
 
 /* ──────────────────────── TYPES ──────────────────────── */
@@ -1027,6 +1028,7 @@ export default function CollegeHeatmapPage() {
 
   const [gpa, setGpa] = useState(3.5);
   const [sat, setSat] = useState(1200);
+  const [act, setAct] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'galaxy' | 'list' | 'trends'>('galaxy');
   const sliderDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedTile, setSelectedTile] = useState<HeatmapTile | null>(null);
@@ -1068,6 +1070,7 @@ export default function CollegeHeatmapPage() {
           if (data.studentStats) {
             setGpa(data.studentStats.gpa || 3.5);
             setSat(data.studentStats.totalSAT || 1200);
+            if (data.studentStats.actScore) setAct(data.studentStats.actScore);
           }
           setProfileLoaded(true);
         })
@@ -1075,12 +1078,17 @@ export default function CollegeHeatmapPage() {
     }
   }, [status, profileLoaded]);
 
+  const bestSAT = useMemo(() => {
+    const actEquiv = act > 0 ? actToSat(act) : 0;
+    return Math.max(sat, actEquiv);
+  }, [sat, act]);
+
   const tiles = useMemo<HeatmapTile[]>(() => {
     return colleges.map(college => {
-      const match = computeMatch(gpa, sat, college);
+      const match = computeMatch(gpa, bestSAT, college);
       return { college, ...match, isSaved: savedSchools.has(college.name.toLowerCase()) };
     });
-  }, [gpa, sat, savedSchools]);
+  }, [gpa, bestSAT, savedSchools]);
 
   const visibleTiles = useMemo(() => {
     let result = [...tiles];
@@ -1276,10 +1284,10 @@ export default function CollegeHeatmapPage() {
             <h2 className="text-sm font-bold text-primary">What-If Simulator</h2>
             <span className="text-xs text-slate-400 ml-1">Adjust your stats to see real-time changes</span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-semibold text-slate-600">GPA</label>
+                <label className="text-xs font-semibold text-slate-600">GPA (UW)</label>
                 <span className="text-sm font-bold text-primary tabular-nums">{gpa.toFixed(2)}</span>
               </div>
               <input
@@ -1310,6 +1318,24 @@ export default function CollegeHeatmapPage() {
                 style={{ background: `linear-gradient(to right, #6366f1 ${((sat - 800) / 800) * 100}%, #e2e8f0 ${((sat - 800) / 800) * 100}%)` }}
               />
               <div className="flex justify-between text-[10px] text-slate-400 mt-1"><span>800</span><span>1200</span><span>1600</span></div>
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-semibold text-slate-600">ACT</label>
+                <span className="text-sm font-bold text-primary tabular-nums">{act || '—'}</span>
+              </div>
+              <input
+                type="range" min="0" max="36" step="1" value={act}
+                onChange={e => {
+                  const v = parseInt(e.target.value); setAct(v);
+                  if (sliderDebounceRef.current) clearTimeout(sliderDebounceRef.current);
+                  sliderDebounceRef.current = setTimeout(() => tracker.feature('college-heatmap', 'act_slider', { act: v }), 800);
+                }}
+                className="w-full h-2 rounded-full appearance-none cursor-pointer accent-accent"
+                style={{ background: `linear-gradient(to right, #6366f1 ${(act / 36) * 100}%, #e2e8f0 ${(act / 36) * 100}%)` }}
+              />
+              <div className="flex justify-between text-[10px] text-slate-400 mt-1"><span>Off</span><span>18</span><span>36</span></div>
+              {act > 0 && <p className="text-[10px] text-slate-400 mt-1">SAT equivalent: {actToSat(act)}</p>}
             </div>
           </div>
         </div>}
@@ -1488,6 +1514,7 @@ export default function CollegeHeatmapPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-slate-400">GPA: <span className="font-semibold text-primary">{gpa.toFixed(2)}</span></span>
                     <span className="text-xs text-slate-400">SAT: <span className="font-semibold text-primary">{sat}</span></span>
+                    {act > 0 && <span className="text-xs text-slate-400">ACT: <span className="font-semibold text-primary">{act}</span></span>}
                   </div>
                 </div>
                 {listTiles.map(tile => {
@@ -1639,7 +1666,7 @@ export default function CollegeHeatmapPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 p-5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-5">
               <div className="text-center p-3 rounded-xl bg-slate-50">
                 <div className="text-lg font-bold text-primary">{selectedTile.college.acceptanceRate}%</div>
                 <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Accept Rate</div>
@@ -1652,12 +1679,16 @@ export default function CollegeHeatmapPage() {
                 <div className="text-lg font-bold text-primary">{selectedTile.college.satRange[0]}-{selectedTile.college.satRange[1]}</div>
                 <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">SAT Range</div>
               </div>
+              <div className="text-center p-3 rounded-xl bg-slate-50">
+                <div className="text-lg font-bold text-primary">{Math.round(satToAct((selectedTile.college.satRange[0] + selectedTile.college.satRange[1]) / 2))}</div>
+                <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">ACT Equiv</div>
+              </div>
             </div>
 
             <div className="px-5 space-y-3">
               <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Your Fit Breakdown</h3>
               <FitBar label="GPA" value={selectedTile.gpaFit} yours={gpa.toFixed(2)} theirs={selectedTile.college.avgGPA.toFixed(2)} />
-              <FitBar label="SAT" value={selectedTile.satFit} yours={String(sat)} theirs={`${selectedTile.college.satRange[0]}-${selectedTile.college.satRange[1]}`} />
+              <FitBar label={act > 0 ? 'Best Test' : 'SAT'} value={selectedTile.satFit} yours={String(bestSAT)} theirs={`${selectedTile.college.satRange[0]}-${selectedTile.college.satRange[1]}`} />
             </div>
 
             <div className="px-5 mt-4">
@@ -1674,7 +1705,7 @@ export default function CollegeHeatmapPage() {
                 {selectedTile.tier === 'reach' ? 'How to Improve Your Chances' : selectedTile.tier === 'match' ? 'Strategy Tips' : 'Why This Is a Great Fit'}
               </h3>
               <div className="space-y-2">
-                {generateAdvice(selectedTile, gpa, sat).map((tip, i) => (
+                {generateAdvice(selectedTile, gpa, bestSAT).map((tip, i) => (
                   <div key={i} className="flex gap-2 items-start">
                     <div className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5 ${
                       selectedTile.tier === 'reach' ? 'bg-blue-50 text-blue-600' : selectedTile.tier === 'match' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'

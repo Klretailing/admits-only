@@ -54,6 +54,8 @@ export async function ensureSchema() {
         "gpaScale"         TEXT NOT NULL DEFAULT '4.0',
         "satMath"          INTEGER,
         "satRW"            INTEGER,
+        "gpaWeighted"      DOUBLE PRECISION,
+        "actScore"         INTEGER,
         "extracurriculars" JSONB NOT NULL DEFAULT '[]',
         "holisticScore"    INTEGER,
         "percentile"       INTEGER,
@@ -67,6 +69,8 @@ export async function ensureSchema() {
         CONSTRAINT "student_profiles_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
       );
     `);
+    await prisma.$executeRawUnsafe(`DO $$ BEGIN ALTER TABLE "student_profiles" ADD COLUMN "gpaWeighted" DOUBLE PRECISION; EXCEPTION WHEN duplicate_column THEN NULL; END $$;`);
+    await prisma.$executeRawUnsafe(`DO $$ BEGIN ALTER TABLE "student_profiles" ADD COLUMN "actScore" INTEGER; EXCEPTION WHEN duplicate_column THEN NULL; END $$;`);
 
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "essays" (

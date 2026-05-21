@@ -67,8 +67,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         applications,
         profile: profile ? {
           gpa: profile.gpa,
+          gpaWeighted: (profile as any).gpaWeighted,
           satMath: profile.satMath,
           satRW: profile.satRW,
+          actScore: (profile as any).actScore,
           holisticScore: profile.holisticScore,
         } : null,
         essays: conn.role === 'tutor' ? essayRows : essayRows.map((e: any) => ({ id: e.id, title: e.title, status: e.status, overallScore: e.overallScore })),

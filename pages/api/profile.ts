@@ -17,22 +17,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'PUT') {
-    const { gpa, gpaScale, satMath, satRW, extracurriculars } = req.body;
+    const { gpa, gpaScale, gpaWeighted, satMath, satRW, actScore, extracurriculars } = req.body;
 
-    // Compute scores server-side (authoritative)
     const scores = computeHolisticScore({
       gpa: gpa ?? '0',
       gpaScale: gpaScale || '4.0',
+      gpaWeighted: gpaWeighted ?? null,
       satMath: satMath ?? '0',
       satRW: satRW ?? '0',
+      actScore: actScore ?? null,
       extracurriculars: extracurriculars || [],
     });
 
     const data = {
       gpa: gpa != null ? parseFloat(gpa) : null,
       gpaScale: gpaScale || '4.0',
+      gpaWeighted: gpaWeighted != null && gpaWeighted !== '' ? parseFloat(gpaWeighted) : null,
       satMath: satMath != null ? parseInt(satMath) : null,
       satRW: satRW != null ? parseInt(satRW) : null,
+      actScore: actScore != null && actScore !== '' ? parseInt(actScore) : null,
       extracurriculars: extracurriculars || [],
       holisticScore: scores.holistic,
       percentile: scores.percentile,
