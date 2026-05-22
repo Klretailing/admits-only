@@ -129,15 +129,18 @@ export default function Sessions() {
             <span className="ml-3 text-sm text-slate-500">Loading sessions...</span>
           </div>
         ) : sessions.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center">
-              <svg className="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="text-center py-16">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-accent/10 to-purple-100 flex items-center justify-center">
+              <svg className="w-8 h-8 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-primary mb-1">No sessions yet</h3>
-            <p className="text-sm text-slate-500 max-w-sm mx-auto">
-              When your tutor books a session with you, it will appear here. Ask your tutor to schedule your first session!
+            <h3 className="text-lg font-bold font-display text-primary mb-2">No sessions yet</h3>
+            <p className="text-sm text-slate-500 max-w-sm mx-auto mb-1">
+              Sessions with your tutor will show up here once scheduled.
+            </p>
+            <p className="text-xs text-slate-400 max-w-sm mx-auto">
+              Connect with a tutor through your connection code in settings, then they can book sessions with you.
             </p>
           </div>
         ) : (

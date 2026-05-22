@@ -3430,12 +3430,19 @@ export default function Essays() {
             {loading ? (
               <div className="text-center py-12"><div className="animate-pulse text-sm text-slate-400">Loading...</div></div>
             ) : essays.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center mx-auto mb-3">
-                  <svg className="w-7 h-7 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+              <div className="text-center py-10 px-4">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-accent/10 to-purple-100 flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                 </div>
-                <p className="text-sm font-medium text-slate-400">No essays yet</p>
-                <p className="text-xs text-slate-300 mt-1">Create your first essay to begin</p>
+                <h4 className="text-sm font-bold text-primary mb-1">Start your first essay</h4>
+                <p className="text-xs text-slate-400 max-w-[200px] mx-auto mb-4">Personal statements can make or break your application. Our AI scores your writing in real time.</p>
+                <button
+                  onClick={createEssay}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-accent rounded-lg hover:bg-accent/90 transition-colors shadow-sm shadow-accent/20"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
+                  Create Essay
+                </button>
               </div>
             ) : (
               essays.map(essay => {
