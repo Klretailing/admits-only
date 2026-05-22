@@ -970,6 +970,47 @@ export default function StudyPods() {
     }
   };
 
+  // Drag-and-drop upload
+  const [isDragging, setIsDragging] = useState(false);
+  const dragCounter = useRef(0);
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current++;
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      setIsDragging(true);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current--;
+    if (dragCounter.current === 0) {
+      setIsDragging(false);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    dragCounter.current = 0;
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0 && fileInputRef.current) {
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(files[0]);
+      fileInputRef.current.files = dataTransfer.files;
+      fileInputRef.current.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  }, []);
+
   // Mobile: show chat view when a pod is selected
   const [mobileShowChat, setMobileShowChat] = useState(false);
 
@@ -1039,34 +1080,34 @@ export default function StudyPods() {
       <div className="h-[calc(100vh-12rem)] lg:h-[calc(100vh-7rem)]">
         <div className="grid h-full lg:grid-cols-[280px_1fr] gap-0 bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
 
-          {/* ═══════════════ CHANNEL SIDEBAR (Slack-style) ═══════════════ */}
-          <div className={`border-r border-[#3e1c58] flex flex-col bg-[#3F0E40] ${mobileShowChat ? 'hidden lg:flex' : 'flex'}`}>
+          {/* ═══════════════ CHANNEL SIDEBAR (Modern light) ═══════════════ */}
+          <div className={`border-r border-slate-200 flex flex-col bg-white ${mobileShowChat ? 'hidden lg:flex' : 'flex'}`}>
             {/* Sidebar header */}
-            <div className="p-4 border-b border-[#522b5b]">
+            <div className="p-4 border-b border-slate-100">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-accent to-purple-600 flex items-center justify-center shadow-sm shadow-accent/20">
                     <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                   </div>
                   <div>
-                    <h2 className="text-sm font-bold font-display text-white">Study Pods</h2>
-                    <p className="text-[10px] text-white/50">{pods.length} pod{pods.length !== 1 ? 's' : ''}</p>
+                    <h2 className="text-sm font-bold font-display text-primary">Study Pods</h2>
+                    <p className="text-[10px] text-slate-400">{pods.length} pod{pods.length !== 1 ? 's' : ''}</p>
                   </div>
                 </div>
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => { setShowCreate(true); setShowJoin(false); setError(''); }}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-white/15 rounded-lg hover:bg-white/25 transition-colors"
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-accent rounded-lg hover:bg-accent/90 transition-colors shadow-sm shadow-accent/20"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
                   Create
                 </button>
                 <button
                   onClick={() => { setShowJoin(true); setShowCreate(false); setError(''); }}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-white/80 border border-white/20 rounded-lg hover:bg-white/10 transition-colors"
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" /></svg>
                   Join
@@ -1076,13 +1117,13 @@ export default function StudyPods() {
 
             {/* Create dialog */}
             {showCreate && (
-              <div className="p-4 border-b border-[#522b5b] bg-[#4A154B] space-y-2">
+              <div className="p-4 border-b border-slate-100 bg-slate-50 space-y-2">
                 <input
                   type="text"
                   value={newPodName}
                   onChange={e => setNewPodName(e.target.value)}
                   placeholder="Pod name (e.g. Essay Review Squad)"
-                  className="w-full px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-sm text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm text-primary placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent/40"
                   autoFocus
                 />
                 <textarea
@@ -1090,32 +1131,32 @@ export default function StudyPods() {
                   onChange={e => setNewPodDesc(e.target.value)}
                   placeholder="Short description (optional)"
                   rows={2}
-                  className="w-full px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-sm text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/30 resize-none"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm text-primary placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent/40 resize-none"
                 />
-                {error && <p className="text-xs text-red-300">{error}</p>}
+                {error && <p className="text-xs text-red-500">{error}</p>}
                 <div className="flex gap-2 justify-end">
-                  <button onClick={() => setShowCreate(false)} className="px-3 py-1.5 text-xs text-white/50 hover:text-white rounded-md hover:bg-white/10 transition-colors">Cancel</button>
-                  <button onClick={createPod} className="px-3 py-1.5 text-xs font-semibold text-[#3F0E40] bg-white rounded-md hover:bg-white/90 transition-colors">Create Pod</button>
+                  <button onClick={() => setShowCreate(false)} className="px-3 py-1.5 text-xs text-slate-500 hover:text-primary rounded-md hover:bg-slate-100 transition-colors">Cancel</button>
+                  <button onClick={createPod} className="px-3 py-1.5 text-xs font-semibold text-white bg-accent rounded-md hover:bg-accent/90 transition-colors">Create Pod</button>
                 </div>
               </div>
             )}
 
             {/* Join dialog */}
             {showJoin && (
-              <div className="p-4 border-b border-[#522b5b] bg-[#4A154B] space-y-2">
+              <div className="p-4 border-b border-slate-100 bg-slate-50 space-y-2">
                 <input
                   type="text"
                   value={joinCode}
                   onChange={e => setJoinCode(e.target.value.toUpperCase())}
                   placeholder="Enter invite code"
                   maxLength={8}
-                  className="w-full px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-sm font-mono tracking-wider text-center uppercase text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm font-mono tracking-wider text-center uppercase text-primary placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent/40"
                   autoFocus
                 />
-                {error && <p className="text-xs text-red-300">{error}</p>}
+                {error && <p className="text-xs text-red-500">{error}</p>}
                 <div className="flex gap-2 justify-end">
-                  <button onClick={() => setShowJoin(false)} className="px-3 py-1.5 text-xs text-white/50 hover:text-white rounded-md hover:bg-white/10 transition-colors">Cancel</button>
-                  <button onClick={joinPod} className="px-3 py-1.5 text-xs font-semibold text-[#3F0E40] bg-white rounded-md hover:bg-white/90 transition-colors">Join Pod</button>
+                  <button onClick={() => setShowJoin(false)} className="px-3 py-1.5 text-xs text-slate-500 hover:text-primary rounded-md hover:bg-slate-100 transition-colors">Cancel</button>
+                  <button onClick={joinPod} className="px-3 py-1.5 text-xs font-semibold text-white bg-accent rounded-md hover:bg-accent/90 transition-colors">Join Pod</button>
                 </div>
               </div>
             )}
@@ -1123,49 +1164,51 @@ export default function StudyPods() {
             {/* Pod / channel list */}
             <div className="flex-1 overflow-y-auto px-2 py-2">
               {loading ? (
-                <div className="p-8 text-center text-sm text-white/40 animate-pulse">Loading...</div>
+                <div className="p-8 text-center text-sm text-slate-400 animate-pulse">Loading...</div>
               ) : pods.length === 0 ? (
                 <div className="p-6 text-center">
-                  <div className="w-14 h-14 mx-auto rounded-2xl bg-white/10 flex items-center justify-center mb-3">
-                    <svg className="w-7 h-7 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-14 h-14 mx-auto rounded-2xl bg-accent/5 flex items-center justify-center mb-3">
+                    <svg className="w-7 h-7 text-accent/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                   </div>
-                  <p className="text-sm font-medium text-white/70 mb-1">No pods yet</p>
-                  <p className="text-xs text-white/40">Create a pod or join one with an invite code.</p>
+                  <p className="text-sm font-medium text-slate-600 mb-1">No pods yet</p>
+                  <p className="text-xs text-slate-400">Create a pod or join one with an invite code.</p>
                 </div>
               ) : (
                 <>
-                  <p className="text-[10px] font-bold text-white/40 uppercase tracking-wider px-3 py-1.5 mb-1">Channels</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 py-1.5 mb-1">Your Pods</p>
                   {pods.map(pod => {
                     const isActive = selectedPod?.id === pod.id;
                     return (
                       <button
                         key={pod.id}
                         onClick={() => selectPod(pod)}
-                        className={`w-full text-left px-3 py-2.5 rounded-lg mb-0.5 transition-all group ${
+                        className={`w-full text-left px-3 py-2.5 rounded-xl mb-0.5 transition-all group ${
                           isActive
-                            ? 'bg-[#1164A3] text-white'
-                            : 'text-white/70 hover:bg-white/10'
+                            ? 'bg-accent/10 text-accent border border-accent/20'
+                            : 'text-slate-600 hover:bg-slate-50 border border-transparent'
                         }`}
                       >
                         <div className="flex items-center gap-2.5">
-                          <span className="text-base opacity-80">#</span>
+                          <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${getAvatarColor(pod.name)} flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0`}>
+                            {pod.name[0]?.toUpperCase()}
+                          </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-2">
-                              <p className={`text-sm font-medium truncate ${isActive ? 'text-white' : ''}`}>{pod.name.toLowerCase().replace(/\s+/g, '-')}</p>
+                              <p className={`text-sm font-semibold truncate ${isActive ? 'text-accent' : 'text-primary'}`}>{pod.name}</p>
                               {pod.lastMessage && (
-                                <span className="text-[10px] text-white/30 flex-shrink-0">{formatTime(pod.lastMessage.createdAt)}</span>
+                                <span className="text-[10px] text-slate-300 flex-shrink-0">{formatTime(pod.lastMessage.createdAt)}</span>
                               )}
                             </div>
                             {pod.lastMessage && (
-                              <p className="text-[11px] text-white/40 mt-0.5 truncate">
+                              <p className="text-[11px] text-slate-400 mt-0.5 truncate">
                                 {pod.lastMessage.userName}: {pod.lastMessage.content}
                               </p>
                             )}
                           </div>
                           {pod.memberCount > 1 && (
-                            <span className="text-[10px] text-white/30 flex-shrink-0">{pod.memberCount}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-400 font-semibold flex-shrink-0">{pod.memberCount}</span>
                           )}
                         </div>
                       </button>
@@ -1176,16 +1219,16 @@ export default function StudyPods() {
             </div>
 
             {/* Sidebar footer — user info + streak */}
-            <div className="p-3 border-t border-[#522b5b]">
+            <div className="p-3 border-t border-slate-100">
               {myStats && myStats.currentStreak > 0 && (
                 <div className="flex items-center gap-2 mb-2 px-1">
                   <span className="text-base">{myStats.currentStreak >= 7 ? '🔥' : '⚡'}</span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <p className="text-[10px] font-bold text-amber-300">{myStats.currentStreak}-day streak</p>
-                      <p className="text-[10px] text-white/40">{myStats.xp} XP</p>
+                      <p className="text-[10px] font-bold text-amber-600">{myStats.currentStreak}-day streak</p>
+                      <p className="text-[10px] text-slate-400">{myStats.xp} XP</p>
                     </div>
-                    <div className="h-1 bg-white/10 rounded-full mt-1 overflow-hidden">
+                    <div className="h-1 bg-slate-100 rounded-full mt-1 overflow-hidden">
                       <div
                         className="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full transition-all"
                         style={{ width: `${Math.min(100, (myStats.currentStreak / 30) * 100)}%` }}
@@ -1199,14 +1242,14 @@ export default function StudyPods() {
                   <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${getAvatarColor(currentUserName)} flex items-center justify-center text-white text-xs font-bold`}>
                     {getInitials(currentUserName)}
                   </div>
-                  <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 border-2 border-[#3F0E40] rounded-full" />
+                  <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 border-2 border-white rounded-full" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold text-white truncate">{currentUserName}</p>
-                  <p className="text-[10px] text-emerald-400">Active</p>
+                  <p className="text-xs font-semibold text-primary truncate">{currentUserName}</p>
+                  <p className="text-[10px] text-emerald-500">Active</p>
                 </div>
                 {myStats && myStats.xp > 0 && (
-                  <div className="px-2 py-0.5 rounded-md bg-accent/20 text-accent text-[10px] font-bold">
+                  <div className="px-2 py-0.5 rounded-full bg-accent/10 text-accent text-[10px] font-bold">
                     {myStats.xp} XP
                   </div>
                 )}
@@ -1216,7 +1259,26 @@ export default function StudyPods() {
 
           {/* ═══════════════ CHAT AREA ═══════════════ */}
           {selectedPod ? (
-            <div className={`relative flex flex-col h-full bg-white ${mobileShowChat ? 'flex' : 'hidden lg:flex'}`}>
+            <div
+              className={`relative flex flex-col h-full bg-white ${mobileShowChat ? 'flex' : 'hidden lg:flex'}`}
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+            >
+              {isDragging && (
+                <div className="absolute inset-0 z-50 bg-accent/5 border-2 border-dashed border-accent rounded-r-2xl flex items-center justify-center backdrop-blur-sm">
+                  <div className="text-center">
+                    <div className="w-16 h-16 mx-auto rounded-2xl bg-accent/10 flex items-center justify-center mb-3">
+                      <svg className="w-8 h-8 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                    </div>
+                    <p className="text-sm font-bold text-accent">Drop file to upload</p>
+                    <p className="text-xs text-slate-500 mt-1">PDF, TXT, DOC, DOCX, or images up to 5MB</p>
+                  </div>
+                </div>
+              )}
               {/* ─── Chat header ─── */}
               <div className="px-4 lg:px-5 py-3 border-b border-slate-200 bg-white">
                 <div className="flex items-center justify-between gap-3">
@@ -1278,55 +1340,30 @@ export default function StudyPods() {
                 </div>
 
                 {/* ─── Tab switcher: Chat | Files | Focus ─── */}
-                <div className="flex gap-0 mt-3 border-b border-slate-200 -mx-4 lg:-mx-5 px-4 lg:px-5">
-                  <button
-                    onClick={() => { setActiveTab('chat'); setSelectedDoc(null); }}
-                    className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold border-b-2 transition-all -mb-px ${
-                      activeTab === 'chat'
-                        ? 'border-[#1264a3] text-[#1264a3]'
-                        : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                    }`}
-                  >
-                    Chat
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('documents')}
-                    className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold border-b-2 transition-all -mb-px ${
-                      activeTab === 'documents'
-                        ? 'border-[#1264a3] text-[#1264a3]'
-                        : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                    }`}
-                  >
-                    Files
-                    {documents.length > 0 && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold">{documents.length}</span>
-                    )}
-                  </button>
-                  <button
-                    onClick={() => { setActiveTab('focus'); setSelectedSession(null); }}
-                    className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold border-b-2 transition-all -mb-px ${
-                      activeTab === 'focus'
-                        ? 'border-[#1264a3] text-[#1264a3]'
-                        : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                    }`}
-                  >
-                    Focus
-                    {sessions.filter(s => s.status !== 'completed').length > 0 && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold">
-                        {sessions.filter(s => s.status !== 'completed').length}
-                      </span>
-                    )}
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('leaderboard')}
-                    className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold border-b-2 transition-all -mb-px ${
-                      activeTab === 'leaderboard'
-                        ? 'border-[#1264a3] text-[#1264a3]'
-                        : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                    }`}
-                  >
-                    Leaderboard
-                  </button>
+                <div className="flex gap-1 mt-3 -mx-4 lg:-mx-5 px-4 lg:px-5 border-b border-slate-100">
+                  {[
+                    { key: 'chat' as const, label: 'Chat', onClick: () => { setActiveTab('chat'); setSelectedDoc(null); }, badge: null },
+                    { key: 'documents' as const, label: 'Files', onClick: () => setActiveTab('documents'), badge: documents.length > 0 ? documents.length : null },
+                    { key: 'focus' as const, label: 'Focus', onClick: () => { setActiveTab('focus'); setSelectedSession(null); }, badge: sessions.filter(s => s.status !== 'completed').length > 0 ? sessions.filter(s => s.status !== 'completed').length : null },
+                    { key: 'leaderboard' as const, label: 'Leaderboard', onClick: () => setActiveTab('leaderboard'), badge: null },
+                  ].map(tab => (
+                    <button
+                      key={tab.key}
+                      onClick={tab.onClick}
+                      className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold border-b-2 transition-all -mb-px ${
+                        activeTab === tab.key
+                          ? 'border-accent text-accent'
+                          : 'border-transparent text-slate-400 hover:text-slate-600 hover:border-slate-200'
+                      }`}
+                    >
+                      {tab.label}
+                      {tab.badge && (
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                          activeTab === tab.key ? 'bg-accent/10 text-accent' : tab.key === 'focus' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                        }`}>{tab.badge}</span>
+                      )}
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -1334,14 +1371,38 @@ export default function StudyPods() {
               {activeTab === 'documents' && (
                 <div className="flex-1 flex flex-col overflow-hidden">
                   <div className="flex-1 overflow-y-auto">
-                    {/* Info banner */}
-                    <div className="px-4 lg:px-5 py-3 border-b border-slate-100 bg-accent/5">
-                      <div className="flex items-center gap-2 text-xs text-accent">
-                        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span>Upload documents using the <strong>📎 button in chat</strong>. Click any document below to open, edit, and comment.</span>
-                      </div>
+                    {/* Upload zone */}
+                    <div className="px-4 lg:px-5 pt-4">
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full flex items-center gap-4 p-4 border-2 border-dashed border-slate-200 rounded-xl hover:border-accent/40 hover:bg-accent/5 transition-all group cursor-pointer"
+                      >
+                        <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0 group-hover:bg-accent/20 transition-colors">
+                          <svg className="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                          </svg>
+                        </div>
+                        <div className="text-left">
+                          <p className="text-sm font-semibold text-primary group-hover:text-accent transition-colors">Upload a document</p>
+                          <p className="text-xs text-slate-400">Drag & drop or click to browse — PDF, TXT, DOC, DOCX, images up to 5MB</p>
+                        </div>
+                      </button>
+                      {uploading && (
+                        <div className="mt-3 flex items-center gap-3 p-3 bg-accent/5 border border-accent/20 rounded-xl">
+                          <div className="relative w-8 h-8 flex-shrink-0">
+                            <svg className="w-8 h-8 animate-spin text-accent" viewBox="0 0 24 24" fill="none">
+                              <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                              <path className="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            </svg>
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-xs font-semibold text-accent">Uploading...</p>
+                            <div className="h-1.5 bg-accent/10 rounded-full mt-1.5 overflow-hidden">
+                              <div className="h-full bg-accent rounded-full animate-pulse" style={{ width: '60%' }} />
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Document list */}
@@ -1349,16 +1410,8 @@ export default function StudyPods() {
                       {docLoading ? (
                         <div className="text-center py-8 text-sm text-slate-400 animate-pulse">Loading documents...</div>
                       ) : documents.length === 0 ? (
-                        <div className="text-center py-12">
-                          <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center mb-4">
-                            <svg className="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                          </div>
-                          <h4 className="text-sm font-bold text-primary mb-1">No Documents Yet</h4>
-                          <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                            Share documents using the 📎 button in the chat tab. They will appear here for easy access.
-                          </p>
+                        <div className="text-center py-8">
+                          <p className="text-sm text-slate-400">No documents shared yet. Upload one above to get started.</p>
                         </div>
                       ) : (
                         <div className="grid gap-2">
@@ -2274,7 +2327,7 @@ export default function StudyPods() {
                     disabled={!messageText.trim() || sending}
                     className={`p-2 rounded-lg transition-all flex-shrink-0 ${
                       messageText.trim()
-                        ? 'text-white bg-[#007a5a] hover:bg-[#148567]'
+                        ? 'text-white bg-accent hover:bg-accent/90 shadow-sm shadow-accent/20'
                         : 'text-slate-300 cursor-not-allowed'
                     }`}
                   >
