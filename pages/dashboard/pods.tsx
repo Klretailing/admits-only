@@ -972,6 +972,7 @@ export default function StudyPods() {
 
   // Drag-and-drop upload
   const [isDragging, setIsDragging] = useState(false);
+  const [leaveConfirm, setLeaveConfirm] = useState(false);
   const dragCounter = useRef(0);
 
   const handleDragEnter = useCallback((e: React.DragEvent) => {
@@ -1326,16 +1327,23 @@ export default function StudyPods() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m6 5.197V20" />
                       </svg>
                     </button>
-                    {/* More menu */}
-                    <button
-                      onClick={() => leavePod(selectedPod.id)}
-                      className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"
-                      title="Leave pod"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                      </svg>
-                    </button>
+                    {/* Leave pod */}
+                    {leaveConfirm ? (
+                      <span className="flex items-center gap-1">
+                        <button onClick={() => { leavePod(selectedPod.id); setLeaveConfirm(false); }} className="text-[11px] font-semibold text-red-500 hover:text-red-600 px-2 py-1 rounded-lg bg-red-50">Leave</button>
+                        <button onClick={() => setLeaveConfirm(false)} className="text-[11px] font-semibold text-slate-400 hover:text-slate-600 px-2 py-1 rounded-lg bg-slate-50">Cancel</button>
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => setLeaveConfirm(true)}
+                        className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"
+                        title="Leave pod"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                      </button>
+                    )}
                   </div>
                 </div>
 

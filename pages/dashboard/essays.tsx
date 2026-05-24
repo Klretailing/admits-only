@@ -2471,6 +2471,7 @@ export default function Essays() {
   const [suppSchoolFilter, setSuppSchoolFilter] = useState<string>('all');
   const [suppTypeFilter, setSuppTypeFilter] = useState<SuppPromptType | 'all'>('all');
   const [suppExpandedPrompt, setSuppExpandedPrompt] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const trackerSchools = useMemo(() => {
     try {
@@ -3457,9 +3458,16 @@ export default function Essays() {
                   >
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="text-sm font-bold text-primary truncate flex-1">{essay.title}</h3>
-                      <button onClick={e => { e.stopPropagation(); deleteEssay(essay.id); }} className="text-slate-300 hover:text-red-400 opacity-0 group-hover:opacity-100 flex-shrink-0 p-0.5">
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                      </button>
+                      {deleteConfirmId === essay.id ? (
+                        <span className="flex items-center gap-1 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                          <button onClick={() => deleteEssay(essay.id)} className="text-[10px] font-semibold text-red-500 hover:text-red-600 px-1.5 py-0.5 rounded bg-red-50">Delete</button>
+                          <button onClick={() => setDeleteConfirmId(null)} className="text-[10px] font-semibold text-slate-400 hover:text-slate-600 px-1.5 py-0.5 rounded bg-slate-50">Cancel</button>
+                        </span>
+                      ) : (
+                        <button onClick={e => { e.stopPropagation(); setDeleteConfirmId(essay.id); }} className="text-slate-300 hover:text-red-400 opacity-0 group-hover:opacity-100 flex-shrink-0 p-0.5">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                      )}
                     </div>
                     {essay.prompt && <p className="text-[10px] text-slate-400 italic mt-1 truncate">{essay.prompt}</p>}
                     <div className="flex items-center gap-2 mt-2.5">

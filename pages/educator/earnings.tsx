@@ -192,6 +192,7 @@ export default function EducatorEarnings() {
   const [chartRange, setChartRange] = useState<'3m' | '6m' | '1y' | 'all' | 'custom'>('1y');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const exportCSV = useCallback(() => {
     if (!data) return;
@@ -515,13 +516,20 @@ export default function EducatorEarnings() {
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0">
                     <span className="text-sm font-bold text-primary">{formatCurrency(entry.amount)}</span>
-                    <button
-                      onClick={() => handleDeleteEarning(entry.id)}
-                      className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
-                      title="Remove"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                    </button>
+                    {deleteConfirmId === entry.id ? (
+                      <span className="flex items-center gap-1">
+                        <button onClick={() => { handleDeleteEarning(entry.id); setDeleteConfirmId(null); }} className="text-[10px] font-semibold text-red-500 hover:text-red-600 px-2 py-1 rounded bg-red-50">Delete</button>
+                        <button onClick={() => setDeleteConfirmId(null)} className="text-[10px] font-semibold text-slate-400 hover:text-slate-600 px-2 py-1 rounded bg-slate-50">Cancel</button>
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => setDeleteConfirmId(entry.id)}
+                        className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+                        title="Remove"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}

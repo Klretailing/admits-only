@@ -13,7 +13,6 @@ interface ParentTask {
   dueDate?: string;
 }
 
-const STORAGE_KEY = 'admitsonly_parent_actions';
 const CATEGORY_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   financial: { label: 'Financial Aid', color: 'text-emerald-600', bg: 'bg-emerald-50' },
   visit: { label: 'Campus Visit', color: 'text-blue-600', bg: 'bg-blue-50' },
@@ -41,60 +40,75 @@ export default function ParentActionItems() {
 
   useEffect(() => {
     if (status !== 'authenticated') return;
-    fetch('/api/parent/overview').then(r => r.json()).then(data => {
-      setConnected(data.connected);
-      if (data.students?.length) {
-        const student = data.students[0];
+    Promise.all([
+      fetch('/api/parent/overview').then(r => r.json()),
+      fetch('/api/parent/action-items').then(r => r.json()),
+    ]).then(([overviewData, actionData]) => {
+      setConnected(overviewData.connected);
+      if (overviewData.students?.length) {
+        const student = overviewData.students[0];
         setStudentName(student.name);
 
-        // Load from localStorage or generate initial tasks
-        try {
-          const stored = localStorage.getItem(STORAGE_KEY);
-          if (stored) {
-            setTasks(JSON.parse(stored));
-            setLoaded(true);
-            setLoading(false);
-            return;
-          }
-        } catch {}
+        if (actionData.items && actionData.items.length > 0) {
+          setTasks(actionData.items);
+          setLoaded(true);
+        } else {
+          const apps: AppData[] = student.applications || [];
+          const generated: ParentTask[] = [];
+          generated.push({ id: genId(), label: 'Complete FAFSA application', category: 'financial', done: false });
+          generated.push({ id: genId(), label: `Discuss school preferences with ${student.name}`, category: 'discussion', done: false });
+          generated.push({ id: genId(), label: 'Review and compare financial aid award letters', category: 'financial', done: false });
+          generated.push({ id: genId(), label: 'Create a college visit schedule', category: 'visit', done: false });
+          apps.forEach((app: AppData) => {
+            generated.push({ id: genId(), label: `Submit CSS Profile for ${app.name}`, category: 'financial', schoolName: app.name, done: false, dueDate: app.deadline });
+            generated.push({ id: genId(), label: `Schedule campus visit to ${app.name}`, category: 'visit', schoolName: app.name, done: false });
+          });
+          generated.push({ id: genId(), label: 'Compare net costs across all schools', category: 'financial', done: false });
+          generated.push({ id: genId(), label: `Discuss safety/match/reach balance with ${student.name}`, category: 'discussion', done: false });
 
-        // Generate initial tasks from student's applications
-        const apps: AppData[] = student.applications || [];
-        const generated: ParentTask[] = [];
-
-        // General tasks
-        generated.push({ id: genId(), label: 'Complete FAFSA application', category: 'financial', done: false });
-        generated.push({ id: genId(), label: `Discuss school preferences with ${student.name}`, category: 'discussion', done: false });
-        generated.push({ id: genId(), label: 'Review and compare financial aid award letters', category: 'financial', done: false });
-        generated.push({ id: genId(), label: 'Create a college visit schedule', category: 'visit', done: false });
-
-        // Per-school tasks
-        apps.forEach((app: AppData) => {
-          generated.push({ id: genId(), label: `Submit CSS Profile for ${app.name}`, category: 'financial', schoolName: app.name, done: false, dueDate: app.deadline });
-          generated.push({ id: genId(), label: `Schedule campus visit to ${app.name}`, category: 'visit', schoolName: app.name, done: false });
-        });
-
-        generated.push({ id: genId(), label: 'Compare net costs across all schools', category: 'financial', done: false });
-        generated.push({ id: genId(), label: `Discuss safety/match/reach balance with ${student.name}`, category: 'discussion', done: false });
-
-        setTasks(generated);
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(generated)); } catch {}
-        setLoaded(true);
+          setTasks(generated);
+          fetch('/api/parent/action-items', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items: generated }),
+          }).catch(() => {});
+          setLoaded(true);
+        }
       }
     }).catch(() => {}).finally(() => setLoading(false));
   }, [status]);
 
-  const save = useCallback((updated: ParentTask[]) => {
-    setTasks(updated);
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(updated)); } catch {}
-  }, []);
+  const toggleTask = (id: string) => {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    const newDone = !task.done;
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, done: newDone } : t));
+    fetch('/api/parent/action-items', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, done: newDone }),
+    }).catch(() => {});
+  };
 
-  const toggleTask = (id: string) => save(tasks.map(t => t.id === id ? { ...t, done: !t.done } : t));
-  const removeTask = (id: string) => save(tasks.filter(t => t.id !== id));
+  const removeTask = (id: string) => {
+    setTasks(prev => prev.filter(t => t.id !== id));
+    fetch('/api/parent/action-items', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    }).catch(() => {});
+  };
+
   const addTask = () => {
     if (!newTaskLabel.trim()) return;
-    save([...tasks, { id: genId(), label: newTaskLabel.trim(), category: 'custom', done: false }]);
+    const newTask: ParentTask = { id: genId(), label: newTaskLabel.trim(), category: 'custom', done: false };
+    setTasks(prev => [...prev, newTask]);
     setNewTaskLabel('');
+    fetch('/api/parent/action-items', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ label: newTask.label, category: 'custom' }),
+    }).catch(() => {});
   };
 
   const now = new Date();
