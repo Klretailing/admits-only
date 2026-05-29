@@ -135,35 +135,56 @@ This is the largest feature (~3500+ lines). It contains multiple sub-systems:
 - **Grammar Score** — checks grammar and mechanics
 - **Originality Score** — measures uniqueness and authenticity
 
-#### Sentence-Level Analysis
-- Individual sentence scoring and annotation
-- Sentence type classification
-- Stats dashboard with readability metrics
+#### Sentence-Level Analysis (`lib/sentenceAnalysis.ts`)
+- Classifies every sentence as **Internalized** (reflective/cognitive), **Externalized** (action-based), or **Neutral**
+- Uses ~200 cognitive verbs and ~100 action verbs for classification
+- Passive voice pattern detection (be + past participle)
+- Shows internalized/externalized balance ratio
+- Sentence-level highlights with color coding
+- Readability metrics dashboard
 
-#### Grammar Checker
-- Real-time grammar issue detection
+#### Grammar Checker (`lib/grammarCheck.ts`)
+- Detects 13 issue categories: spelling, punctuation, capitalization, subject-verb agreement, spacing, article errors, wordiness, cliches, weak words, passive voice, redundancy, contractions, word repetition
+- Numbered highlights with character-offset precision
 - One-click fix application
 - Issue dismissal for false positives
 
 #### Live Writing Tips
 - Context-aware suggestions based on essay content and prompt
+- **Prompt Classification Engine** — classifies prompts into 8 types (creativity, challenge, leadership, community, growth, passion, identity, teamwork)
+- Cross-references student's extracurriculars to generate per-EC suggestions tailored to the prompt type (56 possible prompt-type x EC-bucket combinations with unique suggestion text)
 - Integrated with extracurricular data for personalization
 
-#### Supplemental Prompt Hub
-- Browse supplemental essay prompts for 50+ schools
+#### Supplemental Prompt Hub (Tab 3)
+- Database of **140+ real supplemental prompts from 40+ top schools** (`lib/schoolData.ts`)
 - 11 canonical prompt types: Why Us, Community, Intellectual, Activity, Identity, Challenge, Creative, Future, Diversity, Roommate, Other
-- Filter by school and prompt type
-- Click-to-start writing from any prompt
+- Filter by school name and prompt type
+- **Prompt Detail Modal** (on click):
+  - Full prompt text and word limit
+  - Writing guide tailored to prompt type
+  - School stats (acceptance rate, SAT range, deadlines)
+  - "Why Us" research data (notable programs, campus culture, unique features)
+  - Existing essay reuse matches with % score
+  - "Start Writing" button that pre-fills the essay editor
 
 #### Essay Reuse Engine
+- Multi-signal scoring: type match, cross-type compatibility, content overlap, theme detection
 - Analyzes existing essays for reuse across supplemental prompts
-- Match scoring based on thematic overlap
-- Reduces redundant writing effort
+- Shows percentage match with adaptation notes
+- Displayed as horizontal strip at top of Prompts tab and inside each prompt modal
+- Reduces redundant writing effort across applications
 
 #### Submit for Review
 - Submit essays to connected educators for feedback
 - Review note/message attachment
 - Status tracking (pending, reviewed)
+
+#### Motif Board (Tab 2)
+- Canvas for discovering recurring themes across all essays
+- Student enters "bullet" observations about their life, values, and experiences
+- AI analysis identifies thematic patterns and narrative threads
+- Multiple boards per student, stored as JSONB in `motif_boards` table
+- Helps students find their authentic voice before writing
 
 #### Essay Delete
 - Confirmation dialog before deletion (inline confirm/cancel)
@@ -177,10 +198,12 @@ This is the largest feature (~3500+ lines). It contains multiple sub-systems:
   - Notes field
 - **Per-application task checklist** (8 default tasks):
   - Common App filled, Main essay finalized, Supplemental essays done, Rec letters requested, Test scores sent, Transcript requested, Financial aid/CSS Profile, Application fee paid
+- **Smart Planner** — auto-categorizes tasks as Critical (overdue/<=7 days), This Week (<=14 days), Coming Up (future) with category-aware lead times (rec letters: 4+ weeks early, essays: 3 weeks early)
 - **Smart Timeline Generator** — auto-generates a timeline based on deadlines
-- **Weekly Digest** — summary of upcoming tasks and deadlines
-- **School Research Cards** — pulls data from the school database (acceptance rate, SAT range, GPA, strengths)
-- Data persisted to database via `/api/applications`
+- **Weekly Digest** — progress summary generation with upcoming task counts
+- **School Research Cards** — expandable cards with programs, features, campus culture, deadlines, and links to supplemental prompts from the school database
+- **Deadline Countdown Badges** — color-coded urgency (overdue=red, <=7 days=amber, <=30 days=blue) shown on dashboard home
+- Data persisted to database via `/api/applications` with localStorage fallback and merge strategy
 
 ### 3.5 Study Pods (`/dashboard/pods`)
 Collaborative study group system (~2800 lines):
@@ -205,15 +228,20 @@ Collaborative study group system (~2800 lines):
 - Reply threads on comments
 - Upload progress indicator
 
-#### Focus Sessions
-- Timed study sessions with goals
-- Session timer display
-- Goal tracking
+#### Focus Sessions (Pomodoro)
+- Configurable focus duration (default 25 min), break duration (5 min), rounds (4)
+- Session states: waiting, in_progress, break, completed
+- Per-participant goal-setting and completion tracking
+- Real-time timer display with round counter
+- Stored in `pod_study_sessions` and `session_participants` tables
 
 #### Leaderboard & Gamification
-- Member stats tracking (messages, focus time, documents)
-- XP system with leaderboard rankings
-- Achievement badges/definitions
+- **XP System** — XP earned from: messages, focus sessions, reactions given, documents shared, polls voted
+- **Streak Tracking** — daily activity streaks (current + longest) per user per pod
+- **Activity Categories**: messagesCount, sessionsCount, reactionsGiven, docsShared, pollsVoted
+- **Achievement Badges** — threshold-based unlocks tied to XP/stats milestones
+- **Leaderboard** — XP-ranked member list with streak indicators and badge display
+- Stats stored in `pod_member_stats` table
 
 #### Polls
 - Create polls with custom questions and options
@@ -326,20 +354,32 @@ Collaborative study group system (~2800 lines):
 - Quick access to all educator features
 
 ### 5.2 My Students (`/educator/students`)
-- List of connected students (via `educator_students` table and connection codes)
-- Student connection code input for adding new students
-- Per-student: name, email, essay count, join date
-- Click to view individual student details
+- Student roster with name, email, tags, status, session count
+- **Add students** manually (name + email + tags) OR by entering a student's connection code
+- **Tag system**: SAT Prep, ACT Prep, Essay Review, College Counseling, STEM, Humanities, Test Prep, Interview Prep
+- Active/inactive status toggle
+- Per-student note-taking (text notes with date stamps, stored as JSONB)
+- Per-student detail view (click to expand)
+- Search and filter by status
 
 ### 5.3 Student Progress (`/educator/student-progress`)
-- Detailed view of a specific student's progress
-- Essay status breakdown, application tracking
-- Student notes per student
+- List view of all connected students (via connection codes) with:
+  - Profile data (GPA, SAT, holistic score, percentile)
+  - Essay counts by status (draft, in review, complete)
+  - Application count and pending review count
+- **Student detail view** (click to expand): full essay list with scores + application list with status, type, deadline, and task counts
 
 ### 5.4 Essay Reviews (`/educator/essay-reviews`)
-- Queue of essays submitted for review by students
-- Review workflow: receive submission, read essay, provide feedback
-- Review status tracking
+- Review queue with filter by status (pending, in_review, completed)
+- Priority levels (normal, high)
+- Student note displayed alongside submission
+- **Per-essay review interface**:
+  - Essay content displayed paragraph by paragraph
+  - **Inline annotation system** — add annotations per paragraph with types: strength, suggestion, issue, question
+  - **Tutor scoring** — five dimensions rated 1-5: Structure, Voice, Argument, Grammar, Impact
+  - Free-text feedback field
+  - Submit/complete review workflow
+  - Student's AI scores (aiScore, vocabScore, grammarScore, originalityScore, overallScore) shown alongside for reference
 
 ### 5.5 Schedule (`/educator/schedule`)
 - Session scheduling and management
@@ -502,26 +542,35 @@ Collaborative study group system (~2800 lines):
 - Auto-fix suggestions
 - Issue categorization
 
-### 7.6 AI Chat & Agent (`pages/api/ai/chat.ts`, `pages/api/ai/agent.ts`)
-- Conversational AI assistant
-- Agent-based interactions with memory
-- Conversation history stored in `agent_conversations` and `agent_messages` tables
-- User preferences and facts stored in `agent_memories` table
+### 7.6 AI Counselor Chat (`pages/api/ai/chat.ts`)
+- Stateless multi-turn chat powered by Claude Sonnet
+- System prompt: experienced college admissions counselor
+- Accepts student context string (profile data) to personalize responses
+- Error handling for billing, invalid keys, and rate limits
 
-### 7.7 School Data & Prompt Engine (`lib/schoolData.ts`)
+### 7.7 Ari — Personal AI Agent (`pages/api/ai/agent.ts`)
+- Named AI persona "Ari" — persistent personal admissions counselor
+- **Full conversation persistence** — stored in `agent_conversations` + `agent_messages` tables
+- **Agent memory system** — stores facts and preferences per user in `agent_memories` table (JSONB)
+- Actions: list conversations, new conversation, chat, delete conversation
+- System prompt includes student's profile, essay, and activity data for deep personalization
+- **Frontend** (`components/PersonalAgent.tsx`): floating bottom-right panel with chat interface + conversation history sidebar, 6 starter prompt suggestions
+- Requires `ANTHROPIC_API_KEY` environment variable
+
+### 7.8 School Data & Prompt Engine (`lib/schoolData.ts`)
 - **50+ schools** with supplemental essay prompts
 - **11 canonical prompt types** with metadata
 - **Essay reuse matching** — finds thematic overlaps between essays and prompts
 - **Smart timeline generation** from school deadlines
 - **Weekly digest generation** for upcoming tasks
 
-### 7.8 Career Roadmap Engine (`lib/careerRoadmaps.ts`)
+### 7.9 Career Roadmap Engine (`lib/careerRoadmaps.ts`)
 - Major database with career paths and salary data
 - Career interest quiz with scoring algorithm
 - College recommendations per major
 - Milestone timelines for career progression
 
-### 7.9 Readiness Scoring (`pages/api/readiness.ts`)
+### 7.10 Readiness Scoring (`pages/api/readiness.ts`)
 - Weighted readiness score (0-100) based on 6 checklist items
 - Smart nudge generation with 8 rules
 - Contextual recommendations based on user state
@@ -535,33 +584,40 @@ All tables are created via `ensureSchema()` on cold start:
 
 | Table | Purpose |
 |-------|---------|
-| `users` | All users (id, name, email, password, role, plan, timestamps) |
-| `student_profiles` | GPA, SAT, ACT, weighted GPA, extracurriculars (JSONB), holistic score, percentile |
-| `essays` | Essays with title, prompt, content, status, AI scores, timestamps |
-| `contact_submissions` | Contact form messages (name, email, phone, message, read status) |
-| `analytics_events` | Client-side analytics (type, path, session, user, referrer, device, meta) |
-| `study_pods` | Pods with name, description, invite code |
-| `pod_members` | Pod membership (user, pod, role, join date) |
-| `pod_messages` | Chat messages (pod, user, content, type, essay reference) |
-| `motif_boards` | Essay motif brainstorming boards (bullets, analysis as JSONB) |
-| `agent_conversations` | AI chat conversation threads |
-| `agent_messages` | Individual AI chat messages (role, content) |
-| `agent_memories` | AI user memory (facts, preferences as JSONB) |
-| `educator_profiles` | Bio, headline, credentials, subjects, hourly rate, meeting links, timezone, availability |
-| `educator_services` | Service offerings (name, description, duration, price, type) |
-| `educator_students` | Educator-student relationships |
+| `users` | All accounts (id, name, email, password, role, plan, planStartedAt, lastLoginAt, timestamps) |
+| `student_profiles` | GPA (4.0/5.0), weighted GPA, SAT Math/RW, ACT, extracurriculars (JSONB), holistic/percentile/gpa/sat/ec scores |
+| `essays` | Title, prompt, content, status, 5 AI score columns (ai, vocab, grammar, originality, overall) |
+| `contact_submissions` | Contact form entries (name, email, phone, message, read flag) |
+| `analytics_events` | Behavioral analytics (type, path, sessionId, userId, referrer, meta JSONB, deviceInfo JSONB) |
+| `study_pods` | Pod name, description, unique invite code |
+| `pod_members` | Many-to-many: user in pod with role (admin/member) |
+| `pod_messages` | Chat messages with type, optional essayId, optional parentId (threading) |
+| `pod_message_reactions` | Emoji reactions on messages (unique per message+user+emoji) |
+| `pod_polls` | Poll question, options (JSON), expiration date |
+| `pod_poll_votes` | One vote per user per poll |
+| `pod_documents` | Uploaded files (fileName, fileType, fileSize, content text, base64 fileData) |
+| `document_comments` | Threaded comments on documents with section reference |
+| `pod_study_sessions` | Pomodoro sessions (focusDuration, breakDuration, rounds, status, currentRound, startedAt, endsAt) |
+| `session_participants` | Per-user goal + completion tracking for study sessions |
+| `pod_member_stats` | XP, streaks (current + longest), activity counts, achievements per user per pod |
+| `pod_activities` | Activity feed log (type + metadata JSON) |
+| `motif_boards` | Essay motif boards (title, bullets JSONB, analysis JSONB) |
+| `agent_conversations` | AI agent conversation threads (title, timestamps) |
+| `agent_messages` | Messages in agent conversations (role: user/assistant, content) |
+| `agent_memories` | Per-user AI memory (facts JSONB, preferences JSONB) |
+| `educator_profiles` | Bio, headline, credentials (JSONB), subjects (JSONB), hourlyRate, Zoom/Meet links, availability, timezone |
+| `educator_services` | Service offerings (name, description, duration, price, type, maxStudents, active) |
+| `educator_students` | Student roster (studentName, email, tags JSONB, notes JSONB, status) |
 | `educator_student_notes` | Per-student notes from educators |
-| `educator_bookings` | Session bookings (student, service, date, duration, status, platform, meeting link, amount, paid) |
+| `educator_bookings` | Session bookings (student, service, date, duration, status, platform, meeting link, amount, paid, notes) |
 | `educator_earnings` | Manual earnings entries (description, hours, amount, date) |
 | `connection_codes` | Unique 8-char connection codes per user |
-| `account_connections` | Parent/tutor-to-student connections (role-based) |
-| `saved_applications` | Student application lists (saved as JSONB) |
-| `essay_library_docs` | Curated essay examples for the library |
-| `essay_reviews` | Essay review submissions and feedback |
-| `tutor_session_notes` | Notion-like notepad for educators |
-| `parent_action_items` | Parent task lists (label, category, school, done, due date) |
-| `pod_documents` | Uploaded documents in study pods |
-| `pod_document_comments` | Comments on pod documents |
+| `account_connections` | Parent/tutor-to-student connections with role (parent/tutor) |
+| `saved_applications` | Student application lists (data as JSONB array) |
+| `essay_library_docs` | Curated successful essay examples (all metadata + content + base64 file, free/paid, published) |
+| `essay_reviews` | Review queue (essayId, studentId, tutorId, status, priority, studentNote, tutorFeedback, annotations JSONB, scores JSONB) |
+| `tutor_session_notes` | Notion-like notepad (title, content, color, pinned, archived, sortOrder) |
+| `parent_action_items` | Parent task lists (label, category, schoolName, done, dueDate) |
 
 ### 8.2 Authentication (`lib/auth.ts`)
 - NextAuth with CredentialsProvider
@@ -570,9 +626,13 @@ All tables are created via `ensureSchema()` on cold start:
 - Session includes user id, role, name, email
 
 ### 8.3 Analytics System (`lib/analytics.ts`)
-- Client-side event tracking (pageviews, clicks, feature usage, navigation)
-- Session-based analytics with device info
-- Scroll depth tracking
+- Client-side singleton tracker class with event types: pageview, click, session, event, feature, nav, scroll
+- Batches events in-memory, flushes every 30 seconds or at 50 events
+- `sendBeacon` on page unload for reliable last-event delivery
+- Tracks: scroll depth (max % per page), click targets (tag, label, href), session duration, feature usage counts, nav source/target
+- Device info captured once per session (screen, user agent, mobile flag, connection type)
+- Session ID stored in `sessionStorage` (UUID per tab)
+- No PII captured — privacy-respecting analytics
 - Server-side storage in `analytics_events` table
 - Admin analytics dashboard for visualization
 
@@ -588,15 +648,31 @@ All tables are created via `ensureSchema()` on cold start:
 | Scholarship-Ready Academy | Grades 9-12 | $499/mo |
 | STEM Innovators Lab | Grades 8-12 | $449/mo |
 
-### 8.6 API Endpoints (37 total)
+### 8.6 Shared Components
+| Component | Purpose |
+|-----------|---------|
+| `Layout.tsx` | Public page wrapper (nav + footer) |
+| `DashboardLayout.tsx` | Student dashboard shell (sidebar + mobile tab bar + hamburger menu) |
+| `ParentLayout.tsx` | Parent portal shell with teal theme |
+| `EducatorDashboardLayout.tsx` | Educator portal shell with emerald theme |
+| `AdminLayout.tsx` | Admin panel shell with amber accent + view switching |
+| `HelpChatbot.tsx` | Rule-based help chatbot floating widget (no AI, keyword matching) |
+| `PersonalAgent.tsx` | Ari AI agent floating panel (chat + conversation history) |
+| `AIAssistant.tsx` | Stateless AI chat component |
+| `BentoGrid.tsx` | Marketing bento grid layout component |
+| `EssayMockup.tsx` | Animated essay editor UI mockup for landing page |
+| `ServiceShowcase.tsx` | Service/program showcase cards |
+| `TestimonialCarousel.tsx` | Auto-scrolling testimonials |
+
+### 8.7 API Endpoints (40+ total)
 - **Auth**: register, NextAuth [...nextauth]
-- **Student**: profile, essays, applications, pods, readiness, sessions, college-match, motifs, essay-library, analytics, dashboard, connection-code
+- **Student**: profile, essays, essays/submit-for-review, applications, pods, pod-documents, pod-engage, pod-sessions, readiness, student/sessions, college-match, motifs, essay-library, analytics, dashboard, connection-code
 - **AI**: chat, agent, essay-feedback
-- **Educator**: overview, profile, students (CRUD + notes), services (CRUD), bookings (CRUD), earnings, essay-reviews, session-notes, student-progress
-- **Parent**: overview, action-items (CRUD)
+- **Educator**: overview, profile, students/index, students/[id]/index, students/[id]/notes, services/index, services/[id], bookings/index, bookings/[id], earnings, essay-reviews, session-notes, student-progress
+- **Parent**: overview, action-items
 - **Admin**: stats, users, contacts, analytics, essay-library
 - **Public**: contact, health
-- **Pod**: pods, pod-documents, pod-engage, pod-sessions
+- **Utility**: setup-fresh-tutor
 
 ---
 
