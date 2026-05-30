@@ -1078,37 +1078,30 @@ export default function StudyPods() {
     <DashboardLayout>
       <Head><title>Study Pods | AdmitsOnly Dashboard</title></Head>
 
-      <div className="h-[calc(100vh-12rem)] lg:h-[calc(100vh-7rem)]">
-        <div className="grid h-full lg:grid-cols-[280px_1fr] gap-0 bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+      <div className="h-[calc(100dvh-9rem)] lg:h-[calc(100dvh-8rem)]">
+        <div className="grid h-full lg:grid-cols-[272px_1fr] gap-0 bg-white rounded-2xl overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.08),0_8px_24px_rgba(0,0,0,0.04)]">
 
-          {/* ═══════════════ CHANNEL SIDEBAR (Modern light) ═══════════════ */}
-          <div className={`border-r border-slate-200 flex flex-col bg-white ${mobileShowChat ? 'hidden lg:flex' : 'flex'}`}>
+          {/* ═══════════════ CHANNEL SIDEBAR ═══════════════ */}
+          <div className={`border-r border-slate-800/10 flex flex-col bg-slate-900 ${mobileShowChat ? 'hidden lg:flex' : 'flex'}`}>
             {/* Sidebar header */}
-            <div className="p-4 border-b border-slate-100">
+            <div className="p-3.5 border-b border-white/5 flex-shrink-0">
               <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-accent to-purple-600 flex items-center justify-center shadow-sm shadow-accent/20">
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h2 className="text-sm font-bold font-display text-primary">Study Pods</h2>
-                    <p className="text-[10px] text-slate-400">{pods.length} pod{pods.length !== 1 ? 's' : ''}</p>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-semibold text-white tracking-tight">Study Pods</h2>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 text-slate-400 font-medium">{pods.length}</span>
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-1.5">
                 <button
                   onClick={() => { setShowCreate(true); setShowJoin(false); setError(''); }}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-accent rounded-lg hover:bg-accent/90 transition-colors shadow-sm shadow-accent/20"
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-white bg-white/10 rounded-lg hover:bg-white/15 transition-colors"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
-                  Create
+                  New
                 </button>
                 <button
                   onClick={() => { setShowJoin(true); setShowCreate(false); setError(''); }}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-slate-300 bg-white/5 rounded-lg hover:bg-white/10 transition-colors"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" /></svg>
                   Join
@@ -1118,13 +1111,13 @@ export default function StudyPods() {
 
             {/* Create dialog */}
             {showCreate && (
-              <div className="p-4 border-b border-slate-100 bg-slate-50 space-y-2">
+              <div className="p-3 border-b border-white/5 bg-slate-800/50 space-y-2">
                 <input
                   type="text"
                   value={newPodName}
                   onChange={e => setNewPodName(e.target.value)}
                   placeholder="Pod name (e.g. Essay Review Squad)"
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm text-primary placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent/40"
+                  className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent/40"
                   autoFocus
                 />
                 <textarea
@@ -1132,32 +1125,32 @@ export default function StudyPods() {
                   onChange={e => setNewPodDesc(e.target.value)}
                   placeholder="Short description (optional)"
                   rows={2}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm text-primary placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent/40 resize-none"
+                  className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent/40 resize-none"
                 />
-                {error && <p className="text-xs text-red-500">{error}</p>}
+                {error && <p className="text-xs text-red-400">{error}</p>}
                 <div className="flex gap-2 justify-end">
-                  <button onClick={() => setShowCreate(false)} className="px-3 py-1.5 text-xs text-slate-500 hover:text-primary rounded-md hover:bg-slate-100 transition-colors">Cancel</button>
-                  <button onClick={createPod} className="px-3 py-1.5 text-xs font-semibold text-white bg-accent rounded-md hover:bg-accent/90 transition-colors">Create Pod</button>
+                  <button onClick={() => setShowCreate(false)} className="px-3 py-1.5 text-xs text-slate-400 hover:text-white rounded-md hover:bg-white/10 transition-colors">Cancel</button>
+                  <button onClick={createPod} className="px-3 py-1.5 text-xs font-semibold text-white bg-accent rounded-md hover:bg-accent/90 transition-colors">Create</button>
                 </div>
               </div>
             )}
 
             {/* Join dialog */}
             {showJoin && (
-              <div className="p-4 border-b border-slate-100 bg-slate-50 space-y-2">
+              <div className="p-3 border-b border-white/5 bg-slate-800/50 space-y-2">
                 <input
                   type="text"
                   value={joinCode}
                   onChange={e => setJoinCode(e.target.value.toUpperCase())}
                   placeholder="Enter invite code"
                   maxLength={8}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm font-mono tracking-wider text-center uppercase text-primary placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent/40"
+                  className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm font-mono tracking-wider text-center uppercase text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent/40"
                   autoFocus
                 />
-                {error && <p className="text-xs text-red-500">{error}</p>}
+                {error && <p className="text-xs text-red-400">{error}</p>}
                 <div className="flex gap-2 justify-end">
-                  <button onClick={() => setShowJoin(false)} className="px-3 py-1.5 text-xs text-slate-500 hover:text-primary rounded-md hover:bg-slate-100 transition-colors">Cancel</button>
-                  <button onClick={joinPod} className="px-3 py-1.5 text-xs font-semibold text-white bg-accent rounded-md hover:bg-accent/90 transition-colors">Join Pod</button>
+                  <button onClick={() => setShowJoin(false)} className="px-3 py-1.5 text-xs text-slate-400 hover:text-white rounded-md hover:bg-white/10 transition-colors">Cancel</button>
+                  <button onClick={joinPod} className="px-3 py-1.5 text-xs font-semibold text-white bg-accent rounded-md hover:bg-accent/90 transition-colors">Join</button>
                 </div>
               </div>
             )}
@@ -1166,55 +1159,50 @@ export default function StudyPods() {
             <div className="flex-1 overflow-y-auto px-2 py-2">
               {loading ? (
                 <div className="flex items-center justify-center py-12">
-                  <svg className="w-6 h-6 animate-spin text-accent" fill="none" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 animate-spin text-slate-500" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
                 </div>
               ) : pods.length === 0 ? (
-                <div className="p-6 text-center">
-                  <div className="w-14 h-14 mx-auto rounded-2xl bg-accent/5 flex items-center justify-center mb-3">
-                    <svg className="w-7 h-7 text-accent/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                  </div>
-                  <p className="text-sm font-medium text-slate-600 mb-1">No pods yet</p>
-                  <p className="text-xs text-slate-400">Create a pod or join one with an invite code.</p>
+                <div className="p-5 text-center">
+                  <p className="text-sm font-medium text-slate-400 mb-1">No pods yet</p>
+                  <p className="text-xs text-slate-500">Create or join one above.</p>
                 </div>
               ) : (
                 <>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 py-1.5 mb-1">Your Pods</p>
+                  <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider px-2.5 py-1.5 mb-0.5">Pods</p>
                   {pods.map(pod => {
                     const isActive = selectedPod?.id === pod.id;
                     return (
                       <button
                         key={pod.id}
                         onClick={() => selectPod(pod)}
-                        className={`w-full text-left px-3 py-2.5 rounded-xl mb-0.5 transition-all group ${
+                        className={`w-full text-left px-2.5 py-2 rounded-lg mb-px transition-all group ${
                           isActive
-                            ? 'bg-accent/10 text-accent border border-accent/20'
-                            : 'text-slate-600 hover:bg-slate-50 border border-transparent'
+                            ? 'bg-white/10'
+                            : 'hover:bg-white/5'
                         }`}
                       >
                         <div className="flex items-center gap-2.5">
-                          <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${getAvatarColor(pod.name)} flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0`}>
+                          <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${getAvatarColor(pod.name)} flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0`}>
                             {pod.name[0]?.toUpperCase()}
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-2">
-                              <p className={`text-sm font-semibold truncate ${isActive ? 'text-accent' : 'text-primary'}`}>{pod.name}</p>
+                              <p className={`text-[13px] font-medium truncate ${isActive ? 'text-white' : 'text-slate-300'}`}>{pod.name}</p>
                               {pod.lastMessage && (
-                                <span className="text-[10px] text-slate-300 flex-shrink-0">{formatTime(pod.lastMessage.createdAt)}</span>
+                                <span className="text-[10px] text-slate-500 flex-shrink-0">{formatTime(pod.lastMessage.createdAt)}</span>
                               )}
                             </div>
                             {pod.lastMessage && (
-                              <p className="text-[11px] text-slate-400 mt-0.5 truncate">
+                              <p className="text-[11px] text-slate-500 mt-0.5 truncate">
                                 {pod.lastMessage.userName}: {pod.lastMessage.content}
                               </p>
                             )}
                           </div>
                           {pod.memberCount > 1 && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-400 font-semibold flex-shrink-0">{pod.memberCount}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 text-slate-400 font-medium flex-shrink-0">{pod.memberCount}</span>
                           )}
                         </div>
                       </button>
@@ -1224,17 +1212,17 @@ export default function StudyPods() {
               )}
             </div>
 
-            {/* Sidebar footer — user info + streak */}
-            <div className="p-3 border-t border-slate-100">
+            {/* Sidebar footer */}
+            <div className="p-3 border-t border-white/5 flex-shrink-0">
               {myStats && myStats.currentStreak > 0 && (
-                <div className="flex items-center gap-2 mb-2 px-1">
-                  <span className="text-base">{myStats.currentStreak >= 7 ? '🔥' : '⚡'}</span>
+                <div className="flex items-center gap-2 mb-2 px-0.5">
+                  <span className="text-sm">{myStats.currentStreak >= 7 ? '🔥' : '⚡'}</span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <p className="text-[10px] font-bold text-amber-600">{myStats.currentStreak}-day streak</p>
-                      <p className="text-[10px] text-slate-400">{myStats.xp} XP</p>
+                      <p className="text-[10px] font-medium text-amber-400">{myStats.currentStreak}d streak</p>
+                      <p className="text-[10px] text-slate-500">{myStats.xp} XP</p>
                     </div>
-                    <div className="h-1 bg-slate-100 rounded-full mt-1 overflow-hidden">
+                    <div className="h-0.5 bg-white/10 rounded-full mt-1 overflow-hidden">
                       <div
                         className="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full transition-all"
                         style={{ width: `${Math.min(100, (myStats.currentStreak / 30) * 100)}%` }}
@@ -1245,17 +1233,16 @@ export default function StudyPods() {
               )}
               <div className="flex items-center gap-2">
                 <div className="relative">
-                  <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${getAvatarColor(currentUserName)} flex items-center justify-center text-white text-xs font-bold`}>
+                  <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${getAvatarColor(currentUserName)} flex items-center justify-center text-white text-[10px] font-bold`}>
                     {getInitials(currentUserName)}
                   </div>
-                  <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 border-2 border-white rounded-full" />
+                  <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-emerald-400 border-[1.5px] border-slate-900 rounded-full" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold text-primary truncate">{currentUserName}</p>
-                  <p className="text-[10px] text-emerald-500">Active</p>
+                  <p className="text-xs font-medium text-slate-300 truncate">{currentUserName}</p>
                 </div>
                 {myStats && myStats.xp > 0 && (
-                  <div className="px-2 py-0.5 rounded-full bg-accent/10 text-accent text-[10px] font-bold">
+                  <div className="px-1.5 py-0.5 rounded-md bg-white/10 text-slate-400 text-[10px] font-medium">
                     {myStats.xp} XP
                   </div>
                 )}
@@ -1266,7 +1253,7 @@ export default function StudyPods() {
           {/* ═══════════════ CHAT AREA ═══════════════ */}
           {selectedPod ? (
             <div
-              className={`relative flex flex-col h-full bg-white ${mobileShowChat ? 'flex' : 'hidden lg:flex'}`}
+              className={`relative flex flex-col h-full bg-slate-50/40 ${mobileShowChat ? 'flex' : 'hidden lg:flex'}`}
               onDragEnter={handleDragEnter}
               onDragLeave={handleDragLeave}
               onDragOver={handleDragOver}
@@ -1275,76 +1262,60 @@ export default function StudyPods() {
               {isDragging && (
                 <div className="absolute inset-0 z-50 bg-accent/5 border-2 border-dashed border-accent rounded-r-2xl flex items-center justify-center backdrop-blur-sm">
                   <div className="text-center">
-                    <div className="w-16 h-16 mx-auto rounded-2xl bg-accent/10 flex items-center justify-center mb-3">
-                      <svg className="w-8 h-8 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                      </svg>
-                    </div>
-                    <p className="text-sm font-bold text-accent">Drop file to upload</p>
-                    <p className="text-xs text-slate-500 mt-1">PDF, TXT, DOC, DOCX, or images up to 5MB</p>
+                    <svg className="w-8 h-8 text-accent mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <p className="text-sm font-semibold text-accent">Drop to upload</p>
                   </div>
                 </div>
               )}
-              {/* ─── Chat header ─── */}
-              <div className="px-4 lg:px-5 py-3 border-b border-slate-200 bg-white">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    {/* Mobile back button */}
+              {/* ─── Compact header ─── */}
+              <div className="px-3 lg:px-4 py-2 border-b border-slate-200/80 bg-white flex-shrink-0">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
                     <button
                       onClick={mobileBackToList}
-                      className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-primary hover:bg-slate-50 transition-all flex-shrink-0"
+                      className="lg:hidden p-1 rounded-md text-slate-400 hover:text-primary transition-all flex-shrink-0"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                     </button>
-                    <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${getAvatarColor(selectedPod.name)} flex items-center justify-center text-white text-sm font-bold flex-shrink-0`}>
-                      {selectedPod.name[0]?.toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="text-sm lg:text-base font-bold text-primary truncate">{selectedPod.name}</h3>
-                      <p className="text-[11px] text-slate-400 truncate">
-                        {members.length} member{members.length !== 1 ? 's' : ''}
-                        {selectedPod.description && ` — ${selectedPod.description}`}
-                      </p>
-                    </div>
+                    <h3 className="text-sm font-semibold text-primary truncate">{selectedPod.name}</h3>
+                    <span className="hidden sm:inline text-[11px] text-slate-400">{members.length} members</span>
                   </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    {/* Invite code */}
+                  <div className="flex items-center gap-0.5 flex-shrink-0">
                     <button
                       onClick={copyInviteCode}
-                      className="relative hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono tracking-wider text-accent bg-accent/5 border border-accent/20 rounded-lg hover:bg-accent/10 transition-colors"
+                      className="relative hidden sm:flex items-center gap-1 px-2 py-1 text-[10px] font-mono tracking-wider text-slate-500 hover:text-accent hover:bg-accent/5 rounded-md transition-colors"
                       title="Copy invite code"
                     >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
                       {selectedPod.inviteCode}
                       {showInvite && (
-                        <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-[10px] bg-slate-800 text-white px-2 py-0.5 rounded whitespace-nowrap">
+                        <span className="absolute -top-7 left-1/2 -translate-x-1/2 text-[10px] bg-slate-800 text-white px-2 py-0.5 rounded whitespace-nowrap">
                           Copied!
                         </span>
                       )}
                     </button>
-                    {/* Members toggle */}
                     <button
                       onClick={() => setShowMembers(!showMembers)}
-                      className={`p-2 rounded-lg transition-all ${showMembers ? 'text-accent bg-accent/10' : 'text-slate-400 hover:text-primary hover:bg-slate-50'}`}
+                      className={`p-1.5 rounded-md transition-all ${showMembers ? 'text-accent bg-accent/10' : 'text-slate-400 hover:text-primary hover:bg-slate-100'}`}
                       title="View members"
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m6 5.197V20" />
                       </svg>
                     </button>
-                    {/* Leave pod */}
                     {leaveConfirm ? (
                       <span className="flex items-center gap-1">
-                        <button onClick={() => { leavePod(selectedPod.id); setLeaveConfirm(false); }} className="text-[11px] font-semibold text-red-500 hover:text-red-600 px-2 py-1 rounded-lg bg-red-50">Leave</button>
-                        <button onClick={() => setLeaveConfirm(false)} className="text-[11px] font-semibold text-slate-400 hover:text-slate-600 px-2 py-1 rounded-lg bg-slate-50">Cancel</button>
+                        <button onClick={() => { leavePod(selectedPod.id); setLeaveConfirm(false); }} className="text-[10px] font-semibold text-red-500 px-2 py-1 rounded-md bg-red-50">Leave</button>
+                        <button onClick={() => setLeaveConfirm(false)} className="text-[10px] font-semibold text-slate-400 px-2 py-1 rounded-md bg-slate-100">Cancel</button>
                       </span>
                     ) : (
                       <button
                         onClick={() => setLeaveConfirm(true)}
-                        className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"
+                        className="p-1.5 rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"
                         title="Leave pod"
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                         </svg>
                       </button>
@@ -1352,27 +1323,27 @@ export default function StudyPods() {
                   </div>
                 </div>
 
-                {/* ─── Tab switcher: Chat | Files | Focus ─── */}
-                <div className="flex gap-1 mt-3 -mx-4 lg:-mx-5 px-4 lg:px-5 border-b border-slate-100">
+                {/* ─── Tab switcher ─── */}
+                <div className="flex gap-0.5 mt-2 -mx-3 lg:-mx-4 px-3 lg:px-4">
                   {[
                     { key: 'chat' as const, label: 'Chat', onClick: () => { setActiveTab('chat'); setSelectedDoc(null); }, badge: null },
                     { key: 'documents' as const, label: 'Files', onClick: () => setActiveTab('documents'), badge: documents.length > 0 ? documents.length : null },
                     { key: 'focus' as const, label: 'Focus', onClick: () => { setActiveTab('focus'); setSelectedSession(null); }, badge: sessions.filter(s => s.status !== 'completed').length > 0 ? sessions.filter(s => s.status !== 'completed').length : null },
-                    { key: 'leaderboard' as const, label: 'Leaderboard', onClick: () => setActiveTab('leaderboard'), badge: null },
+                    { key: 'leaderboard' as const, label: 'Board', onClick: () => setActiveTab('leaderboard'), badge: null },
                   ].map(tab => (
                     <button
                       key={tab.key}
                       onClick={tab.onClick}
-                      className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold border-b-2 transition-all -mb-px ${
+                      className={`flex items-center gap-1 px-3 py-1.5 text-[11px] font-medium rounded-t-md transition-all ${
                         activeTab === tab.key
-                          ? 'border-accent text-accent'
-                          : 'border-transparent text-slate-400 hover:text-slate-600 hover:border-slate-200'
+                          ? 'bg-slate-50/80 text-accent border-b-2 border-accent'
+                          : 'text-slate-400 hover:text-slate-600'
                       }`}
                     >
                       {tab.label}
                       {tab.badge && (
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
-                          activeTab === tab.key ? 'bg-accent/10 text-accent' : tab.key === 'focus' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                        <span className={`text-[9px] px-1 py-px rounded-full font-semibold ${
+                          activeTab === tab.key ? 'bg-accent/10 text-accent' : 'bg-slate-200 text-slate-500'
                         }`}>{tab.badge}</span>
                       )}
                     </button>
@@ -1937,58 +1908,37 @@ export default function StudyPods() {
               {activeTab === 'chat' && <>
               {/* ─── Members panel (collapsible) ─── */}
               {showMembers && (
-                <div className="px-4 lg:px-5 py-3 border-b border-slate-100 bg-slate-50/50">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2.5">
-                    Members — {members.length}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
+                <div className="px-3 lg:px-4 py-2 border-b border-slate-200/60 bg-white flex-shrink-0">
+                  <div className="flex flex-wrap gap-1.5">
                     {members.map(m => (
-                      <div key={m.id} className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-xl border border-slate-100 shadow-sm">
-                        <div className="relative">
-                          <div className={`w-6 h-6 rounded-md bg-gradient-to-br ${getAvatarColor(m.user.name)} flex items-center justify-center text-white text-[9px] font-bold`}>
-                            {getInitials(m.user.name)}
-                          </div>
+                      <div key={m.id} className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 rounded-md">
+                        <div className={`w-5 h-5 rounded bg-gradient-to-br ${getAvatarColor(m.user.name)} flex items-center justify-center text-white text-[8px] font-bold`}>
+                          {getInitials(m.user.name)}
                         </div>
-                        <span className="text-xs font-medium text-slate-600">{m.user.name}</span>
-                        {m.role === 'admin' && <span className="text-[9px] px-1.5 py-0.5 rounded bg-accent/10 text-accent font-bold">Admin</span>}
+                        <span className="text-[11px] text-slate-600">{m.user.name}</span>
+                        {m.role === 'admin' && <span className="text-[8px] px-1 py-px rounded bg-accent/10 text-accent font-semibold">Admin</span>}
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* ─── Messages area (Discord-style) ─── */}
-              <div className="flex-1 overflow-y-auto px-4 lg:px-5 py-4" style={{ WebkitOverflowScrolling: 'touch' }}>
+              {/* ─── Messages area ─── */}
+              <div className="flex-1 overflow-y-auto px-3 lg:px-5 py-3" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
                 {messages.length === 0 ? (
                   <div className="h-full flex items-center justify-center">
-                    <div className="text-center max-w-sm">
-                      <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-accent/10 via-purple-100 to-indigo-50 flex items-center justify-center mb-5 shadow-sm">
-                        <svg className="w-10 h-10 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="text-center max-w-xs px-4">
+                      <div className="w-12 h-12 mx-auto rounded-xl bg-slate-100 flex items-center justify-center mb-4">
+                        <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                         </svg>
                       </div>
-                      <h4 className="text-lg font-bold text-primary mb-2">Welcome to {selectedPod.name}!</h4>
-                      <p className="text-sm text-slate-500 leading-relaxed mb-4">This is the beginning of your study pod. Share essay ideas, give feedback, or just say hi.</p>
-                      <div className="flex flex-wrap justify-center gap-2 mb-4">
-                        <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-purple-50 text-purple-600 rounded-full text-[11px] font-semibold">
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                          Share docs
-                        </span>
-                        <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-full text-[11px] font-semibold">
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                          Focus together
-                        </span>
-                        <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-50 text-amber-600 rounded-full text-[11px] font-semibold">
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                          React & vibe
-                        </span>
-                      </div>
-                      {/* Mobile invite code */}
+                      <h4 className="text-sm font-semibold text-primary mb-1">Start the conversation</h4>
+                      <p className="text-xs text-slate-400 leading-relaxed mb-3">Share essay ideas, give feedback, or say hi to your pod.</p>
                       <button
                         onClick={copyInviteCode}
-                        className="sm:hidden mt-2 flex items-center justify-center gap-2 mx-auto px-4 py-2 text-xs font-mono tracking-wider text-accent bg-accent/5 border border-accent/20 rounded-lg"
+                        className="sm:hidden inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono text-slate-500 bg-slate-100 rounded-md"
                       >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
                         Invite: {selectedPod.inviteCode}
                       </button>
                     </div>
@@ -2004,16 +1954,16 @@ export default function StudyPods() {
                         <div key={msg.id}>
                           {/* Date separator */}
                           {showDateSep && (
-                            <div className="flex items-center gap-4 my-5">
-                              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 py-1 bg-white border border-slate-100 rounded-full shadow-sm">{getDateLabel(msg.createdAt)}</span>
-                              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+                            <div className="flex items-center gap-3 my-4">
+                              <div className="flex-1 h-px bg-slate-200/70" />
+                              <span className="text-[10px] font-medium text-slate-400 px-2">{getDateLabel(msg.createdAt)}</span>
+                              <div className="flex-1 h-px bg-slate-200/70" />
                             </div>
                           )}
 
-                          {/* Message row — Discord/Slack style */}
+                          {/* Message row */}
                           <div
-                            className={`relative flex gap-3 hover:bg-accent/[0.02] rounded-lg px-2 py-1 transition-all group ${msg.isGroupStart ? 'mt-4' : 'mt-0.5'}`}
+                            className={`relative flex gap-2.5 hover:bg-white/80 rounded-lg px-2 py-1 transition-colors group ${msg.isGroupStart ? 'mt-3' : 'mt-px'}`}
                             onMouseEnter={() => setHoveredMessage(msg.id)}
                             onMouseLeave={() => { setHoveredMessage(null); if (showReactionPicker === msg.id) setShowReactionPicker(null); }}
                           >
@@ -2057,13 +2007,13 @@ export default function StudyPods() {
                             )}
 
                             {/* Avatar column */}
-                            <div className="w-10 flex-shrink-0">
+                            <div className="w-8 flex-shrink-0">
                               {msg.isGroupStart ? (
-                                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${getAvatarColor(msg.user.name)} flex items-center justify-center text-white text-sm font-bold shadow-sm ring-2 ring-white`}>
+                                <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${getAvatarColor(msg.user.name)} flex items-center justify-center text-white text-[10px] font-bold`}>
                                   {getInitials(msg.user.name)}
                                 </div>
                               ) : (
-                                <span className="text-[10px] text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity leading-[22px] block text-center">
+                                <span className="text-[9px] text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity leading-[20px] block text-center">
                                   {formatTimeFull(msg.createdAt)}
                                 </span>
                               )}
@@ -2072,14 +2022,14 @@ export default function StudyPods() {
                             {/* Content column */}
                             <div className="flex-1 min-w-0">
                               {msg.isGroupStart && (
-                                <div className="flex items-baseline gap-2 mb-0.5">
-                                  <span className={`text-sm font-bold ${isMe ? 'text-accent' : 'text-primary'}`}>
+                                <div className="flex items-baseline gap-2 mb-px">
+                                  <span className={`text-[13px] font-semibold ${isMe ? 'text-accent' : 'text-slate-800'}`}>
                                     {isMe ? 'You' : msg.user.name}
                                   </span>
-                                  <span className="text-[10px] text-slate-400 font-medium">{formatTimeFull(msg.createdAt)}</span>
+                                  <span className="text-[10px] text-slate-400">{formatTimeFull(msg.createdAt)}</span>
                                 </div>
                               )}
-                              <div className="text-sm text-slate-700 leading-relaxed break-words">
+                              <div className="text-[13px] text-slate-600 leading-relaxed break-words">
                                 {(() => {
                                   const linkedDoc = getDocForMessage(msg);
                                   if (linkedDoc) {
@@ -2210,9 +2160,8 @@ export default function StudyPods() {
                 )}
               </div>
 
-              {/* ─── Message input bar (Premium Slack-style) ─── */}
-              <div className="px-4 lg:px-5 pb-4 lg:pb-5 pt-2 flex-shrink-0">
-                {/* Hidden file input for chat uploads */}
+              {/* ─── Message input bar ─── */}
+              <div className="px-3 lg:px-4 pb-3 lg:pb-4 pt-1.5 flex-shrink-0 bg-slate-50/40">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -2221,30 +2170,28 @@ export default function StudyPods() {
                   className="hidden"
                 />
                 {uploading && (
-                  <div className="flex items-center gap-2.5 px-4 py-2.5 mb-3 bg-gradient-to-r from-accent/5 to-purple-50 border border-accent/20 rounded-xl text-xs text-accent font-semibold">
-                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <div className="flex items-center gap-2 px-3 py-2 mb-2 bg-accent/5 border border-accent/15 rounded-lg text-[11px] text-accent font-medium">
+                    <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                     </svg>
-                    Uploading file to pod...
+                    Uploading...
                   </div>
                 )}
                 {error && (
-                  <div className="flex items-center gap-2 px-4 py-2 mb-2 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600 font-medium">
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  <div className="flex items-center gap-2 px-3 py-1.5 mb-2 bg-red-50 border border-red-200/60 rounded-lg text-[11px] text-red-600">
                     {error}
                     <button onClick={() => setError('')} className="ml-auto text-red-400 hover:text-red-600">
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
                   </div>
                 )}
-                {/* Reply indicator */}
                 {replyToMsg && (
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-accent/5 border border-accent/10 rounded-t-lg text-xs">
-                    <span className="text-accent font-semibold">Replying to {replyToMsg.user.name}</span>
+                  <div className="flex items-center gap-2 px-3 py-1.5 mb-1 bg-accent/5 border border-accent/10 rounded-lg text-[11px]">
+                    <span className="text-accent font-medium">Replying to {replyToMsg.user.name}</span>
                     <span className="text-slate-400 truncate flex-1">{replyToMsg.content}</span>
                     <button onClick={() => setReplyToMsg(null)} className="text-slate-400 hover:text-slate-600">
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
                   </div>
                 )}
@@ -2302,23 +2249,21 @@ export default function StudyPods() {
                     </div>
                   </div>
                 )}
-                <div className={`flex items-end gap-2 bg-white border border-slate-300 rounded-lg px-3 py-2 focus-within:border-slate-500 focus-within:shadow-[0_0_0_4px_rgba(29,155,209,0.1)] transition-all ${replyToMsg ? 'rounded-t-none border-t-0' : ''}`}>
-                  {/* Attachment button */}
+                <div className={`flex items-end gap-1.5 bg-white rounded-xl border border-slate-200 shadow-sm px-2 py-1.5 focus-within:border-slate-300 focus-within:shadow-md transition-all`}>
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploading}
-                    className="p-2 rounded-xl text-slate-400 hover:text-accent hover:bg-accent/5 transition-all flex-shrink-0 disabled:opacity-40"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all flex-shrink-0 disabled:opacity-40"
                     title="Share a document"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
                   </button>
-                  {/* Poll button */}
                   <button
                     onClick={() => setShowCreatePoll(!showCreatePoll)}
-                    className="p-2 rounded-xl text-slate-400 hover:text-accent hover:bg-accent/5 transition-all flex-shrink-0"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all flex-shrink-0"
                     title="Create a poll"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                   </button>
                   <input
                     ref={inputRef}
@@ -2331,33 +2276,22 @@ export default function StudyPods() {
                         replyToMsg ? sendReply() : sendMessage();
                       }
                     }}
-                    placeholder={replyToMsg ? `Reply to ${replyToMsg.user.name}...` : `Message #${selectedPod.name.toLowerCase().replace(/\s+/g, '-')}...`}
-                    className="flex-1 py-1.5 text-sm bg-transparent focus:outline-none placeholder-slate-400"
+                    placeholder={replyToMsg ? `Reply to ${replyToMsg.user.name}...` : 'Type a message...'}
+                    className="flex-1 py-1.5 text-[13px] bg-transparent focus:outline-none placeholder-slate-400"
                   />
-                  {/* Send */}
                   <button
                     onClick={replyToMsg ? sendReply : sendMessage}
                     disabled={!messageText.trim() || sending}
-                    className={`p-2 rounded-lg transition-all flex-shrink-0 ${
+                    className={`p-1.5 rounded-lg transition-all flex-shrink-0 ${
                       messageText.trim()
-                        ? 'text-white bg-accent hover:bg-accent/90 shadow-sm shadow-accent/20'
-                        : 'text-slate-300 cursor-not-allowed'
+                        ? 'text-white bg-accent hover:bg-accent/90'
+                        : 'text-slate-300'
                     }`}
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
                     </svg>
                   </button>
-                </div>
-                <div className="flex items-center justify-between mt-1.5 px-1">
-                  <p className="text-[10px] text-slate-300">
-                    <kbd className="px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-[9px] font-mono text-slate-400">Enter</kbd>
-                    <span className="ml-1">to send</span>
-                  </p>
-                  <div className="flex items-center gap-1.5 text-[10px] text-slate-300">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>{members.length} online</span>
-                  </div>
                 </div>
               </div>
               </>}
@@ -2838,36 +2772,16 @@ export default function StudyPods() {
           ) : (
             /* ─── Empty state — no pod selected ─── */
             <div className="hidden lg:flex items-center justify-center h-full bg-slate-50/30">
-              <div className="text-center max-w-sm px-6">
-                <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-accent/10 to-purple-100 flex items-center justify-center mb-5">
-                  <svg className="w-10 h-10 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="text-center max-w-xs px-6">
+                <div className="w-12 h-12 mx-auto rounded-xl bg-slate-100 flex items-center justify-center mb-4">
+                  <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-bold font-display text-primary mb-2">Select a Pod</h3>
-                <p className="text-sm text-slate-500 mb-6">
-                  Choose a study pod from the sidebar to start chatting. Share essay drafts, give feedback, and grow together with your peers.
+                <h3 className="text-base font-semibold text-primary mb-1">Select a pod</h3>
+                <p className="text-sm text-slate-400">
+                  Choose a study pod from the sidebar to start chatting.
                 </p>
-                <div className="flex flex-col gap-3 text-left bg-white rounded-xl border border-slate-100 p-4">
-                  <div className="flex items-center gap-3 text-xs text-slate-500">
-                    <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center flex-shrink-0">
-                      <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                    </div>
-                    <span><strong className="text-primary">Create</strong> a pod and invite friends with a code</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs text-slate-500">
-                    <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0">
-                      <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                    </div>
-                    <span><strong className="text-primary">Share</strong> essay drafts for peer review</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs text-slate-500">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">
-                      <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
-                    </div>
-                    <span><strong className="text-primary">Discuss</strong> college strategy with your peers</span>
-                  </div>
-                </div>
               </div>
             </div>
           )}
