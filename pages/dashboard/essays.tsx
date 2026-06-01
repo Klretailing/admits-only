@@ -2473,6 +2473,19 @@ export default function Essays() {
   const [suppExpandedPrompt, setSuppExpandedPrompt] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
+  // Handle URL query params for deep-linking from applications page
+  useEffect(() => {
+    if (!router.isReady) return;
+    const { school, mode: urlMode } = router.query;
+    if (urlMode === 'supplementals') {
+      setMode('supplementals');
+      if (typeof school === 'string' && SCHOOLS.some(s => s.id === school)) {
+        setSuppSchoolFilter(school);
+      }
+      router.replace('/dashboard/essays', undefined, { shallow: true });
+    }
+  }, [router.isReady]);
+
   const trackerSchools = useMemo(() => {
     try {
       const stored = typeof window !== 'undefined' ? localStorage.getItem('admitsonly_applications') : null;
