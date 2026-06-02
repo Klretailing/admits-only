@@ -2471,6 +2471,20 @@ export default function Essays() {
   const [suppSchoolFilter, setSuppSchoolFilter] = useState<string>('all');
   const [suppTypeFilter, setSuppTypeFilter] = useState<SuppPromptType | 'all'>('all');
   const [suppExpandedPrompt, setSuppExpandedPrompt] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  // Handle URL query params for deep-linking from applications page
+  useEffect(() => {
+    if (!router.isReady) return;
+    const { school, mode: urlMode } = router.query;
+    if (urlMode === 'supplementals') {
+      setMode('supplementals');
+      if (typeof school === 'string' && SCHOOLS.some(s => s.id === school)) {
+        setSuppSchoolFilter(school);
+      }
+      router.replace('/dashboard/essays', undefined, { shallow: true });
+    }
+  }, [router.isReady]);
 
   const trackerSchools = useMemo(() => {
     try {
@@ -3428,7 +3442,12 @@ export default function Essays() {
           {/* ─── LEFT: Essay List ─── */}
           <div className={`overflow-y-auto space-y-2 pr-1 ${mobileEssayView === 'editor' && activeEssay ? 'hidden lg:block' : ''}`}>
             {loading ? (
-              <div className="text-center py-12"><div className="animate-pulse text-sm text-slate-400">Loading...</div></div>
+              <div className="flex items-center justify-center py-12">
+                <svg className="w-6 h-6 animate-spin text-accent" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              </div>
             ) : essays.length === 0 ? (
               <div className="text-center py-10 px-4">
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-accent/10 to-purple-100 flex items-center justify-center mx-auto mb-4">
@@ -3457,9 +3476,16 @@ export default function Essays() {
                   >
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="text-sm font-bold text-primary truncate flex-1">{essay.title}</h3>
-                      <button onClick={e => { e.stopPropagation(); deleteEssay(essay.id); }} className="text-slate-300 hover:text-red-400 opacity-0 group-hover:opacity-100 flex-shrink-0 p-0.5">
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                      </button>
+                      {deleteConfirmId === essay.id ? (
+                        <span className="flex items-center gap-1 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                          <button onClick={() => deleteEssay(essay.id)} className="text-[10px] font-semibold text-red-500 hover:text-red-600 px-1.5 py-0.5 rounded bg-red-50">Delete</button>
+                          <button onClick={() => setDeleteConfirmId(null)} className="text-[10px] font-semibold text-slate-400 hover:text-slate-600 px-1.5 py-0.5 rounded bg-slate-50">Cancel</button>
+                        </span>
+                      ) : (
+                        <button onClick={e => { e.stopPropagation(); setDeleteConfirmId(essay.id); }} className="text-slate-300 hover:text-red-400 opacity-0 group-hover:opacity-100 flex-shrink-0 p-0.5">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                      )}
                     </div>
                     {essay.prompt && <p className="text-[10px] text-slate-400 italic mt-1 truncate">{essay.prompt}</p>}
                     <div className="flex items-center gap-2 mt-2.5">

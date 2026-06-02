@@ -602,6 +602,24 @@ export async function ensureSchema() {
     `);
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "tutor_session_notes_educatorId_idx" ON "tutor_session_notes"("educatorId");`);
 
+    // ─── Parent Action Items ───
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "parent_action_items" (
+        "id"         TEXT NOT NULL,
+        "userId"     TEXT NOT NULL,
+        "label"      TEXT NOT NULL,
+        "category"   TEXT NOT NULL DEFAULT 'custom',
+        "schoolName" TEXT,
+        "done"       BOOLEAN NOT NULL DEFAULT false,
+        "dueDate"    TEXT,
+        "createdAt"  TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt"  TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "parent_action_items_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "parent_action_items_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "parent_action_items_userId_idx" ON "parent_action_items"("userId");`);
+
     globalForPrisma.schemaReady = true;
   } catch (e) {
     // Tables likely already exist — mark as ready

@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import DashboardLayout from '../../components/DashboardLayout';
-import { findSchoolByName, generateSmartTimeline, generateWeeklyDigest, type SchoolData } from '../../lib/schoolData';
+import { SCHOOLS, findSchoolByName, generateSmartTimeline, generateWeeklyDigest, type SchoolData } from '../../lib/schoolData';
 import { useCountUp } from '../../hooks/useAnimations';
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -75,6 +75,34 @@ export default function Applications() {
   const [newName, setNewName] = useState('');
   const [newDeadline, setNewDeadline] = useState('');
   const [newType, setNewType] = useState<CollegeApp['type']>('RD');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const suggestionRef = useRef<HTMLDivElement>(null);
+
+  const filteredSchools = useMemo(() => {
+    if (!newName.trim()) return [];
+    const q = newName.toLowerCase();
+    const alreadyAdded = new Set(apps.map(a => a.name.toLowerCase()));
+    return SCHOOLS.filter(s =>
+      !alreadyAdded.has(s.name.toLowerCase()) &&
+      (s.name.toLowerCase().includes(q) || s.id.toLowerCase().includes(q))
+    ).slice(0, 8);
+  }, [newName, apps]);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (suggestionRef.current && !suggestionRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  const selectSchool = (school: SchoolData) => {
+    setNewName(school.name);
+    setShowSuggestions(false);
+  };
 
   // Load from server first, fall back to localStorage, merge
   useEffect(() => {
@@ -348,14 +376,47 @@ export default function Applications() {
           <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
             <h3 className="text-sm font-bold text-primary mb-3">Add a School</h3>
             <div className="grid gap-3 sm:grid-cols-[1fr_150px_120px]">
-              <input
-                type="text"
-                value={newName}
-                onChange={e => setNewName(e.target.value)}
-                placeholder="School name (e.g. Stanford University)"
-                className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
-                autoFocus
-              />
+              <div className="relative" ref={suggestionRef}>
+                <input
+                  type="text"
+                  value={newName}
+                  onChange={e => { setNewName(e.target.value); setShowSuggestions(true); }}
+                  onFocus={() => { if (newName.trim()) setShowSuggestions(true); }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && filteredSchools.length > 0 && showSuggestions) {
+                      e.preventDefault();
+                      selectSchool(filteredSchools[0]);
+                    }
+                  }}
+                  placeholder="Search for a school..."
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
+                  autoFocus
+                />
+                {showSuggestions && filteredSchools.length > 0 && (
+                  <div className="absolute z-20 left-0 right-0 mt-1 bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden max-h-64 overflow-y-auto">
+                    {filteredSchools.map(school => (
+                      <button
+                        key={school.id}
+                        onClick={() => selectSchool(school)}
+                        className="w-full text-left px-4 py-2.5 text-sm hover:bg-accent/5 transition-colors flex items-center justify-between gap-2"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-medium text-primary truncate">{school.name}</p>
+                          <p className="text-[11px] text-slate-400">{school.location} · {school.acceptanceRate}% acceptance</p>
+                        </div>
+                        {school.deadlines?.rd && (
+                          <span className="text-[10px] text-slate-400 flex-shrink-0">RD: {school.deadlines.rd}</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {showSuggestions && newName.trim().length >= 2 && filteredSchools.length === 0 && (
+                  <div className="absolute z-20 left-0 right-0 mt-1 bg-white rounded-xl border border-slate-200 shadow-lg p-3">
+                    <p className="text-xs text-slate-400 text-center">No matching schools found — you can still add a custom name</p>
+                  </div>
+                )}
+              </div>
               <input
                 type="date"
                 value={newDeadline}
@@ -371,7 +432,7 @@ export default function Applications() {
               </select>
             </div>
             <div className="flex gap-2 mt-3 justify-end">
-              <button onClick={() => { setShowAddForm(false); setNewName(''); setNewDeadline(''); }} className="px-4 py-2 text-sm text-slate-500 hover:text-slate-700 font-medium">Cancel</button>
+              <button onClick={() => { setShowAddForm(false); setNewName(''); setNewDeadline(''); setShowSuggestions(false); }} className="px-4 py-2 text-sm text-slate-500 hover:text-slate-700 font-medium">Cancel</button>
               <button onClick={addApp} disabled={!newName.trim()} className="px-5 py-2 text-sm font-semibold text-white bg-accent rounded-xl hover:bg-accent/90 transition-colors disabled:opacity-40">Add School</button>
             </div>
           </div>
@@ -457,6 +518,24 @@ export default function Applications() {
                     <span className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex-shrink-0 ${statusInfo.color}`}>
                       {statusInfo.label}
                     </span>
+
+                    {/* Delete button */}
+                    {deleteConfirmId === app.id ? (
+                      <span className="flex items-center gap-1 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => { removeApp(app.id); setDeleteConfirmId(null); }} className="text-[11px] font-semibold text-red-500 px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100">Delete</button>
+                        <button onClick={() => setDeleteConfirmId(null)} className="text-[11px] font-semibold text-slate-400 px-2 py-1 rounded-lg bg-slate-50 hover:bg-slate-100">Cancel</button>
+                      </span>
+                    ) : (
+                      <button
+                        onClick={e => { e.stopPropagation(); setDeleteConfirmId(app.id); }}
+                        className="p-1.5 rounded-lg text-slate-300 hover:text-red-400 hover:bg-red-50 transition-all flex-shrink-0"
+                        title="Remove school"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    )}
                   </div>
 
                   {/* Expanded details */}
@@ -547,26 +626,23 @@ export default function Applications() {
                           </div>
 
                           {/* Quick Links */}
-                          <Link
-                            href="/dashboard/essays"
-                            className="flex items-center gap-2 text-xs text-accent font-semibold hover:underline"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            View Supplemental Prompts →
-                          </Link>
-
-                          {/* Delete */}
-                          <button
-                            onClick={() => removeApp(app.id)}
-                            className="flex items-center gap-2 text-xs text-slate-300 hover:text-red-400 transition-colors mt-2"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                            Remove school
-                          </button>
+                          {(() => {
+                            const schoolData = findSchoolByName(app.name);
+                            const href = schoolData
+                              ? `/dashboard/essays?school=${schoolData.id}&mode=supplementals`
+                              : '/dashboard/essays?mode=supplementals';
+                            return (
+                              <Link
+                                href={href}
+                                className="flex items-center gap-2 text-xs text-accent font-semibold hover:underline"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                View {schoolData ? `${schoolData.name} ` : ''}Supplemental Prompts →
+                              </Link>
+                            );
+                          })()}
                         </div>
                       </div>
 
