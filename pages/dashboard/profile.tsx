@@ -356,39 +356,38 @@ function Scatterplot({ userGpa, userSat }: { userGpa: number; userSat: number })
         if ((e.target as Element).tagName !== 'circle') setSelected(null);
       }}>
         <defs>
-          <linearGradient id="chart-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#0f172a" /><stop offset="100%" stopColor="#1e1b4b" /></linearGradient>
-          <radialGradient id="user-glow" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="#a78bfa" stopOpacity="0.6" /><stop offset="50%" stopColor="#8b5cf6" stopOpacity="0.2" /><stop offset="100%" stopColor="#6366f1" stopOpacity="0" /></radialGradient>
-          <filter id="dot-shadow" x="-100%" y="-100%" width="300%" height="300%"><feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#a78bfa" floodOpacity="0.6" /></filter>
+          <linearGradient id="chart-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#ffffff" /><stop offset="100%" stopColor="#f8fafc" /></linearGradient>
+          <radialGradient id="user-glow" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.2" /><stop offset="100%" stopColor="#8b5cf6" stopOpacity="0" /></radialGradient>
           <radialGradient id="user-dot-grad" cx="30%" cy="30%" r="70%"><stop offset="0%" stopColor="#c4b5fd" /><stop offset="100%" stopColor="#7c3aed" /></radialGradient>
         </defs>
         <rect x="0" y="0" width={W} height={H} rx="16" fill="url(#chart-bg)" />
 
         {/* Grid lines */}
-        {[2.5, 3.0, 3.5, 4.0].map((g) => (<line key={`gx-${g}`} x1={toX(g)} y1={PAD.top} x2={toX(g)} y2={PAD.top + plotH} stroke="#334155" strokeWidth="0.5" strokeDasharray="4 8" />))}
-        {[900, 1000, 1100, 1200, 1300, 1400, 1500].map((s) => (<line key={`gy-${s}`} x1={PAD.left} y1={toY(s)} x2={PAD.left + plotW} y2={toY(s)} stroke="#334155" strokeWidth="0.5" strokeDasharray="4 8" />))}
+        {[2.5, 3.0, 3.5, 4.0].map((g) => (<line key={`gx-${g}`} x1={toX(g)} y1={PAD.top} x2={toX(g)} y2={PAD.top + plotH} stroke="#e2e8f0" strokeWidth="0.5" strokeDasharray="4 8" />))}
+        {[900, 1000, 1100, 1200, 1300, 1400, 1500].map((s) => (<line key={`gy-${s}`} x1={PAD.left} y1={toY(s)} x2={PAD.left + plotW} y2={toY(s)} stroke="#e2e8f0" strokeWidth="0.5" strokeDasharray="4 8" />))}
 
         {/* Zone backgrounds — solid fills */}
-        <rect x={toX(xMin)} y={toY(1100)} width={toX(3.2) - toX(xMin)} height={toY(yMin) - toY(1100)} fill="#ef4444" opacity="0.12" rx="6" />
+        <rect x={toX(xMin)} y={toY(1100)} width={toX(3.2) - toX(xMin)} height={toY(yMin) - toY(1100)} fill="#ef4444" opacity="0.08" rx="6" />
         <text x={toX(xMin) + 6} y={toY(1100) + 14} className="text-[9px] font-bold" fill="#ef4444" opacity="0.7">Building</text>
 
-        <rect x={toX(3.0)} y={toY(1300)} width={toX(3.8) - toX(3.0)} height={toY(1100) - toY(1300)} fill="#f59e0b" opacity="0.1" rx="6" />
+        <rect x={toX(3.0)} y={toY(1300)} width={toX(3.8) - toX(3.0)} height={toY(1100) - toY(1300)} fill="#f59e0b" opacity="0.08" rx="6" />
         <text x={toX(3.0) + 6} y={toY(1300) + 14} className="text-[9px] font-bold" fill="#f59e0b" opacity="0.7">Developing</text>
 
-        <rect x={toX(3.4)} y={toY(1500)} width={toX(4.1) - toX(3.4)} height={toY(1300) - toY(1500)} fill="#10b981" opacity="0.1" rx="6" />
+        <rect x={toX(3.4)} y={toY(1500)} width={toX(4.1) - toX(3.4)} height={toY(1300) - toY(1500)} fill="#10b981" opacity="0.08" rx="6" />
         <text x={toX(3.4) + 6} y={toY(1500) + 14} className="text-[9px] font-bold" fill="#10b981" opacity="0.7">Competitive</text>
 
-        <rect x={toX(3.7)} y={toY(yMax)} width={toX(xMax) - toX(3.7)} height={toY(1500) - toY(yMax)} fill="#8b5cf6" opacity="0.1" rx="6" />
+        <rect x={toX(3.7)} y={toY(yMax)} width={toX(xMax) - toX(3.7)} height={toY(1500) - toY(yMax)} fill="#8b5cf6" opacity="0.08" rx="6" />
         <text x={toX(3.7) + 6} y={toY(yMax) + 14} className="text-[9px] font-bold" fill="#8b5cf6" opacity="0.7">Elite</text>
 
         {/* Axes */}
-        <line x1={PAD.left} y1={PAD.top + plotH} x2={PAD.left + plotW} y2={PAD.top + plotH} stroke="#475569" strokeWidth="1" />
-        <line x1={PAD.left} y1={PAD.top} x2={PAD.left} y2={PAD.top + plotH} stroke="#475569" strokeWidth="1" />
+        <line x1={PAD.left} y1={PAD.top + plotH} x2={PAD.left + plotW} y2={PAD.top + plotH} stroke="#cbd5e1" strokeWidth="1" />
+        <line x1={PAD.left} y1={PAD.top} x2={PAD.left} y2={PAD.top + plotH} stroke="#cbd5e1" strokeWidth="1" />
 
         {/* Axis labels */}
-        {[2.5, 3.0, 3.5, 4.0].map((g) => (<text key={`xl-${g}`} x={toX(g)} y={PAD.top + plotH + 20} textAnchor="middle" className="text-[10px] font-medium" fill="#94a3b8">{g.toFixed(1)}</text>))}
-        <text x={PAD.left + plotW / 2} y={H - 6} textAnchor="middle" className="text-[11px] font-bold" fill="#a78bfa">GPA</text>
-        {[800, 1000, 1200, 1400, 1600].map((s) => (<text key={`yl-${s}`} x={PAD.left - 10} y={toY(s) + 4} textAnchor="end" className="text-[10px] font-medium" fill="#94a3b8">{s}</text>))}
-        <text x={14} y={PAD.top + plotH / 2} textAnchor="middle" className="text-[11px] font-bold" fill="#a78bfa" transform={`rotate(-90, 14, ${PAD.top + plotH / 2})`}>SAT Score</text>
+        {[2.5, 3.0, 3.5, 4.0].map((g) => (<text key={`xl-${g}`} x={toX(g)} y={PAD.top + plotH + 20} textAnchor="middle" className="text-[10px] font-medium" fill="#64748b">{g.toFixed(1)}</text>))}
+        <text x={PAD.left + plotW / 2} y={H - 6} textAnchor="middle" className="text-[11px] font-bold" fill="#7c3aed">GPA</text>
+        {[800, 1000, 1200, 1400, 1600].map((s) => (<text key={`yl-${s}`} x={PAD.left - 10} y={toY(s) + 4} textAnchor="end" className="text-[10px] font-medium" fill="#64748b">{s}</text>))}
+        <text x={14} y={PAD.top + plotH / 2} textAnchor="middle" className="text-[11px] font-bold" fill="#7c3aed" transform={`rotate(-90, 14, ${PAD.top + plotH / 2})`}>SAT Score</text>
 
         {/* Comparative dots — colored by tier */}
         {comparativeData.map((d, i) => {
@@ -418,7 +417,7 @@ function Scatterplot({ userGpa, userSat }: { userGpa: number; userSat: number })
               <animate attributeName="r" values="26;32;26" dur="3s" repeatCount="indefinite" />
               <animate attributeName="opacity" values="0.8;0.4;0.8" dur="3s" repeatCount="indefinite" />
             </circle>
-            <circle cx={toX(userGpa)} cy={toY(userSat)} r="9" fill="url(#user-dot-grad)" filter="url(#dot-shadow)" />
+            <circle cx={toX(userGpa)} cy={toY(userSat)} r="9" fill="url(#user-dot-grad)" />
             <circle cx={toX(userGpa)} cy={toY(userSat)} r="9" fill="none" stroke="white" strokeWidth="2" opacity="0.9" />
             <circle cx={toX(userGpa) - 2} cy={toY(userSat) - 2} r="2.5" fill="white" opacity="0.4" />
             <rect x={toX(userGpa) + 14} y={toY(userSat) - 11} width="32" height="22" rx="6" fill="#7c3aed" opacity="0.95" />
@@ -428,11 +427,11 @@ function Scatterplot({ userGpa, userSat }: { userGpa: number; userSat: number })
 
         {/* Legend */}
         <g transform={`translate(${PAD.left + plotW - 140}, ${PAD.top + 6})`}>
-          <rect x="0" y="0" width="138" height="82" rx="10" fill="#0f172a" fillOpacity="0.9" stroke="#334155" strokeWidth="0.5" />
-          <circle cx="14" cy="14" r="5" fill="#8b5cf6" /><text x="26" y="18" className="text-[9px] font-semibold" fill="#c4b5fd">Elite (85+)</text>
-          <circle cx="14" cy="30" r="5" fill="#10b981" /><text x="26" y="34" className="text-[9px] font-semibold" fill="#6ee7b7">Competitive (65-84)</text>
-          <circle cx="14" cy="46" r="5" fill="#f59e0b" /><text x="26" y="50" className="text-[9px] font-semibold" fill="#fcd34d">Developing (40-64)</text>
-          <circle cx="14" cy="62" r="5" fill="#ef4444" /><text x="26" y="66" className="text-[9px] font-semibold" fill="#fca5a5">Building (&lt;40)</text>
+          <rect x="0" y="0" width="138" height="82" rx="10" fill="rgba(255,255,255,0.9)" stroke="#e2e8f0" strokeWidth="0.5" />
+          <circle cx="14" cy="14" r="5" fill="#8b5cf6" /><text x="26" y="18" className="text-[9px] font-semibold" fill="#64748b">Elite (85+)</text>
+          <circle cx="14" cy="30" r="5" fill="#10b981" /><text x="26" y="34" className="text-[9px] font-semibold" fill="#64748b">Competitive (65-84)</text>
+          <circle cx="14" cy="46" r="5" fill="#f59e0b" /><text x="26" y="50" className="text-[9px] font-semibold" fill="#64748b">Developing (40-64)</text>
+          <circle cx="14" cy="62" r="5" fill="#ef4444" /><text x="26" y="66" className="text-[9px] font-semibold" fill="#64748b">Building (&lt;40)</text>
         </g>
 
         {/* Tooltip for active dot */}
@@ -448,9 +447,9 @@ function Scatterplot({ userGpa, userSat }: { userGpa: number; userSat: number })
           const by = flipY ? ty + 16 : ty - 56;
           return (
             <g>
-              <rect x={bx} y={by} width="110" height="50" rx="8" fill="#0f172a" stroke={color.fill} strokeWidth="1" opacity="0.95" />
-              <text x={bx + 8} y={by + 16} className="text-[10px] font-bold" fill={color.solid}>Score: {d.score}</text>
-              <text x={bx + 8} y={by + 30} className="text-[9px] font-medium" fill="#94a3b8">GPA {d.gpa.toFixed(1)} · SAT {d.sat}</text>
+              <rect x={bx} y={by} width="110" height="50" rx="8" fill="rgba(255,255,255,0.95)" stroke={color.fill} strokeWidth="1" />
+              <text x={bx + 8} y={by + 16} className="text-[10px] font-bold" fill={color.fill}>Score: {d.score}</text>
+              <text x={bx + 8} y={by + 30} className="text-[9px] font-medium" fill="#64748b">GPA {d.gpa.toFixed(1)} · SAT {d.sat}</text>
               <text x={bx + 8} y={by + 43} className="text-[9px] font-semibold" fill={color.fill} style={{ textTransform: 'capitalize' }}>{tier}</text>
             </g>
           );
@@ -492,8 +491,8 @@ function ScoreRing({ score, label, size = 100, color = '#6366f1', glowColor }: {
               <stop offset="100%" stopColor={glow} />
             </linearGradient>
           </defs>
-          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#1e293b" strokeWidth="6" opacity="0.15" />
-          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={`url(#ring-grad-${label.replace(/\s/g, '')})`} strokeWidth="7" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset} className="transition-all duration-1000" style={{ filter: `drop-shadow(0 0 8px ${glow}50)` }} />
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#e2e8f0" strokeWidth="6" opacity="1" />
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={`url(#ring-grad-${label.replace(/\s/g, '')})`} strokeWidth="7" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset} className="transition-all duration-1000" />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-2xl font-extrabold font-display" style={{ color }}>{score}</span>
@@ -1031,11 +1030,8 @@ export default function StudentProfile() {
 
             {/* ─── EC SCOREBOARD (always visible when there are ECs) ─── */}
             {profile.extracurriculars.length > 0 && (
-              <div className="relative overflow-hidden rounded-2xl border border-indigo-500/10 bg-gradient-to-br from-slate-900 via-indigo-950 to-purple-950 p-6">
-                {/* Ambient glow effect */}
-                <div className="absolute top-0 right-0 w-40 h-40 bg-violet-500/10 rounded-full blur-3xl" />
-                <div className="absolute bottom-0 left-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-3xl" />
-                <h3 className="relative text-lg font-bold font-display text-white mb-5">Activity Scoreboard</h3>
+              <div className="relative overflow-hidden bg-white border border-slate-200 rounded-2xl p-6">
+                <h3 className="relative text-lg font-bold font-display text-slate-800 mb-5">Activity Scoreboard</h3>
 
                 <div className="relative flex items-center justify-around gap-4 mb-6">
                   <ScoreRing score={diversity.score} label="Diversity" size={95} color="#a78bfa" glowColor="#c4b5fd" />
@@ -1051,7 +1047,7 @@ export default function StudentProfile() {
                       const filled = ecsByBucket[b.key]?.length > 0;
                       return (
                         <div key={b.key} className="flex-1 group relative">
-                          <div className={`h-3 rounded-full transition-all ${filled ? `bg-gradient-to-r ${b.gradient} shadow-sm` : 'bg-white/5'}`} style={filled ? { boxShadow: `0 0 8px ${b.ring}40` } : {}} />
+                          <div className={`h-3 rounded-full transition-all ${filled ? `bg-gradient-to-r ${b.gradient}` : 'bg-slate-100'}`} />
                           <div className="absolute -top-8 left-1/2 -translate-x-1/2 hidden group-hover:block z-10">
                             <span className="text-[9px] bg-white text-slate-800 px-2 py-0.5 rounded shadow-lg whitespace-nowrap">{b.label}</span>
                           </div>
@@ -1063,23 +1059,23 @@ export default function StudentProfile() {
 
                 {/* Feedback */}
                 <div className="relative space-y-2">
-                  <div className="p-3 rounded-xl bg-violet-500/10 border border-violet-500/20 backdrop-blur-sm">
-                    <p className="text-[10px] font-semibold text-violet-400 uppercase tracking-wider">Diversity</p>
-                    <p className="text-xs text-violet-200 mt-0.5">{diversity.feedback}</p>
+                  <div className="p-3 rounded-xl bg-violet-50 border border-violet-200">
+                    <p className="text-[10px] font-semibold text-violet-600 uppercase tracking-wider">Diversity</p>
+                    <p className="text-xs text-violet-700 mt-0.5">{diversity.feedback}</p>
                   </div>
-                  <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/20 backdrop-blur-sm">
-                    <p className="text-[10px] font-semibold text-cyan-400 uppercase tracking-wider">Depth</p>
-                    <p className="text-xs text-cyan-200 mt-0.5">{depth.feedback}</p>
+                  <div className="p-3 rounded-xl bg-cyan-50 border border-cyan-200">
+                    <p className="text-[10px] font-semibold text-cyan-600 uppercase tracking-wider">Depth</p>
+                    <p className="text-xs text-cyan-700 mt-0.5">{depth.feedback}</p>
                   </div>
                 </div>
 
                 {/* Missing categories */}
                 {diversity.missing.length > 0 && diversity.missing.length <= 4 && (
-                  <div className="relative mt-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                    <p className="text-[10px] font-semibold text-amber-400 uppercase tracking-wider mb-1.5">Consider adding</p>
+                  <div className="relative mt-3 p-3 rounded-xl bg-amber-50 border border-amber-200">
+                    <p className="text-[10px] font-semibold text-amber-600 uppercase tracking-wider mb-1.5">Consider adding</p>
                     <div className="flex flex-wrap gap-1.5">
                       {diversity.missing.map(cat => (
-                        <span key={cat} className="px-2.5 py-0.5 bg-amber-500/15 text-amber-300 text-[10px] font-medium rounded-full border border-amber-500/20">{cat}</span>
+                        <span key={cat} className="px-2.5 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-medium rounded-full border border-amber-200">{cat}</span>
                       ))}
                     </div>
                   </div>
@@ -1088,23 +1084,15 @@ export default function StudentProfile() {
             )}
 
             {/* ─── PERSONALIZED SUGGESTIONS ─── */}
-            <div className="relative overflow-hidden rounded-2xl border p-6" style={{
-              background: isDark ? 'linear-gradient(to bottom right, #1e1b2e, #1a1a2e, #1c1a30)' : 'linear-gradient(to bottom right, #ffffff, rgba(237,233,254,0.3), rgba(224,231,255,0.5))',
-              borderColor: isDark ? '#3b2d5e' : 'rgba(139,92,246,0.1)',
-            }}>
-              <div className="absolute top-0 right-0 w-48 h-48 rounded-full blur-3xl" style={{ background: isDark ? 'rgba(139,92,246,0.08)' : 'rgba(196,181,253,0.2)' }} />
+            <div className="relative overflow-hidden bg-white border border-slate-200 rounded-2xl p-6">
               <div className="flex items-center justify-between mb-5">
                 <div>
-                  <h3 className="text-lg font-bold font-display" style={{ color: isDark ? '#e8eaed' : undefined }}>{isDark ? '' : ''}<span className={isDark ? '' : 'text-primary'}>Expert Guidance</span></h3>
-                  <p className="text-[11px] mt-0.5" style={{ color: isDark ? '#9aa0a6' : undefined }}><span className={isDark ? '' : 'text-slate-400'}>Personalized advice based on your current profile</span></p>
+                  <h3 className="text-lg font-bold font-display text-primary">Expert Guidance</h3>
+                  <p className="text-[11px] mt-0.5 text-slate-400">Personalized advice based on your current profile</p>
                 </div>
                 <button
                   onClick={() => setShowPersonas(!showPersonas)}
-                  className="text-[10px] font-semibold px-2.5 py-1 rounded-lg transition-colors"
-                  style={{
-                    color: isDark ? '#c4b5fd' : '#8b5cf6',
-                    ...(isDark ? {} : {}),
-                  }}
+                  className="text-[10px] font-semibold px-2.5 py-1 rounded-lg transition-colors text-violet-600"
                 >
                   {showPersonas ? 'Collapse' : 'Expand'}
                 </button>
@@ -1113,22 +1101,17 @@ export default function StudentProfile() {
               {showPersonas && (
                 <div className="relative space-y-3">
                   {personaSuggestions.map((ps, i) => (
-                    <div key={i} className="group p-4 rounded-xl backdrop-blur-sm transition-all duration-300" style={{
-                      background: isDark ? '#252338' : 'rgba(255,255,255,0.8)',
-                      borderWidth: 1,
-                      borderStyle: 'solid',
-                      borderColor: isDark ? '#3b2d5e' : '#f1f5f9',
-                    }}>
+                    <div key={i} className="group p-4 rounded-xl bg-white border border-slate-100 transition-all duration-300">
                       <div className="flex items-center gap-3 mb-2.5">
-                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${ps.persona.avatarBg} flex items-center justify-center text-white font-bold text-xs flex-shrink-0 shadow-lg`} style={{ boxShadow: `0 4px 14px -2px ${ps.persona.avatarBg.includes('violet') ? '#8b5cf640' : ps.persona.avatarBg.includes('sky') ? '#0ea5e940' : '#f43f5e40'}` }}>
+                        <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent font-bold text-xs flex-shrink-0">
                           {ps.persona.emoji}
                         </div>
                         <div>
                           <p className={`text-sm font-bold ${ps.persona.color}`}>{ps.persona.name}</p>
-                          <p className="text-[10px] font-medium" style={{ color: isDark ? '#9aa0a6' : '#94a3b8' }}>{ps.persona.title}</p>
+                          <p className="text-[10px] font-medium text-slate-400">{ps.persona.title}</p>
                         </div>
                       </div>
-                      <p className="text-xs leading-relaxed pl-[52px]" style={{ color: isDark ? '#b0b3b8' : '#475569' }}>{ps.suggestion}</p>
+                      <p className="text-xs leading-relaxed pl-[52px] text-slate-600">{ps.suggestion}</p>
                     </div>
                   ))}
                 </div>
@@ -1137,42 +1120,39 @@ export default function StudentProfile() {
 
             {/* ─── HOLISTIC EVALUATION ─── */}
             {!scored ? (
-              <div className="relative overflow-hidden rounded-2xl border border-indigo-500/10 bg-gradient-to-br from-slate-900 via-indigo-950 to-purple-950 p-8 text-center">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(139,92,246,0.12),transparent_70%)]" />
+              <div className="relative overflow-hidden bg-white border border-slate-200 rounded-2xl p-8 text-center">
                 <div className="relative">
-                  <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-violet-500/20 to-indigo-500/20 border border-violet-500/20 flex items-center justify-center mb-4">
-                    <svg className="w-8 h-8 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                  <div className="w-16 h-16 mx-auto rounded-2xl bg-violet-50 border border-violet-200 flex items-center justify-center mb-4">
+                    <svg className="w-8 h-8 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                   </div>
-                  <h3 className="text-lg font-bold font-display text-white">Your Evaluation Awaits</h3>
-                  <p className="text-sm text-slate-400 mt-2 max-w-xs mx-auto">Fill in your GPA, SAT scores, and extracurriculars, then click &ldquo;Evaluate My Profile&rdquo; to see your holistic score.</p>
+                  <h3 className="text-lg font-bold font-display text-slate-800">Your Evaluation Awaits</h3>
+                  <p className="text-sm text-slate-500 mt-2 max-w-xs mx-auto">Fill in your GPA, SAT scores, and extracurriculars, then click &ldquo;Evaluate My Profile&rdquo; to see your holistic score.</p>
                 </div>
               </div>
             ) : (
               <>
-                <div className="relative overflow-hidden rounded-2xl border border-indigo-500/10 bg-gradient-to-br from-slate-900 via-indigo-950 to-purple-950 p-6">
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(139,92,246,0.15),transparent_60%)]" />
-                  <div className="absolute top-0 right-0 w-48 h-48 bg-violet-500/5 rounded-full blur-3xl" />
-                  <h3 className="relative text-lg font-bold font-display text-white mb-5">Holistic Evaluation</h3>
+                <div className="relative overflow-hidden bg-white border border-slate-200 rounded-2xl p-6">
+                  <h3 className="relative text-lg font-bold font-display text-slate-800 mb-5">Holistic Evaluation</h3>
                   <div className="relative flex items-center justify-around gap-4">
                     <ScoreRing score={results.holistic} label="Overall Score" size={115} color="#a78bfa" glowColor="#c4b5fd" />
                     <ScoreRing score={results.percentile} label="Percentile" size={115} color="#34d399" glowColor="#6ee7b7" />
                   </div>
 
-                  <div className="relative mt-6 p-4 rounded-xl bg-white/5 border border-white/10 backdrop-blur-sm">
-                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Score Breakdown</p>
+                  <div className="relative mt-6 p-4 rounded-xl bg-slate-50 border border-slate-200">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Score Breakdown</p>
                     <div className="space-y-3">
                       {[
-                        { label: 'GPA', score: results.gpaScore, weight: '33%', gradient: 'from-violet-500 to-indigo-500', glow: '#8b5cf6' },
-                        { label: 'Test Scores', score: results.satScore, weight: '28%', gradient: 'from-fuchsia-500 to-purple-500', glow: '#d946ef' },
-                        { label: 'Extracurriculars', score: results.ecScore, weight: '34%', gradient: 'from-emerald-400 to-teal-500', glow: '#34d399' },
+                        { label: 'GPA', score: results.gpaScore, weight: '33%', gradient: 'from-violet-500 to-indigo-500' },
+                        { label: 'Test Scores', score: results.satScore, weight: '28%', gradient: 'from-fuchsia-500 to-purple-500' },
+                        { label: 'Extracurriculars', score: results.ecScore, weight: '34%', gradient: 'from-emerald-400 to-teal-500' },
                       ].map(item => (
                         <div key={item.label}>
                           <div className="flex justify-between text-sm mb-1.5">
-                            <span className="font-medium text-slate-300">{item.label} <span className="text-slate-500 text-xs">({item.weight})</span></span>
-                            <span className="font-bold text-white">{item.score}<span className="text-slate-500 text-xs">/100</span></span>
+                            <span className="font-medium text-slate-700">{item.label} <span className="text-slate-400 text-xs">({item.weight})</span></span>
+                            <span className="font-bold text-slate-800">{item.score}<span className="text-slate-400 text-xs">/100</span></span>
                           </div>
-                          <div className="h-2.5 bg-white/5 rounded-full overflow-hidden">
-                            <div className={`h-full bg-gradient-to-r ${item.gradient} rounded-full transition-all duration-700`} style={{ width: `${item.score}%`, boxShadow: `0 0 12px ${item.glow}30` }} />
+                          <div className="h-2.5 bg-slate-200 rounded-full overflow-hidden">
+                            <div className={`h-full bg-gradient-to-r ${item.gradient} rounded-full transition-all duration-700`} style={{ width: `${item.score}%` }} />
                           </div>
                         </div>
                       ))}
@@ -1182,28 +1162,28 @@ export default function StudentProfile() {
                   {(results.rigorBonus > 0 || results.actEquivalent > 0) && (
                     <div className="flex flex-wrap gap-2 mt-3">
                       {results.rigorBonus > 0 && (
-                        <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-violet-500/20 text-violet-300 border border-violet-500/20">
+                        <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-violet-50 text-violet-600 border border-violet-200">
                           +{results.rigorBonus} rigor bonus
                         </span>
                       )}
                       {results.actEquivalent > 0 && (
-                        <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/20">
+                        <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-fuchsia-50 text-fuchsia-600 border border-fuchsia-200">
                           ACT {results.actEquivalent} equivalent
                         </span>
                       )}
                       {results.bestTestScore > 0 && results.bestTestScore !== results.totalSAT && (
-                        <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/20">
+                        <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-cyan-50 text-cyan-600 border border-cyan-200">
                           Best: {results.bestTestScore} SAT-eq
                         </span>
                       )}
                     </div>
                   )}
 
-                  <div className="relative mt-4 p-4 rounded-xl bg-gradient-to-r from-violet-500/10 to-indigo-500/10 border border-violet-500/20">
-                    <p className="text-sm font-semibold text-white">
-                      You&apos;re in the <span className="text-violet-300 font-extrabold">{results.percentile}th percentile</span> compared to {comparativeData.length} students on the platform.
+                  <div className="relative mt-4 p-4 rounded-xl bg-violet-50 border border-violet-200">
+                    <p className="text-sm font-semibold text-slate-800">
+                      You&apos;re in the <span className="text-violet-600 font-extrabold">{results.percentile}th percentile</span> compared to {comparativeData.length} students on the platform.
                     </p>
-                    <p className="text-xs text-slate-400 mt-1">
+                    <p className="text-xs text-slate-500 mt-1">
                       {results.percentile >= 80 ? 'Excellent position for top-tier universities.' :
                        results.percentile >= 60 ? 'Strong profile with room for strategic improvement.' :
                        results.percentile >= 40 ? 'Solid foundation — focus on extracurriculars and test prep.' :
@@ -1212,16 +1192,16 @@ export default function StudentProfile() {
                   </div>
 
                   {results.ecFeedback && (
-                    <div className="relative mt-4 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                      <p className="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-1">AI Extracurricular Assessment</p>
-                      <p className="text-sm text-emerald-200">{results.ecFeedback}</p>
+                    <div className="relative mt-4 p-4 rounded-xl bg-emerald-50 border border-emerald-200">
+                      <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider mb-1">AI Extracurricular Assessment</p>
+                      <p className="text-sm text-emerald-700">{results.ecFeedback}</p>
                     </div>
                   )}
                 </div>
 
-                <div className="relative overflow-hidden rounded-2xl border border-indigo-500/10 bg-gradient-to-br from-slate-900 to-indigo-950 p-6">
-                  <h3 className="text-lg font-bold font-display text-white mb-1">Where You Stand</h3>
-                  <p className="text-xs text-slate-400 mb-4">Your position vs. other AdmitsOnly students.</p>
+                <div className="relative overflow-hidden rounded-2xl bg-white border border-slate-200 p-6">
+                  <h3 className="text-lg font-bold font-display text-slate-800 mb-1">Where You Stand</h3>
+                  <p className="text-xs text-slate-500 mb-4">Your position vs. other AdmitsOnly students.</p>
                   <Scatterplot userGpa={results.normalizedGpa} userSat={results.totalSAT} />
                 </div>
               </>
@@ -1276,7 +1256,7 @@ function ConnectionCodeSection() {
   return (
     <div className="bg-white rounded-2xl border border-slate-100 p-5">
       <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent to-purple-600 flex items-center justify-center">
+        <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center">
           <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
           </svg>

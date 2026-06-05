@@ -265,7 +265,7 @@ export default function Applications() {
           </div>
           <button
             onClick={() => setShowAddForm(true)}
-            className="px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-accent to-purple-600 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-accent/20 hover:shadow-xl hover:shadow-accent/30 hover:-translate-y-0.5 flex-shrink-0 self-start sm:self-auto"
+            className="px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl hover:bg-accent/90 transition-colors flex-shrink-0 self-start sm:self-auto"
           >
             + Add School
           </button>
@@ -274,27 +274,27 @@ export default function Applications() {
         {/* Stats bar — enhanced with gradients */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[
-            { label: 'Schools', value: apps.length, color: 'text-primary', gradient: 'from-blue-500 to-indigo-600' },
-            { label: 'Submitted', value: submitted, color: 'text-accent', gradient: 'from-accent to-purple-600' },
-            { label: 'Accepted', value: accepted, color: 'text-emerald-600', gradient: 'from-emerald-500 to-teal-600' },
+            { label: 'Schools', value: apps.length, color: 'text-primary', iconBg: 'bg-blue-100', iconColor: 'text-blue-600' },
+            { label: 'Submitted', value: submitted, color: 'text-accent', iconBg: 'bg-accent/10', iconColor: 'text-accent' },
+            { label: 'Accepted', value: accepted, color: 'text-emerald-600', iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
           ].map((stat, i) => (
-            <div key={stat.label} className="dash-stat-card dash-card-hover bg-white rounded-xl border border-slate-100 p-4" style={{ '--stat-accent': i === 0 ? '#3b82f6' : i === 1 ? '#6366f1' : '#10b981', '--stat-accent-end': i === 0 ? '#4f46e5' : i === 1 ? '#9333ea' : '#0d9488' } as React.CSSProperties}>
+            <div key={stat.label} className="dash-stat-card dash-card-hover bg-white rounded-xl border border-slate-100 p-4">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">{stat.label}</p>
-                <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${stat.gradient} flex items-center justify-center opacity-80`}>
-                  {i === 0 && <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5" /></svg>}
-                  {i === 1 && <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>}
-                  {i === 2 && <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+                <div className={`w-7 h-7 rounded-lg ${stat.iconBg} flex items-center justify-center`}>
+                  {i === 0 && <svg className={`w-3.5 h-3.5 ${stat.iconColor}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5" /></svg>}
+                  {i === 1 && <svg className={`w-3.5 h-3.5 ${stat.iconColor}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>}
+                  {i === 2 && <svg className={`w-3.5 h-3.5 ${stat.iconColor}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
                 </div>
               </div>
               <p className={`text-2xl font-bold font-display ${stat.color} mt-1`}>{stat.value}</p>
             </div>
           ))}
-          <div className="dash-stat-card dash-card-hover bg-white rounded-xl border border-slate-100 p-4" style={{ '--stat-accent': '#f59e0b', '--stat-accent-end': '#ea580c' } as React.CSSProperties}>
+          <div className="dash-stat-card dash-card-hover bg-white rounded-xl border border-slate-100 p-4">
             <div className="flex items-center justify-between">
               <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Tasks Done</p>
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center opacity-80">
-                <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2" /></svg>
+              <div className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center">
+                <svg className="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2" /></svg>
               </div>
             </div>
             <div className="flex items-end gap-2 mt-1">
@@ -302,7 +302,7 @@ export default function Applications() {
             </div>
             {totalTasks > 0 && (
               <div className="h-1.5 bg-slate-100 rounded-full mt-2 overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full progress-animated" style={{ width: `${(doneTasks / totalTasks) * 100}%` }} />
+                <div className="h-full bg-amber-500 rounded-full progress-animated" style={{ width: `${(doneTasks / totalTasks) * 100}%` }} />
               </div>
             )}
           </div>
@@ -312,7 +312,7 @@ export default function Applications() {
         {apps.length > 0 && (digest.critical.length > 0 || digest.thisWeek.length > 0) && (
           <div className="bg-white rounded-2xl border border-slate-100 p-5">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
                 <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               </div>
               <div>
@@ -441,7 +441,7 @@ export default function Applications() {
         {/* Application cards */}
         {sortedApps.length === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center">
-            <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-accent/10 to-purple-100 flex items-center justify-center mb-4">
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-accent/10 flex items-center justify-center mb-4">
               <svg className="w-8 h-8 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
               </svg>
@@ -508,7 +508,7 @@ export default function Applications() {
                     <div className="hidden sm:flex items-center gap-3 flex-shrink-0">
                       <div className="flex items-center gap-2">
                         <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-gradient-to-r from-accent to-purple-500 rounded-full progress-animated" style={{ width: `${taskPct}%` }} />
+                          <div className="h-full bg-accent rounded-full progress-animated" style={{ width: `${taskPct}%` }} />
                         </div>
                         <span className="text-[11px] font-semibold text-slate-400 w-8">{taskPct}%</span>
                       </div>
@@ -661,7 +661,7 @@ export default function Applications() {
                               {isResearchOpen ? 'Hide' : 'Show'} School Research & Insights
                             </button>
                             {isResearchOpen && (
-                              <div className="bg-gradient-to-br from-accent/5 to-purple-50 rounded-xl p-4 border border-accent/10 space-y-4">
+                              <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-4">
                                 <div className="flex items-center gap-3 mb-1">
                                   <h4 className="text-sm font-bold text-primary">{schoolData.name} — Research Card</h4>
                                   <div className="flex gap-1.5 flex-wrap">

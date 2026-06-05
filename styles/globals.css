@@ -417,7 +417,7 @@ select:focus-visible {
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, var(--stat-accent, #6366f1), var(--stat-accent-end, #8b5cf6));
+  background: var(--stat-accent, #6366f1);
   opacity: 0;
   transition: opacity 0.5s ease-out;
 }
