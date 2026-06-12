@@ -8,6 +8,27 @@ function generateInviteCode(): string {
   return crypto.randomBytes(4).toString('hex').toUpperCase();
 }
 
+const POD_ACHIEVEMENTS = [
+  { id: 'first_message', label: 'Ice Breaker', desc: 'Sent your first message', icon: '💬', threshold: { messagesCount: 1 } },
+  { id: 'chatterbox', label: 'Chatterbox', desc: 'Sent 50 messages', icon: '🗣️', threshold: { messagesCount: 50 } },
+  { id: 'reactor', label: 'Hype Machine', desc: 'Gave 20 reactions', icon: '🔥', threshold: { reactionsGiven: 20 } },
+  { id: 'streak_7', label: 'Week Warrior', desc: '7-day study streak', icon: '⚡', threshold: { longestStreak: 7 } },
+  { id: 'streak_30', label: 'Monthly Legend', desc: '30-day study streak', icon: '🏆', threshold: { longestStreak: 30 } },
+  { id: 'focus_master', label: 'Focus Master', desc: 'Completed 5 focus sessions', icon: '🧘', threshold: { sessionsCount: 5 } },
+  { id: 'doc_contributor', label: 'Knowledge Sharer', desc: 'Shared 3 documents', icon: '📄', threshold: { docsShared: 3 } },
+  { id: 'pollster', label: 'Voice of the Pod', desc: 'Voted in 5 polls', icon: '📊', threshold: { pollsVoted: 5 } },
+];
+
+function groupReactions(rows: { messageId: string; emoji: string; userId: string }[]) {
+  const grouped: Record<string, Record<string, string[]>> = {};
+  for (const r of rows) {
+    if (!grouped[r.messageId]) grouped[r.messageId] = {};
+    if (!grouped[r.messageId][r.emoji]) grouped[r.messageId][r.emoji] = [];
+    grouped[r.messageId][r.emoji].push(r.userId);
+  }
+  return grouped;
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   await ensureSchema();
 
@@ -52,6 +73,97 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         orderBy: { joinedAt: 'asc' },
       });
       return res.json({ members });
+    }
+
+    // Consolidated bootstrap: everything needed to open a pod in ONE round-trip
+    if (action === 'bootstrap' && podId) {
+      const pid = podId as string;
+      const membership = await (prisma as any).podMember.findUnique({
+        where: { podId_userId: { podId: pid, userId: user.id } },
+      });
+      if (!membership) return res.status(403).json({ error: 'Not a member of this pod' });
+
+      const [messages, members, reactionRows, polls, stats, documents] = await Promise.all([
+        (prisma as any).podMessage.findMany({
+          where: { podId: pid },
+          include: { user: { select: { id: true, name: true } } },
+          orderBy: { createdAt: 'asc' },
+          take: 100,
+        }),
+        (prisma as any).podMember.findMany({
+          where: { podId: pid },
+          include: { user: { select: { id: true, name: true, email: true } } },
+          orderBy: { joinedAt: 'asc' },
+        }),
+        (prisma as any).podMessageReaction.findMany({
+          where: { message: { podId: pid } },
+          select: { messageId: true, emoji: true, userId: true },
+        }),
+        (prisma as any).podPoll.findMany({
+          where: { podId: pid },
+          include: {
+            creator: { select: { id: true, name: true } },
+            votes: { select: { userId: true, optionIdx: true } },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 20,
+        }),
+        (prisma as any).podMemberStats.findUnique({
+          where: { podId_userId: { podId: pid, userId: user.id } },
+          include: { user: { select: { id: true, name: true } } },
+        }),
+        (prisma as any).podDocument.findMany({
+          where: { podId: pid },
+          select: {
+            id: true, podId: true, uploaderId: true, fileName: true, fileType: true,
+            fileSize: true, createdAt: true, updatedAt: true,
+            uploader: { select: { id: true, name: true } },
+            _count: { select: { comments: true } },
+          },
+          orderBy: { createdAt: 'desc' },
+        }),
+      ]);
+
+      return res.json({
+        messages,
+        members,
+        reactions: groupReactions(reactionRows),
+        polls,
+        documents,
+        myStats: stats,
+        achievements: POD_ACHIEVEMENTS,
+      });
+    }
+
+    // Incremental sync for cheap polling: only new messages + current reactions
+    if (action === 'sync' && podId) {
+      const pid = podId as string;
+      const membership = await (prisma as any).podMember.findUnique({
+        where: { podId_userId: { podId: pid, userId: user.id } },
+      });
+      if (!membership) return res.status(403).json({ error: 'Not a member of this pod' });
+
+      const after = req.query.after as string | undefined;
+      const whereClause: any = { podId: pid };
+      if (after) {
+        const afterDate = new Date(after);
+        if (!isNaN(afterDate.getTime())) whereClause.createdAt = { gt: afterDate };
+      }
+
+      const [newMessages, reactionRows] = await Promise.all([
+        (prisma as any).podMessage.findMany({
+          where: whereClause,
+          include: { user: { select: { id: true, name: true } } },
+          orderBy: { createdAt: 'asc' },
+          take: 100,
+        }),
+        (prisma as any).podMessageReaction.findMany({
+          where: { message: { podId: pid } },
+          select: { messageId: true, emoji: true, userId: true },
+        }),
+      ]);
+
+      return res.json({ messages: newMessages, reactions: groupReactions(reactionRows) });
     }
 
     // List all pods the user is a member of
