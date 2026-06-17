@@ -163,7 +163,7 @@ export default function EducatorSettings() {
         {/* Connection Code */}
         <section className="bg-white rounded-2xl border border-slate-100 p-6 space-y-5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
               </svg>
@@ -213,7 +213,7 @@ export default function EducatorSettings() {
                 {connectionsAsStudent.map(conn => (
                   <div key={conn.id} className="flex items-center justify-between p-3 rounded-xl bg-emerald-50/50 border border-emerald-100">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center text-white font-bold text-sm">
+                      <div className="w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-sm">
                         {(conn.connectedName || 'S')[0].toUpperCase()}
                       </div>
                       <div>
@@ -232,7 +232,7 @@ export default function EducatorSettings() {
                 {connectionsAsParent.map(conn => (
                   <div key={conn.id} className="flex items-center justify-between p-3 rounded-xl bg-green-50/50 border border-green-100">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold text-sm">
+                      <div className="w-9 h-9 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-sm">
                         {(conn.studentName || 'S')[0].toUpperCase()}
                       </div>
                       <div>

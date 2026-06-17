@@ -404,8 +404,8 @@ export default function EssayReviews() {
       {/* Annotation Modal */}
       {showAnnotationModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setShowAnnotationModal(false)} />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+          <div className="absolute inset-0 bg-slate-900/30" onClick={() => setShowAnnotationModal(false)} />
+          <div className="relative bg-white rounded-2xl shadow-sm w-full max-w-md p-6">
             <h2 className="text-lg font-bold font-display text-primary mb-4">
               {annotationDraft.editingId ? 'Edit Annotation' : 'Add Annotation'}
             </h2>
@@ -616,7 +616,7 @@ function ReviewCard({
       <div className="flex flex-col sm:flex-row sm:items-start gap-4">
         {/* Left: avatar + content */}
         <div className="flex items-start gap-3 flex-1 min-w-0">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-sm shrink-0">
+          <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-sm shrink-0">
             {(review.studentName?.[0] ?? '?').toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
@@ -720,7 +720,7 @@ function ReviewInterface({
 
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-lg shrink-0">
+        <div className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-lg shrink-0">
           {(review.studentName?.[0] ?? '?').toUpperCase()}
         </div>
         <div>
@@ -738,7 +738,7 @@ function ReviewInterface({
         <div className="lg:w-[60%] space-y-4">
           {/* Prompt */}
           {review.essayPrompt && (
-            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl border border-emerald-100 p-4">
+            <div className="bg-emerald-50 rounded-2xl border border-emerald-100 p-4">
               <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-1.5">Essay Prompt</p>
               <p className="text-sm text-slate-700 leading-relaxed">{review.essayPrompt}</p>
             </div>

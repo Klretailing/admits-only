@@ -64,7 +64,7 @@ function MajorPicker({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-accent to-purple-600 flex items-center justify-center shadow-md shadow-accent/20">
+          <div className="w-11 h-11 rounded-xl bg-accent flex items-center justify-center shadow-sm">
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
             </svg>
@@ -94,7 +94,7 @@ function MajorPicker({
                 i < visibleCount ? 'animate-fade-up' : 'opacity-0'
               }`}
             >
-              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${cat.bg} flex items-center justify-center mb-3 text-lg`}>
+              <div className={`w-10 h-10 rounded-xl ${cat.bg} flex items-center justify-center mb-3 text-lg`}>
                 {major.icon}
               </div>
               <p className="text-sm font-bold font-display text-primary">{major.name}</p>
@@ -170,7 +170,7 @@ function ExplorationQuiz({
               onClick={() => handleSelect(i)}
               className={`w-full bg-white rounded-xl border p-4 cursor-pointer transition-all text-left ${
                 isSelected
-                  ? 'border-accent/50 bg-gradient-to-r from-accent/10 to-purple-500/5 text-accent'
+                  ? 'border-accent/50 bg-accent/10 text-accent'
                   : 'border-slate-100 hover:border-slate-200'
               }`}
             >
@@ -282,7 +282,7 @@ function RoadmapView({
 
       {/* Major header */}
       <div className="flex items-center gap-4">
-        <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${categoryConfig[major.category].bg} flex items-center justify-center shadow-md text-xl`}>
+        <div className={`w-11 h-11 rounded-xl ${categoryConfig[major.category].bg} flex items-center justify-center shadow-sm text-xl`}>
           {major.icon}
         </div>
         <div>
@@ -299,7 +299,7 @@ function RoadmapView({
             onClick={() => onChangePathIndex(i)}
             className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
               i === pathIndex
-                ? 'bg-gradient-to-r from-accent/10 to-purple-500/5 text-accent border border-accent/10'
+                ? 'bg-accent/10 text-accent border border-accent/10'
                 : 'bg-white border border-slate-100 text-slate-600 hover:border-slate-200'
             }`}
           >
@@ -508,7 +508,7 @@ function CompareView({
                 onClick={() => onSelectB(major.id)}
                 className="bg-white rounded-2xl border border-slate-100 p-4 sm:p-5 dash-card-hover cursor-pointer text-left transition-all"
               >
-                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${cat.bg} flex items-center justify-center mb-3 text-lg`}>
+                <div className={`w-10 h-10 rounded-xl ${cat.bg} flex items-center justify-center mb-3 text-lg`}>
                   {major.icon}
                 </div>
                 <p className="text-sm font-bold font-display text-primary">{major.name}</p>
@@ -541,7 +541,7 @@ function CompareView({
         <div className="bg-white rounded-2xl border border-slate-100 p-4 sm:p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${catA.bg} flex items-center justify-center text-lg`}>
+              <div className={`w-10 h-10 rounded-xl ${catA.bg} flex items-center justify-center text-lg`}>
                 {majorA.icon}
               </div>
               <div>
@@ -560,7 +560,7 @@ function CompareView({
         <div className="bg-white rounded-2xl border border-slate-100 p-4 sm:p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${catB.bg} flex items-center justify-center text-lg`}>
+              <div className={`w-10 h-10 rounded-xl ${catB.bg} flex items-center justify-center text-lg`}>
                 {majorB.icon}
               </div>
               <div>

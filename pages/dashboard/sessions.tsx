@@ -109,7 +109,7 @@ export default function Sessions() {
       <Head><title>Sessions | AdmitsOnly Dashboard</title></Head>
       <div className="space-y-8">
         <div className="flex items-center gap-4">
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-accent to-purple-600 flex items-center justify-center shadow-md shadow-accent/20">
+          <div className="w-11 h-11 rounded-xl bg-accent flex items-center justify-center shadow-sm">
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
@@ -130,7 +130,7 @@ export default function Sessions() {
           </div>
         ) : sessions.length === 0 ? (
           <div className="text-center py-16">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-accent/10 to-purple-100 flex items-center justify-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-accent/10 flex items-center justify-center">
               <svg className="w-8 h-8 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
@@ -160,7 +160,7 @@ export default function Sessions() {
                 <div className="space-y-3">
                   {upcoming.map((s) => (
                     <div key={s.id} className="bg-white rounded-2xl border border-slate-100 p-5 flex items-center gap-4 dash-card-hover">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-accent to-purple-600 flex items-center justify-center flex-shrink-0 shadow-sm shadow-accent/20">
+                      <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center flex-shrink-0 shadow-sm">
                         <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                         </svg>
@@ -185,7 +185,7 @@ export default function Sessions() {
                             href={s.meetingLink}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="mt-1 inline-block text-xs font-semibold text-white bg-accent px-3 py-1 rounded-lg hover:bg-accent/90 transition-all shadow-sm shadow-accent/20"
+                            className="mt-1 inline-block text-xs font-semibold text-white bg-accent px-3 py-1 rounded-lg hover:bg-accent/90 transition-all shadow-sm"
                           >
                             Join
                           </a>
@@ -208,7 +208,7 @@ export default function Sessions() {
                 <div className="space-y-3">
                   {completed.map((s) => (
                     <div key={s.id} className="bg-white rounded-2xl border border-slate-100 p-5 flex items-center gap-4 opacity-70 hover:opacity-100 transition-opacity">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-100 to-teal-50 flex items-center justify-center flex-shrink-0">
+                      <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
                         <svg className="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
@@ -243,7 +243,7 @@ export default function Sessions() {
                 <div className="space-y-3">
                   {cancelled.map((s) => (
                     <div key={s.id} className="bg-white rounded-2xl border border-slate-100 p-5 flex items-center gap-4 opacity-50 hover:opacity-80 transition-opacity">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-100 to-rose-50 flex items-center justify-center flex-shrink-0">
+                      <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
                         <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>

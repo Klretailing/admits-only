@@ -160,7 +160,7 @@ export default function ParentActionItems() {
             </div>
             <h2 className="text-xl font-bold text-primary mb-2">Connect to Your Student</h2>
             <p className="text-sm text-slate-500 mb-4">Enter your student&apos;s connection code to generate action items.</p>
-            <button onClick={() => router.push('/parent/settings')} className="px-6 py-3 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-teal-500 to-cyan-600 hover:opacity-90">Go to Settings</button>
+            <button onClick={() => router.push('/parent/settings')} className="px-6 py-3 rounded-xl text-sm font-semibold text-white bg-teal-500 hover:bg-teal-600">Go to Settings</button>
           </div>
         </div>
       </ParentLayout>

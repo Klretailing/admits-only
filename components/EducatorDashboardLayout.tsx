@@ -113,7 +113,7 @@ export default function EducatorDashboardLayout({ children }: { children: ReactN
       <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-slate-100">
         <div className="p-5 border-b border-slate-100">
           <Link href="/educator" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md shadow-emerald-500/20 group-hover:shadow-lg group-hover:shadow-emerald-500/30 transition-shadow">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center shadow-sm transition-shadow">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                 <path d="M12 2L2 9L12 16L22 9L12 2Z" fill="white" opacity="0.9" />
                 <path d="M4 11V17L12 22L20 17V11" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
@@ -137,7 +137,7 @@ export default function EducatorDashboardLayout({ children }: { children: ReactN
                 href={link.href}
                 className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
                   active
-                    ? 'bg-gradient-to-r from-emerald-500/10 to-teal-500/5 text-emerald-700 shadow-sm border border-emerald-500/10'
+                    ? 'bg-emerald-50 text-emerald-700 shadow-sm border border-emerald-500/10'
                     : 'text-slate-500 hover:text-primary hover:bg-slate-50'
                 }`}
               >
@@ -181,11 +181,11 @@ export default function EducatorDashboardLayout({ children }: { children: ReactN
       {/* Mobile slide-out menu overlay */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)} />
-          <aside className="absolute left-0 top-0 bottom-0 w-72 bg-white shadow-2xl flex flex-col animate-fade-in">
+          <div className="absolute inset-0 bg-slate-900/30" onClick={() => setMobileMenuOpen(false)} />
+          <aside className="absolute left-0 top-0 bottom-0 w-72 bg-white shadow-sm flex flex-col animate-fade-in">
             <div className="p-5 border-b border-slate-100 flex items-center justify-between">
               <Link href="/educator" className="flex items-center gap-2.5" onClick={() => setMobileMenuOpen(false)}>
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                     <path d="M12 2L2 9L12 16L22 9L12 2Z" fill="white" opacity="0.9" />
                     <path d="M4 11V17L12 22L20 17V11" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
@@ -222,7 +222,7 @@ export default function EducatorDashboardLayout({ children }: { children: ReactN
             </nav>
             <div className="p-4 border-t border-slate-100">
               <div className="flex items-center gap-3 px-4 py-3 mb-2">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-sm">
+                <div className="w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-sm">
                   {(session?.user?.name || 'E')[0].toUpperCase()}
                 </div>
                 <div>
@@ -248,7 +248,7 @@ export default function EducatorDashboardLayout({ children }: { children: ReactN
       <div className="flex-1 flex flex-col min-h-screen pb-16 lg:pb-0">
         {/* Top bar */}
         <header className="h-14 lg:h-16 bg-white border-b border-slate-100 flex items-center justify-between px-4 lg:px-6 flex-shrink-0 relative">
-          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500 opacity-30" />
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-emerald-500 opacity-30" />
           <div className="flex items-center gap-3">
             <button
               onClick={() => setMobileMenuOpen(true)}
@@ -298,7 +298,7 @@ export default function EducatorDashboardLayout({ children }: { children: ReactN
               <p className="text-sm font-semibold text-primary">{session?.user?.name || 'Educator'}</p>
               <p className="text-xs text-emerald-600 font-medium">Educator</p>
             </div>
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-sm">
+            <div className="w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-sm">
               {(session?.user?.name || 'E')[0].toUpperCase()}
             </div>
           </div>
@@ -322,7 +322,7 @@ export default function EducatorDashboardLayout({ children }: { children: ReactN
                   active ? 'text-emerald-600' : 'text-slate-400'
                 }`}
               >
-                {active && <div className="absolute top-0 left-1/4 right-1/4 h-[2px] bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full" />}
+                {active && <div className="absolute top-0 left-1/4 right-1/4 h-[2px] bg-emerald-500 rounded-full" />}
                 <span className={active ? 'text-emerald-600' : 'text-slate-400'}>{link.icon}</span>
                 <span className={`text-[10px] font-medium ${active ? 'font-semibold' : ''}`}>{link.mobileLabel}</span>
               </Link>

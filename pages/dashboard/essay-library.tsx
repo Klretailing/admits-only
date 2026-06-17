@@ -95,7 +95,7 @@ export default function EssayLibrary() {
 
         {/* Document reader modal */}
         {selectedDoc && (
-          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setSelectedDoc(null)}>
+          <div className="fixed inset-0 z-50 bg-slate-900/30 flex items-center justify-center p-4" onClick={() => setSelectedDoc(null)}>
             <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[85vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
               {/* Header */}
               <div className="p-6 border-b border-slate-100">
@@ -158,7 +158,7 @@ export default function EssayLibrary() {
           <div className="text-center py-16 text-slate-400">Loading essay library...</div>
         ) : filteredDocs.length === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center">
-            <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-accent/10 to-purple-100 flex items-center justify-center mb-4">
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-accent/10 flex items-center justify-center mb-4">
               <svg className="w-8 h-8 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
             </div>
             <h3 className="text-lg font-bold text-primary">
@@ -174,10 +174,10 @@ export default function EssayLibrary() {
               <button
                 key={doc.id}
                 onClick={() => openDocument(doc.id)}
-                className="text-left bg-white rounded-2xl border border-slate-100 p-5 hover:border-accent/30 hover:shadow-lg hover:shadow-accent/5 transition-all duration-200 group"
+                className="text-left bg-white rounded-2xl border border-slate-100 p-5 hover:border-accent/30 hover:shadow-sm transition-all duration-200 group"
               >
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent/20 to-purple-100 flex items-center justify-center flex-shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center flex-shrink-0">
                     <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                   </div>
                   {doc.collegeName && (
@@ -204,8 +204,8 @@ export default function EssayLibrary() {
         )}
 
         {loadingDoc && (
-          <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center">
-            <div className="bg-white rounded-xl px-6 py-4 shadow-xl">
+          <div className="fixed inset-0 z-50 bg-slate-900/30 flex items-center justify-center">
+            <div className="bg-white rounded-xl px-6 py-4 shadow-sm">
               <p className="text-sm text-slate-500 animate-pulse">Loading essay...</p>
             </div>
           </div>

@@ -300,8 +300,8 @@ export default function EducatorSchedule() {
       {/* Add Session Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setShowAddModal(false)} />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[85vh] overflow-y-auto p-6">
+          <div className="absolute inset-0 bg-slate-900/30" onClick={() => setShowAddModal(false)} />
+          <div className="relative bg-white rounded-2xl shadow-sm w-full max-w-md max-h-[85vh] overflow-y-auto p-6">
             <h2 className="text-lg font-bold font-display text-primary mb-4">Schedule New Session</h2>
             <form onSubmit={handleAddBooking} className="space-y-4">
               <div>
@@ -449,8 +449,8 @@ export default function EducatorSchedule() {
       {/* Session Notes Modal */}
       {showNotesModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setShowNotesModal(null)} />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+          <div className="absolute inset-0 bg-slate-900/30" onClick={() => setShowNotesModal(null)} />
+          <div className="relative bg-white rounded-2xl shadow-sm w-full max-w-md p-6">
             <h2 className="text-lg font-bold font-display text-primary mb-1">Session Notes</h2>
             <p className="text-sm text-slate-400 mb-4">{showNotesModal.title} &middot; {showNotesModal.student?.studentName}</p>
             <textarea

@@ -534,7 +534,7 @@ function DescriptionSuggestions({
       </div>
 
       {hasSuggestions && (
-        <div className="p-3 rounded-lg bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100">
+        <div className="p-3 rounded-lg bg-indigo-50 border border-indigo-100">
           <p className="text-[10px] font-semibold text-indigo-500 uppercase tracking-wider mb-2">Suggested revisions</p>
 
           {polished && (
@@ -861,7 +861,7 @@ export default function StudentProfile() {
                     <div key={bucket.key} className="space-y-2">
                       {/* Bucket header */}
                       <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${bucket.light} ${bucket.border} border`}>
-                        <div className={`w-2 h-2 rounded-full bg-gradient-to-r ${bucket.gradient}`} />
+                        <div className={`w-2 h-2 rounded-full`} style={{ backgroundColor: bucket.ring }} />
                         <span className={`text-xs font-bold ${bucket.text}`}>{bucket.label}</span>
                         <span className={`text-[10px] font-medium ${bucket.text} opacity-60`}>({ecs.length})</span>
                       </div>
@@ -1047,9 +1047,9 @@ export default function StudentProfile() {
                       const filled = ecsByBucket[b.key]?.length > 0;
                       return (
                         <div key={b.key} className="flex-1 group relative">
-                          <div className={`h-3 rounded-full transition-all ${filled ? `bg-gradient-to-r ${b.gradient}` : 'bg-slate-100'}`} />
+                          <div className={`h-3 rounded-full transition-all ${filled ? '' : 'bg-slate-100'}`} style={filled ? { backgroundColor: b.ring } : undefined} />
                           <div className="absolute -top-8 left-1/2 -translate-x-1/2 hidden group-hover:block z-10">
-                            <span className="text-[9px] bg-white text-slate-800 px-2 py-0.5 rounded shadow-lg whitespace-nowrap">{b.label}</span>
+                            <span className="text-[9px] bg-white text-slate-800 px-2 py-0.5 rounded shadow-sm whitespace-nowrap">{b.label}</span>
                           </div>
                         </div>
                       );
@@ -1142,9 +1142,9 @@ export default function StudentProfile() {
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Score Breakdown</p>
                     <div className="space-y-3">
                       {[
-                        { label: 'GPA', score: results.gpaScore, weight: '33%', gradient: 'from-violet-500 to-indigo-500' },
-                        { label: 'Test Scores', score: results.satScore, weight: '28%', gradient: 'from-fuchsia-500 to-purple-500' },
-                        { label: 'Extracurriculars', score: results.ecScore, weight: '34%', gradient: 'from-emerald-400 to-teal-500' },
+                        { label: 'GPA', score: results.gpaScore, weight: '33%', color: 'bg-violet-500' },
+                        { label: 'Test Scores', score: results.satScore, weight: '28%', color: 'bg-fuchsia-500' },
+                        { label: 'Extracurriculars', score: results.ecScore, weight: '34%', color: 'bg-emerald-400' },
                       ].map(item => (
                         <div key={item.label}>
                           <div className="flex justify-between text-sm mb-1.5">
@@ -1152,7 +1152,7 @@ export default function StudentProfile() {
                             <span className="font-bold text-slate-800">{item.score}<span className="text-slate-400 text-xs">/100</span></span>
                           </div>
                           <div className="h-2.5 bg-slate-200 rounded-full overflow-hidden">
-                            <div className={`h-full bg-gradient-to-r ${item.gradient} rounded-full transition-all duration-700`} style={{ width: `${item.score}%` }} />
+                            <div className={`h-full ${item.color} rounded-full transition-all duration-700`} style={{ width: `${item.score}%` }} />
                           </div>
                         </div>
                       ))}

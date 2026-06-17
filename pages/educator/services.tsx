@@ -169,8 +169,8 @@ export default function EducatorServices() {
       {/* Create/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setShowModal(false)} />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+          <div className="absolute inset-0 bg-slate-900/30" onClick={() => setShowModal(false)} />
+          <div className="relative bg-white rounded-2xl shadow-sm w-full max-w-md p-6">
             <h2 className="text-lg font-bold font-display text-primary mb-4">
               {editingService ? 'Edit Service' : 'Create New Service'}
             </h2>

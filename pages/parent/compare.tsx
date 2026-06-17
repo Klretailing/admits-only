@@ -155,7 +155,7 @@ export default function CollegeComparison() {
         </Head>
         <div className="max-w-lg mx-auto mt-16">
           <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center">
-            <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-teal-100 to-cyan-100 flex items-center justify-center mb-4">
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-teal-100 flex items-center justify-center mb-4">
               <svg className="w-8 h-8 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
               </svg>
@@ -164,7 +164,7 @@ export default function CollegeComparison() {
             <p className="text-sm text-slate-400 mb-5">Link your account to your student to compare colleges from their application list.</p>
             <Link
               href="/parent/settings"
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-teal-500 to-cyan-600 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-teal-500/20"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-teal-500 rounded-xl hover:opacity-90 transition-all shadow-sm"
             >
               Go to Settings
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -360,7 +360,7 @@ export default function CollegeComparison() {
         {/* School Selector */}
         {allApps.length === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center">
-            <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-teal-100 to-cyan-100 flex items-center justify-center mb-4">
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-teal-100 flex items-center justify-center mb-4">
               <svg className="w-8 h-8 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
               </svg>
@@ -402,7 +402,7 @@ export default function CollegeComparison() {
                       key={app.id}
                       onClick={() => toggleSelection(app.id)}
                       disabled={atLimit}
-                      className={`relative text-left p-4 rounded-xl border-2 transition-all duration-200 ${
+                      className={`relative text-left p-4 rounded-2xl border-2 transition-all duration-200 ${
                         isSelected
                           ? 'border-teal-500 bg-teal-50/50 shadow-sm shadow-teal-500/10'
                           : atLimit
@@ -435,7 +435,7 @@ export default function CollegeComparison() {
                       <div className="flex items-center gap-2 mt-2">
                         <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-gradient-to-r from-teal-400 to-cyan-500 rounded-full transition-all"
+                            className="h-full bg-teal-500 rounded-full transition-all"
                             style={{ width: `${taskPct}%` }}
                           />
                         </div>
@@ -489,7 +489,7 @@ export default function CollegeComparison() {
                                 <div className="flex items-center gap-2">
                                   <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                                     <div
-                                      className="h-full bg-gradient-to-r from-teal-400 to-cyan-500 rounded-full"
+                                      className="h-full bg-teal-500 rounded-full"
                                       style={{ width: v.display }}
                                     />
                                   </div>

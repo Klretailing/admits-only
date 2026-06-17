@@ -364,7 +364,7 @@ const MessageRow = memo(function MessageRow({
         {pickerOpen && (
           <>
             <div className="fixed inset-0 z-10" onClick={onClosePicker} />
-            <div className="absolute right-0 mt-1 z-20 flex gap-0.5 bg-white border border-slate-200 rounded-xl shadow-md px-1.5 py-1">
+            <div className="absolute right-0 mt-1 z-20 flex gap-0.5 bg-white border border-slate-200 rounded-xl shadow-sm px-1.5 py-1">
               {QUICK_REACTIONS.map((emoji) => (
                 <button
                   key={emoji}
@@ -1921,8 +1921,8 @@ export default function StudyPods() {
       {/* Document modal */}
       {docModalId && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4">
-          <div className="absolute inset-0 bg-slate-900/50" onClick={closeDocModal} />
-          <div className="relative bg-white rounded-2xl w-[95vw] h-[90vh] max-w-7xl flex flex-col overflow-hidden shadow-xl">
+          <div className="absolute inset-0 bg-slate-900/30" onClick={closeDocModal} />
+          <div className="relative bg-white rounded-2xl w-[95vw] h-[90vh] max-w-7xl flex flex-col overflow-hidden shadow-sm">
             {docModalLoading || !docModal ? (
               <div className="flex-1 flex items-center justify-center">
                 <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
@@ -1983,7 +1983,7 @@ export default function StudyPods() {
                           className="w-full h-full min-h-[60vh] p-4 text-sm rounded-xl border border-slate-200 bg-white outline-none focus:border-accent resize-none font-mono leading-relaxed"
                         />
                         {showSelectionPopup && (
-                          <div className="absolute top-4 right-4 z-10 bg-white border border-slate-200 rounded-xl shadow-md p-3 w-64">
+                          <div className="absolute top-4 right-4 z-10 bg-white border border-slate-200 rounded-xl shadow-sm p-3 w-64">
                             <p className="text-xs text-slate-400 mb-1 truncate">On: &ldquo;{selectionText}&rdquo;</p>
                             <textarea
                               value={selectionComment}

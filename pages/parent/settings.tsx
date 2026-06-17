@@ -114,7 +114,7 @@ export default function ParentSettings() {
         {/* Your Connection Code */}
         <div className="bg-white rounded-2xl border border-slate-100 p-5">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-teal-500 flex items-center justify-center">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
               </svg>
@@ -152,7 +152,7 @@ export default function ParentSettings() {
         {/* Connect to a Student */}
         <div className="bg-white rounded-2xl border border-slate-100 p-5">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-purple-500 flex items-center justify-center">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
               </svg>
@@ -199,7 +199,7 @@ export default function ParentSettings() {
               <button
                 onClick={handleSubmitCode}
                 disabled={!enteredCode.trim() || submitting}
-                className="px-6 py-3 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-teal-500 to-cyan-600 hover:opacity-90 transition-all disabled:opacity-40"
+                className="px-6 py-3 rounded-xl text-sm font-semibold text-white bg-teal-500 hover:bg-teal-600 transition-all disabled:opacity-40"
               >
                 {submitting ? 'Connecting...' : 'Connect'}
               </button>
@@ -233,7 +233,7 @@ export default function ParentSettings() {
               {connectionsAsParent.map(conn => (
                 <div key={conn.id} className="flex items-center justify-between p-4 rounded-xl bg-teal-50/50 border border-teal-100">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center text-white font-bold text-sm">
+                    <div className="w-10 h-10 rounded-full bg-teal-500 flex items-center justify-center text-white font-bold text-sm">
                       {(conn.studentName || 'S')[0].toUpperCase()}
                     </div>
                     <div>
@@ -253,7 +253,7 @@ export default function ParentSettings() {
               {connectionsAsStudent.map(conn => (
                 <div key={conn.id} className="flex items-center justify-between p-4 rounded-xl bg-purple-50/50 border border-purple-100">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center text-white font-bold text-sm">
+                    <div className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center text-white font-bold text-sm">
                       {(conn.connectedName || 'P')[0].toUpperCase()}
                     </div>
                     <div>
