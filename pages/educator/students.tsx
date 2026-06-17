@@ -211,7 +211,7 @@ export default function EducatorStudents() {
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-sm">
+                    <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-sm">
                       {student.studentName[0].toUpperCase()}
                     </div>
                     <div>
@@ -247,8 +247,8 @@ export default function EducatorStudents() {
       {/* Add Student Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setShowAddModal(false)} />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[85vh] overflow-y-auto p-6">
+          <div className="absolute inset-0 bg-slate-900/30" onClick={() => setShowAddModal(false)} />
+          <div className="relative bg-white rounded-2xl shadow-sm w-full max-w-md max-h-[85vh] overflow-y-auto p-6">
             <h2 className="text-lg font-bold font-display text-primary mb-4">Add Student</h2>
 
             {/* Connect with Student Code */}
@@ -348,11 +348,11 @@ export default function EducatorStudents() {
       {/* Student Detail Modal */}
       {selectedStudent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setSelectedStudent(null)} />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto p-6">
+          <div className="absolute inset-0 bg-slate-900/30" onClick={() => setSelectedStudent(null)} />
+          <div className="relative bg-white rounded-2xl shadow-sm w-full max-w-lg max-h-[85vh] overflow-y-auto p-6">
             <div className="flex items-start justify-between mb-5">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-lg">
+                <div className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-lg">
                   {selectedStudent.studentName[0].toUpperCase()}
                 </div>
                 <div>

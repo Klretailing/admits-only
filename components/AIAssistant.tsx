@@ -60,7 +60,7 @@ export default function AIAssistant({ context }: { context?: string }) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-accent text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center z-50"
+        className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-accent text-white shadow-sm hover:shadow-sm hover:scale-105 transition-all flex items-center justify-center z-50"
         title="AI Assistant"
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -71,9 +71,9 @@ export default function AIAssistant({ context }: { context?: string }) {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 w-96 max-h-[600px] bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col z-50 overflow-hidden">
+    <div className="fixed bottom-6 right-6 w-96 max-h-[600px] bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col z-50 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-gradient-to-r from-accent to-purple-600">
+      <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-accent">
         <div>
           <h3 className="text-sm font-bold text-white">AI Admissions Counselor</h3>
           <p className="text-[10px] text-white/70">Powered by Claude</p>

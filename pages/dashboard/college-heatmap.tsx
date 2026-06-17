@@ -249,12 +249,8 @@ function RadarView({
       const entrance = Math.min(1, elapsed / 1.0);
       const eased = 1 - Math.pow(1 - entrance, 3);
 
-      // Background — app primary color with radial gradient
-      const bgGrad = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, Math.max(w, h) * 0.7);
-      bgGrad.addColorStop(0, '#151d30');
-      bgGrad.addColorStop(0.5, '#0f172a');
-      bgGrad.addColorStop(1, '#0b1120');
-      ctx.fillStyle = bgGrad;
+      // Background — light theme
+      ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, w, h);
 
       const [ccx, ccy] = toScreen(0, 0);
@@ -266,13 +262,13 @@ function RadarView({
         if (sr < 3) continue;
         ctx.beginPath();
         ctx.arc(ccx, ccy, sr, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+        ctx.strokeStyle = 'rgba(148,163,184,0.15)';
         ctx.lineWidth = 1;
         ctx.stroke();
       }
 
       // Cross axes
-      ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+      ctx.strokeStyle = 'rgba(148,163,184,0.15)';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(0, ccy);
@@ -292,9 +288,9 @@ function RadarView({
 
       // Zone bands — filled circles outer to inner
       const zones = [
-        { r: 345, fill: 'rgba(244,63,94,0.06)', stroke: 'rgba(244,63,94,0.22)', label: 'Reach', labelColor: '#fda4af' },
-        { r: 255, fill: 'rgba(245,158,11,0.08)', stroke: 'rgba(245,158,11,0.24)', label: 'Match', labelColor: '#fcd34d' },
-        { r: 155, fill: 'rgba(16,185,129,0.10)', stroke: 'rgba(16,185,129,0.28)', label: 'Safety', labelColor: '#6ee7b7' },
+        { r: 345, fill: 'rgba(244,63,94,0.05)', stroke: 'rgba(244,63,94,0.2)', label: 'Reach', labelColor: '#e11d48' },
+        { r: 255, fill: 'rgba(245,158,11,0.06)', stroke: 'rgba(245,158,11,0.2)', label: 'Match', labelColor: '#d97706' },
+        { r: 155, fill: 'rgba(16,185,129,0.07)', stroke: 'rgba(16,185,129,0.2)', label: 'Safety', labelColor: '#059669' },
       ];
 
       for (const z of zones) {
@@ -419,7 +415,7 @@ function RadarView({
         if (node.tile.isSaved) {
           ctx.beginPath();
           ctx.arc(sx, sy, finalRadius + 3, 0, Math.PI * 2);
-          ctx.strokeStyle = `rgba(255,255,255,${0.45 + 0.2 * Math.sin(elapsed * 2)})`;
+          ctx.strokeStyle = `rgba(99,102,241,${0.45 + 0.2 * Math.sin(elapsed * 2)})`;
           ctx.lineWidth = 1.2;
           ctx.stroke();
         }
@@ -429,7 +425,7 @@ function RadarView({
           const labelAlpha = Math.min(0.75, (cam.zoom - 1.2) * 1.5);
           ctx.font = `500 ${Math.max(8, Math.min(11, 9 * cam.zoom))}px "DM Sans", system-ui, sans-serif`;
           ctx.textAlign = 'center';
-          ctx.fillStyle = `rgba(255,255,255,${labelAlpha})`;
+          ctx.fillStyle = `rgba(30,41,59,${labelAlpha})`;
           ctx.fillText(node.tile.college.name, sx, sy + finalRadius + 11);
         }
       }
@@ -460,14 +456,14 @@ function RadarView({
       ctx.arc(ccx, ccy, youR, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.fillStyle = 'rgba(255,255,255,0.45)';
       ctx.beginPath();
       ctx.arc(ccx - youR * 0.2, ccy - youR * 0.3, youR * 0.3, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.font = `bold ${Math.max(9, Math.min(11, 10 * cam.zoom))}px "DM Sans", system-ui, sans-serif`;
       ctx.textAlign = 'center';
-      ctx.fillStyle = 'rgba(199,210,254,0.65)';
+      ctx.fillStyle = 'rgba(99,102,241,0.7)';
       ctx.fillText('YOU', ccx, ccy + youR + 13);
 
       raf = requestAnimationFrame(render);
@@ -658,7 +654,7 @@ function RadarView({
   }, [nodes, onSelect]);
 
   return (
-    <div ref={containerRef} className="relative rounded-2xl overflow-hidden select-none border border-slate-700/30" style={{ height: 'clamp(400px, 60vh, 650px)' }}>
+    <div ref={containerRef} className="relative rounded-2xl overflow-hidden select-none border border-slate-100" style={{ height: 'clamp(400px, 60vh, 650px)' }}>
       <canvas ref={canvasRef} className="w-full h-full" style={{ cursor: 'grab' }} />
 
       {/* Hover tooltip */}
@@ -670,7 +666,7 @@ function RadarView({
             top: Math.max(8, tooltipPos.y - 40),
           }}
         >
-          <div className="bg-slate-900/90 backdrop-blur-md rounded-xl px-3.5 py-2.5 border border-white/10 shadow-2xl">
+          <div className="bg-white rounded-xl px-3.5 py-2.5 border border-slate-100 shadow-sm">
             <div className="flex items-center gap-2.5">
               <div
                 className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-xs shrink-0"
@@ -679,8 +675,8 @@ function RadarView({
                 {hoveredTile.overallFit}
               </div>
               <div>
-                <p className="text-sm font-semibold text-white">{hoveredTile.college.name}</p>
-                <p className="text-[10px] text-white/50">
+                <p className="text-sm font-semibold text-slate-900">{hoveredTile.college.name}</p>
+                <p className="text-[10px] text-slate-400">
                   {hoveredTile.college.acceptanceRate}% accept &middot; {hoveredTile.college.satRange[0]}-{hoveredTile.college.satRange[1]} SAT
                   &middot; <span style={{ color: getTempColor(hoveredTile.overallFit) }}>{getTempLabel(hoveredTile.overallFit)}</span>
                 </p>
@@ -692,18 +688,18 @@ function RadarView({
 
       {/* Legend overlay */}
       <div className="absolute bottom-4 left-4 flex flex-col gap-1.5 pointer-events-none">
-        <div className="bg-slate-900/60 backdrop-blur-sm rounded-lg px-2.5 py-2 border border-white/5">
+        <div className="bg-white rounded-lg px-2.5 py-2 border border-slate-100 shadow-sm">
           <div className="flex items-center gap-2 text-[10px] mb-1">
-            <div className="w-2 h-2 rounded-full bg-emerald-400" />
-            <span className="text-white/50">Safety (inner)</span>
+            <div className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span className="text-slate-500">Safety (inner)</span>
           </div>
           <div className="flex items-center gap-2 text-[10px] mb-1">
-            <div className="w-2 h-2 rounded-full bg-amber-400" />
-            <span className="text-white/50">Match (middle)</span>
+            <div className="w-2 h-2 rounded-full bg-amber-500" />
+            <span className="text-slate-500">Match (middle)</span>
           </div>
           <div className="flex items-center gap-2 text-[10px]">
-            <div className="w-2 h-2 rounded-full bg-rose-400" />
-            <span className="text-white/50">Reach (outer)</span>
+            <div className="w-2 h-2 rounded-full bg-rose-500" />
+            <span className="text-slate-500">Reach (outer)</span>
           </div>
         </div>
       </div>
@@ -712,19 +708,19 @@ function RadarView({
       <div className="absolute top-4 left-4 flex flex-col gap-1.5">
         <button
           onClick={() => { cameraRef.current.targetZoom = Math.min(4, cameraRef.current.targetZoom * 1.4); }}
-          className="w-8 h-8 rounded-lg bg-slate-900/70 backdrop-blur-sm border border-white/10 text-white/70 hover:text-white hover:bg-slate-800/80 transition-all flex items-center justify-center text-lg font-medium"
+          className="w-8 h-8 rounded-lg bg-white border border-slate-100 text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-all flex items-center justify-center text-lg font-medium shadow-sm"
         >
           +
         </button>
         <button
           onClick={() => { cameraRef.current.targetZoom = Math.max(0.4, cameraRef.current.targetZoom / 1.4); }}
-          className="w-8 h-8 rounded-lg bg-slate-900/70 backdrop-blur-sm border border-white/10 text-white/70 hover:text-white hover:bg-slate-800/80 transition-all flex items-center justify-center text-lg font-medium"
+          className="w-8 h-8 rounded-lg bg-white border border-slate-100 text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-all flex items-center justify-center text-lg font-medium shadow-sm"
         >
           −
         </button>
         <button
           onClick={() => { cameraRef.current.targetZoom = 1; cameraRef.current.panX = 0; cameraRef.current.panY = 0; }}
-          className="w-8 h-8 rounded-lg bg-slate-900/70 backdrop-blur-sm border border-white/10 text-white/70 hover:text-white hover:bg-slate-800/80 transition-all flex items-center justify-center"
+          className="w-8 h-8 rounded-lg bg-white border border-slate-100 text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-all flex items-center justify-center shadow-sm"
           title="Reset view"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -734,15 +730,15 @@ function RadarView({
       </div>
 
       {/* Controls hint */}
-      <div className="absolute bottom-4 right-4 text-[10px] text-white/30 pointer-events-none text-right">
+      <div className="absolute bottom-4 right-4 text-[10px] text-slate-400 pointer-events-none text-right">
         <p>Drag to pan &middot; Scroll to zoom</p>
         <p>Click a dot to explore</p>
       </div>
 
       {/* School count */}
       <div className="absolute top-4 right-4 pointer-events-none">
-        <div className="bg-slate-900/60 backdrop-blur-sm rounded-lg px-2.5 py-1 border border-white/5">
-          <span className="text-[10px] text-white/40 font-medium tabular-nums">
+        <div className="bg-white rounded-lg px-2.5 py-1 border border-slate-100 shadow-sm">
+          <span className="text-[10px] text-slate-500 font-medium tabular-nums">
             {tiles.length} schools
           </span>
         </div>
@@ -829,7 +825,7 @@ function TrendsView() {
       <div className="p-5 pb-0">
         <div className="flex flex-col sm:flex-row sm:items-start gap-4">
           <div className="flex items-center gap-3 flex-1">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-md shadow-orange-500/20">
+            <div className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center shadow-sm">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
               </svg>
@@ -1197,7 +1193,7 @@ export default function CollegeHeatmapPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="flex items-center gap-4 flex-1">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shadow-md shadow-orange-500/20">
+            <div className="w-11 h-11 rounded-xl bg-indigo-500 flex items-center justify-center shadow-sm">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -1217,7 +1213,7 @@ export default function CollegeHeatmapPage() {
               onClick={() => { setViewMode('galaxy'); tracker.feature('college-heatmap', 'view_toggle', { mode: 'radar' }); }}
               className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
                 viewMode === 'galaxy'
-                  ? 'bg-gradient-to-r from-accent to-purple-600 text-white shadow-md shadow-accent/20'
+                  ? 'bg-indigo-500 text-white shadow-sm'
                   : 'text-slate-500 hover:text-slate-700'
               }`}
             >
@@ -1260,7 +1256,7 @@ export default function CollegeHeatmapPage() {
               onClick={() => { setViewMode('trends'); tracker.feature('college-heatmap', 'view_toggle', { mode: 'trends' }); }}
               className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
                 viewMode === 'trends'
-                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md shadow-orange-500/20'
+                  ? 'bg-orange-500 text-white shadow-sm'
                   : 'text-slate-500 hover:text-slate-700'
               }`}
             >
@@ -1416,7 +1412,7 @@ export default function CollegeHeatmapPage() {
                         <div className="text-[9px] text-white/60 font-medium uppercase tracking-wide">{getTempLabel(tile.overallFit)}</div>
                       </div>
                       {tile.isSaved && (
-                        <div className="w-5 h-5 rounded-full bg-white/25 flex items-center justify-center backdrop-blur-sm">
+                        <div className="w-5 h-5 rounded-full bg-white/25 flex items-center justify-center">
                           <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                             <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                           </svg>
@@ -1424,7 +1420,7 @@ export default function CollegeHeatmapPage() {
                       )}
                     </div>
                   </div>
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                  <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
                 </button>
               );
             })}
@@ -1638,12 +1634,12 @@ export default function CollegeHeatmapPage() {
       {/* Detail Modal */}
       {selectedTile && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSelectedTile(null)} />
-          <div className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto animate-fade-up">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setSelectedTile(null)} />
+          <div className="relative bg-white rounded-2xl shadow-sm border border-slate-100 max-w-lg w-full max-h-[85vh] overflow-y-auto animate-fade-up">
             <div className="p-5 pb-0">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="shrink-0 w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg" style={{ backgroundColor: getTempColor(selectedTile.overallFit) }}>{selectedTile.overallFit}</div>
+                  <div className="shrink-0 w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-sm" style={{ backgroundColor: getTempColor(selectedTile.overallFit) }}>{selectedTile.overallFit}</div>
                   <div>
                     <h2 className="text-lg font-bold font-display text-primary">{selectedTile.college.name}</h2>
                     <p className="text-xs text-slate-400">{selectedTile.college.location} &middot; {selectedTile.college.type} &middot; {selectedTile.college.size}</p>
@@ -1805,7 +1801,7 @@ function SimilarHotSchools({ currentCollege, tiles, onSelect, onAdd }: { current
 
 function ListFitBar({ label, value, studentVal, schoolVal }: { label: string; value: number; studentVal: string; schoolVal: string }) {
   const pct = Math.round((value + 1) * 50);
-  const barColor = value >= 0.2 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' : value >= -0.2 ? 'bg-gradient-to-r from-amber-400 to-amber-500' : 'bg-gradient-to-r from-rose-400 to-rose-500';
+  const barColor = value >= 0.2 ? 'bg-emerald-500' : value >= -0.2 ? 'bg-amber-500' : 'bg-rose-500';
   return (
     <div>
       <div className="flex items-center justify-between text-xs mb-1">

@@ -278,7 +278,7 @@ function StudentCard({
     <div className="bg-white rounded-2xl border border-slate-100 p-5 hover:shadow-md hover:border-slate-200 transition-all">
       {/* Name row */}
       <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-sm shrink-0">
+        <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-sm shrink-0">
           {(student.name?.[0] ?? '?').toUpperCase()}
         </div>
         <div className="min-w-0">
@@ -421,7 +421,7 @@ function DetailView({
 
       {/* Student header */}
       <div className="flex items-center gap-4">
-        <div className="w-14 h-14 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-xl shrink-0">
+        <div className="w-14 h-14 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-xl shrink-0">
           {(detail.name?.[0] ?? '?').toUpperCase()}
         </div>
         <div>

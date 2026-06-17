@@ -63,7 +63,7 @@ export default function ParentDashboard() {
             </div>
             <h2 className="text-xl font-bold text-primary mb-2">Connect to Your Student</h2>
             <p className="text-sm text-slate-500 mb-4">Enter your student&apos;s connection code to view their progress.</p>
-            <button onClick={function() { router.push('/parent/settings'); }} className="px-6 py-3 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-teal-500 to-cyan-600 hover:opacity-90">
+            <button onClick={function() { router.push('/parent/settings'); }} className="px-6 py-3 rounded-xl text-sm font-semibold text-white bg-teal-500 hover:bg-teal-600">
               Go to Settings
             </button>
           </div>
@@ -148,15 +148,15 @@ export default function ParentDashboard() {
 
         {/* Quick Links */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Link href="/parent/progress" className="p-4 rounded-xl bg-white border border-slate-100 hover:border-teal-200 transition-all">
+          <Link href="/parent/progress" className="p-4 rounded-2xl bg-white border border-slate-100 hover:border-teal-200 transition-all">
             <p className="text-sm font-semibold text-primary">Progress Tracker</p>
             <p className="text-xs text-slate-400 mt-1">View task checklists</p>
           </Link>
-          <Link href="/parent/calendar" className="p-4 rounded-xl bg-white border border-slate-100 hover:border-teal-200 transition-all">
+          <Link href="/parent/calendar" className="p-4 rounded-2xl bg-white border border-slate-100 hover:border-teal-200 transition-all">
             <p className="text-sm font-semibold text-primary">Calendar</p>
             <p className="text-xs text-slate-400 mt-1">Deadline overview</p>
           </Link>
-          <Link href="/parent/financial" className="p-4 rounded-xl bg-white border border-slate-100 hover:border-teal-200 transition-all">
+          <Link href="/parent/financial" className="p-4 rounded-2xl bg-white border border-slate-100 hover:border-teal-200 transition-all">
             <p className="text-sm font-semibold text-primary">Financial Planner</p>
             <p className="text-xs text-slate-400 mt-1">Compare costs</p>
           </Link>

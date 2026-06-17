@@ -6,6 +6,7 @@ import DashboardLayout from '../../components/DashboardLayout';
 import { SCHOOLS, PROMPT_TYPES as SUPP_PROMPT_TYPES, getPromptTypeInfo, findSchoolByName, findReuseOpportunities, type SchoolData, type SupplementalPrompt, type ReuseMatch, type PromptType as SuppPromptType } from '../../lib/schoolData';
 import { analyzeSentences, computeStats, type AnalyzedSentence, type AnalysisStats } from '../../lib/sentenceAnalysis';
 import { checkGrammar, applyFix, type GrammarIssue } from '../../lib/grammarCheck';
+import { analyzeEssayInsights, type EssayInsights } from '../../lib/essayInsights';
 import { tracker } from '../../lib/analytics';
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -1548,7 +1549,7 @@ function MotifStoryboard({ analysis, expandedCard, setExpandedCard }: {
           return (
             <div key={motif.id} className="rounded-2xl border-2 overflow-hidden transition-all" style={{ borderColor: pal.border + '40', backgroundColor: pal.bg + 'cc' }}>
               {/* Motif header */}
-              <div className="px-5 py-4 border-b" style={{ borderColor: pal.border + '20', background: `linear-gradient(135deg, ${pal.bg}, white)` }}>
+              <div className="px-5 py-4 border-b" style={{ borderColor: pal.border + '20', background: pal.bg }}>
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: pal.border }}>
                     <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
@@ -1573,8 +1574,8 @@ function MotifStoryboard({ analysis, expandedCard, setExpandedCard }: {
                     <div
                       key={b.id}
                       onClick={() => setExpandedCard(isExpanded ? null : b.id)}
-                      className={`rounded-xl border-2 bg-white p-4 cursor-pointer transition-all duration-200 hover:shadow-lg ${
-                        isExpanded ? 'shadow-lg ring-2 scale-[1.02]' : isConnected && expandedCard ? 'ring-2 shadow-md scale-[1.01]' : 'hover:scale-[1.01]'
+                      className={`rounded-xl border-2 bg-white p-4 cursor-pointer transition-all duration-200 hover:shadow-sm ${
+                        isExpanded ? 'shadow-sm ring-2 scale-[1.02]' : isConnected && expandedCard ? 'ring-2 shadow-sm scale-[1.01]' : 'hover:scale-[1.01]'
                       }`}
                       style={{
                         borderColor: isExpanded ? pal.border : isConnected && expandedCard ? pal.accent + '80' : pal.border + '30',
@@ -1656,7 +1657,7 @@ function MotifStoryboard({ analysis, expandedCard, setExpandedCard }: {
         {/* Orphan island */}
         {orphanBullets.length > 0 && (
           <div className="rounded-2xl border-2 border-slate-200 bg-slate-50/80 overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+            <div className="px-5 py-4 border-b border-slate-200 bg-slate-50">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-xl bg-slate-300 flex items-center justify-center">
                   <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -1669,7 +1670,7 @@ function MotifStoryboard({ analysis, expandedCard, setExpandedCard }: {
             </div>
             <div className="p-3 space-y-2">
               {orphanBullets.map(b => (
-                <div key={b.id} className="rounded-xl border border-slate-200 bg-white p-4 cursor-pointer hover:shadow-md transition-all hover:scale-[1.01]" onClick={() => setExpandedCard(expandedCard === b.id ? null : b.id)}>
+                <div key={b.id} className="rounded-xl border border-slate-200 bg-white p-4 cursor-pointer hover:shadow-sm transition-all hover:scale-[1.01]" onClick={() => setExpandedCard(expandedCard === b.id ? null : b.id)}>
                   <p className="text-sm font-medium text-slate-600 leading-relaxed">{b.text}</p>
                   {b.themes.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">
@@ -2701,6 +2702,14 @@ export default function Essays() {
   // Reset dismissed list when switching essays
   useEffect(() => { setDismissedIssueIds(new Set()); setActiveIssueId(null); }, [activeEssay?.id]);
 
+  // ─── Essay Insights state ───
+  const [showInsights, setShowInsights] = useState(false);
+
+  const essayInsights = useMemo<EssayInsights | null>(() => {
+    if (!showInsights || !editContent || editContent.trim().length < 50) return null;
+    return analyzeEssayInsights(editContent, activeEssay?.prompt || undefined);
+  }, [editContent, showInsights, activeEssay?.prompt]);
+
   if (status !== 'authenticated') return null;
 
   const wordCount = editContent.trim() ? editContent.trim().split(/\s+/).length : 0;
@@ -2729,7 +2738,7 @@ export default function Essays() {
               <h1 className="text-xl lg:text-2xl font-bold font-display text-primary tracking-tight">Essay Workspace</h1>
               <p className="mt-0.5 text-xs lg:text-sm text-slate-400 hidden sm:block">{mode === 'essays' ? 'Write, analyze, and get real-time admissions-grade feedback.' : mode === 'motifs' ? 'Discover hidden connections between your ideas and stitch them into compelling stories.' : 'Browse school-specific prompts and find reuse opportunities across your essays.'}</p>
             </div>
-            <div className="flex bg-slate-100/80 rounded-xl p-1 gap-0.5 backdrop-blur-sm border border-slate-200/50">
+            <div className="flex bg-slate-100 rounded-xl p-1 gap-0.5 border border-slate-200">
               <button
                 onClick={() => setMode('essays')}
                 className={`px-3 lg:px-5 py-2 rounded-lg text-xs font-semibold transition-all ${mode === 'essays' ? 'bg-white text-accent shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-primary'}`}
@@ -2750,7 +2759,7 @@ export default function Essays() {
               </button>
             </div>
           </div>
-          {mode === 'essays' && <button onClick={() => setShowNewForm(true)} className="px-4 lg:px-5 py-2 lg:py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-accent to-purple-600 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-accent/20 hover:shadow-xl hover:shadow-accent/30 hover:-translate-y-0.5 flex-shrink-0">+ New Essay</button>}
+          {mode === 'essays' && <button onClick={() => setShowNewForm(true)} className="px-4 lg:px-5 py-2 lg:py-2.5 text-sm font-semibold text-white bg-accent rounded-xl hover:opacity-90 transition-all shadow-sm hover:-translate-y-0.5 flex-shrink-0">+ New Essay</button>}
         </div>
 
         {/* ═══════════════ MOTIFS MODE ═══════════════ */}
@@ -2827,7 +2836,7 @@ export default function Essays() {
                     {/* Candidate motifs explored (collapsible) */}
                     {motifAnalysis.candidateMotifs && motifAnalysis.candidateMotifs.length > 0 && (
                       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-                        <div className="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-purple-50 to-white">
+                        <div className="px-6 py-4 border-b border-slate-100 bg-purple-50">
                           <div className="flex items-center gap-2">
                             <svg className="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
                             <h3 className="text-sm font-bold text-primary">Candidate Motifs Explored</h3>
@@ -2866,7 +2875,7 @@ export default function Essays() {
                       return (
                         <div key={motif.id} className="bg-white rounded-2xl border-2 overflow-hidden shadow-sm" style={{ borderColor: pal.border + '30' }}>
                           {/* Header */}
-                          <div className="px-6 py-5 border-b" style={{ borderColor: pal.border + '15', background: `linear-gradient(135deg, ${pal.bg}80, white)` }}>
+                          <div className="px-6 py-5 border-b" style={{ borderColor: pal.border + '15', background: pal.bg }}>
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: pal.border }}>
@@ -3017,8 +3026,8 @@ export default function Essays() {
 
               return (
                 <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-0 sm:p-4">
-                  <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSuppExpandedPrompt(null)} />
-                  <div className="relative bg-white sm:rounded-2xl shadow-2xl w-full max-w-2xl h-full sm:h-auto sm:max-h-[85vh] overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+                  <div className="absolute inset-0 bg-slate-900/30" onClick={() => setSuppExpandedPrompt(null)} />
+                  <div className="relative bg-white sm:rounded-2xl shadow-sm w-full max-w-2xl h-full sm:h-auto sm:max-h-[85vh] overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
                     {/* Modal header */}
                     <div className="sticky top-0 bg-white border-b border-slate-100 p-3 sm:p-5 sm:rounded-t-2xl z-10">
                       <div className="flex items-center justify-between gap-2">
@@ -3146,7 +3155,7 @@ export default function Essays() {
                             setMode('essays');
                             setSuppExpandedPrompt(null);
                           }}
-                          className="flex-1 flex items-center justify-center gap-2 px-4 sm:px-5 py-3 bg-gradient-to-r from-accent to-purple-600 text-white rounded-xl text-xs sm:text-sm font-semibold hover:opacity-90 transition-all shadow-lg shadow-accent/20"
+                          className="flex-1 flex items-center justify-center gap-2 px-4 sm:px-5 py-3 bg-accent text-white rounded-xl text-xs sm:text-sm font-semibold hover:opacity-90 transition-all shadow-sm"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                           Start Writing
@@ -3262,7 +3271,7 @@ export default function Essays() {
 
             {/* Reuse Opportunities Banner */}
             {reuseMatches.length > 0 && (
-              <div className="bg-gradient-to-r from-accent/5 to-purple-50 rounded-2xl border border-accent/20 p-4 lg:p-5 flex-shrink-0">
+              <div className="bg-indigo-50 rounded-2xl border border-accent/20 p-4 lg:p-5 flex-shrink-0">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0">
                     <svg className="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
@@ -3281,7 +3290,7 @@ export default function Essays() {
                     <button
                       key={i}
                       onClick={() => setSuppExpandedPrompt(match.targetPrompt.id)}
-                      className="bg-white rounded-xl p-3 border border-slate-100 hover:border-accent/30 hover:shadow-md transition-all text-left group min-w-[240px] sm:min-w-0 snap-start flex-shrink-0 sm:flex-shrink"
+                      className="bg-white rounded-xl p-3 border border-slate-100 hover:border-accent/30 hover:shadow-sm transition-all text-left group min-w-[240px] sm:min-w-0 snap-start flex-shrink-0 sm:flex-shrink"
                     >
                       <div className="flex items-center gap-2 mb-1.5">
                         <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold whitespace-nowrap ${getPromptTypeInfo(match.targetPrompt.type).color}`}>
@@ -3356,7 +3365,7 @@ export default function Essays() {
                           <button
                             key={prompt.id}
                             onClick={() => setSuppExpandedPrompt(prompt.id)}
-                            className="text-left p-3 sm:p-4 rounded-xl border border-slate-100 hover:border-accent/30 hover:shadow-md hover:bg-accent/[0.02] transition-all group"
+                            className="text-left p-3 sm:p-4 rounded-xl border border-slate-100 hover:border-accent/30 hover:shadow-sm hover:bg-accent/[0.02] transition-all group"
                           >
                             <div className="flex items-center gap-2 mb-2 flex-wrap">
                               <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${typeInfo.color}`}>
@@ -3423,7 +3432,7 @@ export default function Essays() {
 
         {/* New Essay Form */}
         {mode === 'essays' && showNewForm && (
-          <div className="bg-white rounded-2xl border border-accent/20 p-5 shadow-lg mb-4 flex-shrink-0">
+          <div className="bg-white rounded-2xl border border-accent/20 p-5 shadow-sm mb-4 flex-shrink-0">
             <h3 className="text-base font-bold font-display text-primary mb-3">Create New Essay</h3>
             <div className="grid grid-cols-2 gap-3">
               <input type="text" value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="Essay title (e.g. Personal Statement)" className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent" autoFocus />
@@ -3450,7 +3459,7 @@ export default function Essays() {
               </div>
             ) : essays.length === 0 ? (
               <div className="text-center py-10 px-4">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-accent/10 to-purple-100 flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto mb-4">
                   <svg className="w-8 h-8 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                 </div>
                 <h4 className="text-sm font-bold text-primary mb-1">Start your first essay</h4>
@@ -3471,7 +3480,7 @@ export default function Essays() {
                     key={essay.id}
                     onClick={() => openEssay(essay)}
                     className={`p-4 rounded-xl border-2 cursor-pointer group transition-all duration-200 ${
-                      activeEssay?.id === essay.id ? 'bg-accent/5 border-accent/30 shadow-md' : 'bg-white border-transparent hover:border-slate-200 hover:shadow-sm'
+                      activeEssay?.id === essay.id ? 'bg-accent/5 border-accent/30 shadow-sm' : 'bg-white border-transparent hover:border-slate-200 hover:shadow-sm'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -3556,10 +3565,10 @@ export default function Essays() {
                       ))}
                     </div>
                     <button
-                      onClick={() => { setShowGrammar(prev => !prev); if (!showGrammar) { setShowSentenceAnalysis(false); tracker.feature('essays', 'grammar_check', { wordCount }); } }}
+                      onClick={() => { setShowGrammar(prev => !prev); if (!showGrammar) { setShowSentenceAnalysis(false); setShowInsights(false); tracker.feature('essays', 'grammar_check', { wordCount }); } }}
                       disabled={wordCount < 4}
                       title="Grammar check: errors first, then stylistic optimizations"
-                      className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed ${showGrammar ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md shadow-emerald-200' : 'text-slate-500 bg-slate-100 hover:bg-slate-200'}`}
+                      className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed ${showGrammar ? 'bg-emerald-500 text-white shadow-sm' : 'text-slate-500 bg-slate-100 hover:bg-slate-200'}`}
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" /></svg>
                       Grammar
@@ -3568,13 +3577,22 @@ export default function Essays() {
                       )}
                     </button>
                     <button
-                      onClick={() => { setShowSentenceAnalysis(prev => !prev); if (!showSentenceAnalysis) { setShowGrammar(false); tracker.feature('essays', 'sentence_analysis', { wordCount }); } }}
+                      onClick={() => { setShowSentenceAnalysis(prev => !prev); if (!showSentenceAnalysis) { setShowGrammar(false); setShowInsights(false); tracker.feature('essays', 'sentence_analysis', { wordCount }); } }}
                       disabled={wordCount < 10}
                       title="Sentence Analysis: highlights internalized (thoughts/feelings) vs externalized (actions/events) sentences"
-                      className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed ${showSentenceAnalysis ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md shadow-purple-200' : 'text-slate-500 bg-slate-100 hover:bg-slate-200'}`}
+                      className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed ${showSentenceAnalysis ? 'bg-indigo-500 text-white shadow-sm' : 'text-slate-500 bg-slate-100 hover:bg-slate-200'}`}
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>
                       {showSentenceAnalysis ? 'Analysis On' : 'Analyze'}
+                    </button>
+                    <button
+                      onClick={() => { setShowInsights(prev => !prev); if (!showInsights) { setShowGrammar(false); setShowSentenceAnalysis(false); tracker.feature('essays', 'insights_panel', { wordCount }); } }}
+                      disabled={wordCount < 50}
+                      title="Logic & Flow: tense shifts, unsupported claims, show-don't-tell, and more"
+                      className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed ${showInsights ? 'bg-indigo-500 text-white shadow-sm' : 'text-slate-500 bg-slate-100 hover:bg-slate-200'}`}
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
+                      Insights
                     </button>
                     <button onClick={markComplete} disabled={wordCount < 50} className="hidden sm:block px-3 py-1.5 text-xs font-semibold text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all">Mark Complete</button>
                     {activeEssay && !essayReviews[activeEssay.id] ? (
@@ -3647,6 +3665,195 @@ export default function Essays() {
                       errorCount={grammarErrorCount}
                       optCount={grammarOptCount}
                     />
+                  ) : showInsights && essayInsights && editContent.trim().length > 0 ? (
+                    <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
+                      {/* Essay text (read-only) */}
+                      <div className="flex-1 min-h-0 overflow-y-auto px-4 lg:px-6 py-4 lg:py-5">
+                        <div className="text-[14px] lg:text-[15px] leading-[1.85] font-sans text-slate-800 whitespace-pre-wrap break-words">
+                          {editContent}
+                        </div>
+                        <button
+                          onClick={() => setShowInsights(false)}
+                          className="mt-4 text-[10px] text-slate-400 hover:text-slate-600 italic"
+                        >
+                          Close insights to return to editing
+                        </button>
+                      </div>
+
+                      {/* Insights sidebar */}
+                      <aside className="lg:w-80 xl:w-96 flex-shrink-0 border-t lg:border-t-0 lg:border-l border-slate-200 bg-slate-50/70 flex flex-col">
+                        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-white">
+                          <div>
+                            <h4 className="text-[11px] font-bold text-indigo-600 uppercase tracking-wider">Logic & Flow</h4>
+                            <p className="text-[9px] text-slate-400 mt-0.5">Essay structure insights</p>
+                          </div>
+                          <button
+                            onClick={() => setShowInsights(false)}
+                            className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600"
+                            title="Close insights"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                          </button>
+                        </div>
+
+                        <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-3">
+                          {/* Tense Shifts */}
+                          {essayInsights.tenseShifts.length > 0 && (
+                            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-3">
+                              <div className="flex items-center gap-1.5 mb-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                <h5 className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">Tense Shifts</h5>
+                                <span className="text-[9px] text-slate-400 ml-auto">{essayInsights.tenseShifts.length}</span>
+                              </div>
+                              <div className="space-y-2">
+                                {essayInsights.tenseShifts.map((ts, i) => (
+                                  <div key={i} className="bg-amber-50 border border-amber-100 rounded-xl p-2.5">
+                                    <p className="text-[10px] font-semibold text-amber-800">
+                                      Paragraph {ts.paragraph + 1}: shifts to {ts.shifted} tense (essay is mostly {ts.dominant})
+                                    </p>
+                                    <p className="text-[10px] text-slate-600 mt-1 italic leading-relaxed truncate">&ldquo;{ts.sentence}&rdquo;</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Show Don't Tell */}
+                          {essayInsights.showDontTell.length > 0 && (
+                            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-3">
+                              <div className="flex items-center gap-1.5 mb-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                                <h5 className="text-[10px] font-bold text-blue-700 uppercase tracking-wider">Show, Don&apos;t Tell</h5>
+                                <span className="text-[9px] text-slate-400 ml-auto">{essayInsights.showDontTell.length}</span>
+                              </div>
+                              <div className="space-y-2">
+                                {essayInsights.showDontTell.map((sdt, i) => (
+                                  <div key={i} className="bg-blue-50 border border-blue-100 rounded-xl p-2.5">
+                                    <p className="text-[10px] font-semibold text-blue-800">
+                                      Tells &ldquo;{sdt.emotion}&rdquo; instead of showing it
+                                    </p>
+                                    <p className="text-[10px] text-slate-600 mt-1 italic leading-relaxed truncate">&ldquo;{sdt.sentence}&rdquo;</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Unsupported Claims */}
+                          {essayInsights.unsupportedClaims.length > 0 && (
+                            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-3">
+                              <div className="flex items-center gap-1.5 mb-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                                <h5 className="text-[10px] font-bold text-orange-700 uppercase tracking-wider">Unsupported Claims</h5>
+                                <span className="text-[9px] text-slate-400 ml-auto">{essayInsights.unsupportedClaims.length}</span>
+                              </div>
+                              <div className="space-y-2">
+                                {essayInsights.unsupportedClaims.map((uc, i) => (
+                                  <div key={i} className="bg-orange-50 border border-orange-100 rounded-xl p-2.5">
+                                    <p className="text-[10px] font-semibold text-orange-800">
+                                      Claim type: &ldquo;{uc.claimType}&rdquo; without evidence
+                                    </p>
+                                    <p className="text-[10px] text-slate-600 mt-1 italic leading-relaxed truncate">&ldquo;{uc.sentence}&rdquo;</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Overused Words */}
+                          {essayInsights.overusedWords.length > 0 && (
+                            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-3">
+                              <div className="flex items-center gap-1.5 mb-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
+                                <h5 className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Overused Words</h5>
+                              </div>
+                              <div className="flex flex-wrap gap-1.5">
+                                {essayInsights.overusedWords.map((ow, i) => (
+                                  <span key={i} className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 rounded-lg text-[10px] font-medium text-slate-600">
+                                    {ow.word} <span className="text-[9px] font-bold text-slate-400">({ow.count}x)</span>
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Prompt Alignment */}
+                          {essayInsights.promptAlignment && (
+                            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-3">
+                              <div className="flex items-center gap-1.5 mb-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                                <h5 className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider">Prompt Alignment</h5>
+                                <span className="text-[10px] font-bold ml-auto" style={{ color: essayInsights.promptAlignment.score >= 70 ? '#10b981' : essayInsights.promptAlignment.score >= 40 ? '#f59e0b' : '#ef4444' }}>
+                                  {essayInsights.promptAlignment.score}%
+                                </span>
+                              </div>
+                              <div className="h-2 bg-slate-100 rounded-full overflow-hidden mb-2">
+                                <div
+                                  className="h-full rounded-full transition-all duration-700 ease-out"
+                                  style={{
+                                    width: `${essayInsights.promptAlignment.score}%`,
+                                    backgroundColor: essayInsights.promptAlignment.score >= 70 ? '#10b981' : essayInsights.promptAlignment.score >= 40 ? '#f59e0b' : '#ef4444',
+                                  }}
+                                />
+                              </div>
+                              {essayInsights.promptAlignment.found.length > 0 && (
+                                <div className="mb-1.5">
+                                  <p className="text-[9px] font-semibold text-emerald-600 uppercase tracking-wider mb-1">Found</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {essayInsights.promptAlignment.found.map((kw, i) => (
+                                      <span key={i} className="px-1.5 py-0.5 bg-emerald-50 border border-emerald-100 rounded text-[9px] font-medium text-emerald-700">{kw}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {essayInsights.promptAlignment.missing.length > 0 && (
+                                <div>
+                                  <p className="text-[9px] font-semibold text-rose-600 uppercase tracking-wider mb-1">Missing</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {essayInsights.promptAlignment.missing.map((kw, i) => (
+                                      <span key={i} className="px-1.5 py-0.5 bg-rose-50 border border-rose-100 rounded text-[9px] font-medium text-rose-600">{kw}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Repetitive Openings */}
+                          {essayInsights.repetitiveOpenings.length > 0 && (
+                            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-3">
+                              <div className="flex items-center gap-1.5 mb-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                                <h5 className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Repetitive Openings</h5>
+                              </div>
+                              <div className="space-y-1.5">
+                                {essayInsights.repetitiveOpenings.map((ro, i) => (
+                                  <p key={i} className="text-[10px] text-slate-600 leading-relaxed">
+                                    Paragraphs {ro.paragraphs.map(p => p + 1).join(', ')} all start with &ldquo;{ro.opening}&rdquo;
+                                  </p>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Empty state */}
+                          {essayInsights.tenseShifts.length === 0 &&
+                           essayInsights.showDontTell.length === 0 &&
+                           essayInsights.unsupportedClaims.length === 0 &&
+                           essayInsights.overusedWords.length === 0 &&
+                           !essayInsights.promptAlignment &&
+                           essayInsights.repetitiveOpenings.length === 0 && (
+                            <div className="text-center py-10">
+                              <div className="w-12 h-12 mx-auto rounded-full bg-emerald-100 flex items-center justify-center mb-3">
+                                <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                              </div>
+                              <p className="text-xs font-semibold text-emerald-700">Looking good!</p>
+                              <p className="text-[10px] text-slate-400 mt-1">No logic or flow issues detected.</p>
+                            </div>
+                          )}
+                        </div>
+                      </aside>
+                    </div>
                   ) : showSentenceAnalysis && sentenceAnalysis && editContent.trim().length > 0 ? (
                     <div className="flex-1 min-h-0 flex flex-col">
                       <div
@@ -3768,7 +3975,7 @@ export default function Essays() {
 
                     {/* Prompt type indicator */}
                     {promptAnalysis && (
-                      <div className="bg-gradient-to-r from-accent/5 to-purple-50 rounded-xl border border-accent/10 px-4 py-3">
+                      <div className="bg-indigo-50 rounded-xl border border-accent/10 px-4 py-3">
                         <p className="text-[10px] font-bold text-accent uppercase tracking-wider">Prompt detected</p>
                         <p className="text-xs font-semibold text-primary mt-0.5">{promptAnalysis.label}</p>
                         <p className="text-[10px] text-slate-500 mt-1">AOs look for: {promptAnalysis.aoLookingFor}</p>
@@ -3886,7 +4093,7 @@ export default function Essays() {
               <>
                 {/* Prompt type indicator */}
                 {promptAnalysis && (
-                  <div className="bg-gradient-to-r from-accent/5 to-purple-50 rounded-xl border border-accent/10 px-4 py-3">
+                  <div className="bg-indigo-50 rounded-xl border border-accent/10 px-4 py-3">
                     <p className="text-[10px] font-bold text-accent uppercase tracking-wider">Prompt detected</p>
                     <p className="text-xs font-semibold text-primary mt-0.5">{promptAnalysis.label}</p>
                     <p className="text-[10px] text-slate-500 mt-1">AOs look for: {promptAnalysis.aoLookingFor}</p>
@@ -4067,8 +4274,8 @@ export default function Essays() {
       {/* Submit for Review Modal */}
       {showReviewModal && activeEssay && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setShowReviewModal(false)} />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+          <div className="absolute inset-0 bg-slate-900/30" onClick={() => setShowReviewModal(false)} />
+          <div className="relative bg-white rounded-2xl shadow-sm w-full max-w-md p-6">
             <h2 className="text-lg font-bold font-display text-primary mb-1">Submit for Tutor Review</h2>
             <p className="text-sm text-slate-500 mb-4">Your tutor will review &ldquo;{activeEssay.title}&rdquo; and provide detailed feedback.</p>
             <div className="mb-4">

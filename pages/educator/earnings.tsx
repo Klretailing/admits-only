@@ -86,7 +86,7 @@ function BarChart({ data, valueKey, gradientFrom, gradientTo }: {
                       className="w-full max-w-[36px] rounded-t-lg transition-all duration-500 ease-out"
                       style={{
                         height: `${Math.max(height, 2)}%`,
-                        background: `linear-gradient(to top, ${gradientFrom}, ${gradientTo})`,
+                        backgroundColor: gradientFrom,
                         opacity: 0.85 + (i / data.length) * 0.15,
                         animationDelay: `${i * 50}ms`,
                       }}
@@ -130,7 +130,7 @@ function StudentBreakdown({ payments }: { payments: EarningsData['payments'] }) 
   return (
     <div className="bg-white rounded-2xl border border-slate-100 p-5">
       <div className="flex items-center gap-2 mb-4">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center">
+        <div className="w-8 h-8 rounded-lg bg-purple-500 flex items-center justify-center">
           <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
         </div>
         <div>
@@ -156,8 +156,8 @@ function StudentBreakdown({ payments }: { payments: EarningsData['payments'] }) 
               </div>
               <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
                 <div className="h-full rounded-full relative" style={{ width: `${pct}%` }}>
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500" style={{ width: `${paidPct}%` }} />
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-amber-400 to-orange-400" style={{ left: `${paidPct}%`, width: `${100 - paidPct}%` }} />
+                  <div className="absolute inset-0 rounded-full bg-emerald-500" style={{ width: `${paidPct}%` }} />
+                  <div className="absolute inset-0 rounded-full bg-amber-400" style={{ left: `${paidPct}%`, width: `${100 - paidPct}%` }} />
                 </div>
               </div>
             </div>
@@ -166,11 +166,11 @@ function StudentBreakdown({ payments }: { payments: EarningsData['payments'] }) 
       </div>
       <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-100">
         <div className="flex items-center gap-1.5 text-[10px]">
-          <div className="w-2.5 h-2.5 rounded-sm bg-gradient-to-r from-emerald-500 to-teal-500" />
+          <div className="w-2.5 h-2.5 rounded-sm bg-emerald-500" />
           <span className="text-slate-400">Paid</span>
         </div>
         <div className="flex items-center gap-1.5 text-[10px]">
-          <div className="w-2.5 h-2.5 rounded-sm bg-gradient-to-r from-amber-400 to-orange-400" />
+          <div className="w-2.5 h-2.5 rounded-sm bg-amber-400" />
           <span className="text-slate-400">Unpaid</span>
         </div>
       </div>
@@ -360,15 +360,15 @@ export default function EducatorEarnings() {
         {/* Revenue Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'Total Revenue', value: formatCurrency(data?.totalRevenue || 0), gradient: 'from-emerald-500 to-teal-600' },
-            { label: 'This Month', value: formatCurrency(data?.monthRevenue || 0), gradient: 'from-blue-500 to-indigo-600' },
-            { label: 'Collected', value: formatCurrency(data?.paidAmount || 0), gradient: 'from-green-500 to-emerald-600' },
-            { label: 'Outstanding', value: formatCurrency(data?.unpaidAmount || 0), gradient: 'from-amber-500 to-orange-600' },
+            { label: 'Total Revenue', value: formatCurrency(data?.totalRevenue || 0), color: 'bg-emerald-500' },
+            { label: 'This Month', value: formatCurrency(data?.monthRevenue || 0), color: 'bg-blue-500' },
+            { label: 'Collected', value: formatCurrency(data?.paidAmount || 0), color: 'bg-green-500' },
+            { label: 'Outstanding', value: formatCurrency(data?.unpaidAmount || 0), color: 'bg-amber-500' },
           ].map(stat => (
             <div key={stat.label} className="bg-white rounded-2xl border border-slate-100 p-5">
               <p className="text-sm text-slate-500 font-medium mb-2">{stat.label}</p>
               <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full bg-gradient-to-br ${stat.gradient}`} />
+                <div className={`w-2 h-2 rounded-full ${stat.color}`} />
                 <span className="text-xl font-bold font-display text-primary">{stat.value}</span>
               </div>
             </div>
@@ -381,7 +381,7 @@ export default function EducatorEarnings() {
             {/* Chart header row */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center">
                   <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                 </div>
                 <div>
@@ -488,7 +488,7 @@ export default function EducatorEarnings() {
                 <span className="font-semibold text-emerald-600">{Math.round((data.completedSessions / data.totalSessions) * 100)}%</span>
               </div>
               <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full progress-animated" style={{ width: `${(data.completedSessions / data.totalSessions) * 100}%` }} />
+                <div className="h-full bg-emerald-500 rounded-full progress-animated" style={{ width: `${(data.completedSessions / data.totalSessions) * 100}%` }} />
               </div>
             </div>
           )}
@@ -604,8 +604,8 @@ export default function EducatorEarnings() {
       {/* Add Manual Earning Modal */}
       {showAddEarning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setShowAddEarning(false)} />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+          <div className="absolute inset-0 bg-slate-900/30" onClick={() => setShowAddEarning(false)} />
+          <div className="relative bg-white rounded-2xl shadow-sm w-full max-w-md p-6">
             <h2 className="text-lg font-bold font-display text-primary mb-4">Log Earnings</h2>
             <p className="text-sm text-slate-500 mb-4">Add earnings from outside classes or other sources.</p>
             {earningError && (

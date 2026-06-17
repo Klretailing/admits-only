@@ -326,7 +326,7 @@ export default function SessionNotes() {
               <h1 className="text-lg font-semibold text-slate-800">Session Notes</h1>
               <button
                 onClick={handleCreateNote}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-gradient-to-r from-emerald-500 to-teal-600 rounded-lg hover:from-emerald-600 hover:to-teal-700 transition-all shadow-sm"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 transition-all shadow-sm"
                 title="New Note (Ctrl+N)"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

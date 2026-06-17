@@ -88,7 +88,7 @@ export default function ParentProgress() {
             </div>
             <h2 className="text-xl font-bold text-primary mb-2">Connect to Your Student</h2>
             <p className="text-sm text-slate-500 mb-4">Enter your student&apos;s connection code to view their progress.</p>
-            <button onClick={() => router.push('/parent/settings')} className="px-6 py-3 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-teal-500 to-cyan-600 hover:opacity-90">Go to Settings</button>
+            <button onClick={() => router.push('/parent/settings')} className="px-6 py-3 rounded-xl text-sm font-semibold text-white bg-teal-500 hover:bg-teal-600">Go to Settings</button>
           </div>
         </div>
       </ParentLayout>
@@ -156,7 +156,7 @@ export default function ParentProgress() {
 
               return (
                 <div key={app.id} className={`bg-white rounded-2xl border transition-all ${
-                  isExpanded ? 'border-teal-200 shadow-lg shadow-teal-500/5' : 'border-slate-100'
+                  isExpanded ? 'border-teal-200 shadow-sm' : 'border-slate-100'
                 } ${isUrgent ? 'ring-2 ring-amber-200' : ''}`}>
                   {/* Header row */}
                   <button
@@ -190,7 +190,7 @@ export default function ParentProgress() {
                     <div className="hidden sm:flex items-center gap-3 shrink-0">
                       <div className="flex items-center gap-2">
                         <div className="w-20 h-2 bg-slate-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-gradient-to-r from-teal-400 to-cyan-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                          <div className="h-full bg-teal-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
                         </div>
                         <span className="text-[11px] font-semibold text-slate-400 w-8">{pct}%</span>
                       </div>

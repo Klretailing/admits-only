@@ -117,7 +117,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-slate-100">
         <div className="p-5 border-b border-slate-100">
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 rounded-xl bg-accent flex items-center justify-center shadow-md shadow-accent/20 group-hover:shadow-lg group-hover:shadow-accent/30 transition-shadow">
+            <div className="w-9 h-9 rounded-xl bg-accent flex items-center justify-center shadow-sm transition-shadow">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                 <path d="M12 2L2 9L12 16L22 9L12 2Z" fill="white" opacity="0.9" />
                 <path d="M4 11V17L12 22L20 17V11" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
@@ -191,8 +191,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       {/* Mobile slide-out menu overlay */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)} />
-          <aside className="absolute left-0 top-0 bottom-0 w-72 bg-white shadow-2xl flex flex-col animate-fade-in">
+          <div className="absolute inset-0 bg-slate-900/30" onClick={() => setMobileMenuOpen(false)} />
+          <aside className="absolute left-0 top-0 bottom-0 w-72 bg-white shadow-sm flex flex-col animate-fade-in">
             <div className="p-5 border-b border-slate-100 flex items-center justify-between">
               <Link href="/" className="flex items-center gap-2.5" onClick={() => setMobileMenuOpen(false)}>
                 <div className="w-9 h-9 rounded-xl bg-accent flex items-center justify-center">

@@ -2,6 +2,8 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../lib/auth';
 import { prisma, ensureSchema } from '../../lib/db';
+import { checkGrammar } from '../../lib/grammarCheck';
+import { analyzeEssayInsights, type EssayInsights } from '../../lib/essayInsights';
 
 /* ══════════════════════════════════════════════════════════════════════
    ADMISSIONS-GRADE ESSAY SCORING ENGINE
@@ -715,18 +717,37 @@ function scoreEssay(content: string, prompt: string = '') {
   const wordCount = words.length;
   const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
 
+  // New: run grammar check and essay insights
+  const grammarIssues = checkGrammar(text);
+  const essayInsights = analyzeEssayInsights(text, prompt || undefined);
+
   const voiceScore = analyzeVoice(text, sentences, wordCount);
   const languageScore = analyzeLanguage(words, wordCount, text);
   const structureScore = analyzeStructure(text, sentences, wordCount, prompt);
   const storytellingScore = analyzeStorytelling(text, sentences, wordCount);
   const impactScore = analyzeImpact(text, prompt, wordCount, voiceScore, languageScore, structureScore, storytellingScore);
 
+  // Improved grammar score: factor in actual grammar issue density
+  const grammarErrorCount = grammarIssues.filter(i => i.severity === 'error').length;
+  const grammarOptCount = grammarIssues.filter(i => i.severity === 'optimization').length;
+  const errorDensity = grammarErrorCount / Math.max(wordCount / 100, 1);
+  const optDensity = grammarOptCount / Math.max(wordCount / 100, 1);
+  const densityScore = Math.max(20, Math.round(95 - errorDensity * 3 - optDensity * 1));
+  const combinedGrammarScore = Math.round((densityScore + structureScore) / 2);
+
+  // Logic issue penalties for overall score
+  const unsupportedPenalty = Math.min(essayInsights.unsupportedClaims.length * 2, 10);
+  const showDontTellPenalty = Math.min(essayInsights.showDontTell.length * 1, 5);
+  const tenseShiftPenalty = Math.min(essayInsights.tenseShifts.length * 2, 6);
+  const adjustedOverall = Math.max(0, Math.min(100, Math.round(impactScore) - unsupportedPenalty - showDontTellPenalty - tenseShiftPenalty));
+
   return {
-    aiScore: Math.round(100 - voiceScore),    // stored as "AI %" (low = good) for backward compat
+    aiScore: Math.round(100 - voiceScore),
     vocabScore: Math.round(languageScore),
-    grammarScore: Math.round(structureScore),
+    grammarScore: combinedGrammarScore,
     originalityScore: Math.round(storytellingScore),
-    overallScore: Math.round(impactScore),
+    overallScore: adjustedOverall,
+    insights: essayInsights,
   };
 }
 
