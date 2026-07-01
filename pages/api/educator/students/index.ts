@@ -17,7 +17,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         where: { educatorId: userId },
         orderBy: { createdAt: 'desc' },
       });
-      return res.json({ students: students.map(s => ({ ...s, tags: s.tags as string[], notes: s.notes as any[] })) });
+
+      // Invite columns live outside the Prisma model (added via raw SQL) — fetch and merge them
+      const inviteRows: any[] = await prisma.$queryRaw`
+        SELECT "id", "inviteStatus", "inviteToken", "linkedUserId"
+        FROM "educator_students"
+        WHERE "educatorId" = ${userId}
+      `;
+      const inviteMap = new Map(inviteRows.map(r => [r.id, r]));
+
+      return res.json({
+        students: students.map(s => {
+          const inv = inviteMap.get(s.id) || {};
+          return {
+            ...s,
+            tags: s.tags as string[],
+            notes: s.notes as any[],
+            inviteStatus: inv.inviteStatus || 'none',
+            inviteToken: inv.inviteToken || null,
+            linkedUserId: inv.linkedUserId || null,
+          };
+        }),
+      });
     } catch (e) {
       console.error('Fetch students error:', (e as Error).message);
       return res.json({ students: [] });

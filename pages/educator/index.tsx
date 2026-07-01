@@ -5,6 +5,43 @@ import Head from 'next/head';
 import Link from 'next/link';
 import EducatorDashboardLayout from '../../components/EducatorDashboardLayout';
 
+interface AwaitingReview {
+  reviewId: string;
+  studentId: string;
+  studentName: string;
+  essayTitle: string;
+  submittedAt: string | null;
+}
+interface UpcomingDeadline {
+  studentId: string;
+  studentName: string;
+  school: string;
+  type: string;
+  deadline: string;
+  daysLeft: number;
+}
+interface AtRiskStudent {
+  studentId: string;
+  studentName: string;
+  reason: string;
+}
+interface TodaySession {
+  id: string;
+  title: string;
+  date: string;
+  studentName: string;
+  meetingLink: string;
+  platform: string;
+  duration: number;
+}
+
+interface ActionQueue {
+  essaysAwaitingReview: { count: number; items: AwaitingReview[] };
+  upcomingDeadlines: { count: number; items: UpcomingDeadline[] };
+  atRiskStudents: { count: number; items: AtRiskStudent[] };
+  todaySessions: { count: number; items: TodaySession[] };
+}
+
 interface OverviewData {
   totalStudents: number;
   activeStudents: number;
@@ -22,6 +59,7 @@ interface OverviewData {
     meetingLink: string;
     duration: number;
   }[];
+  actionQueue?: ActionQueue;
 }
 
 function formatCurrency(amount: number) {
@@ -34,6 +72,55 @@ function formatTime(dateStr: string) {
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function timeAgo(dateStr: string | null) {
+  if (!dateStr) return 'recently';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  if (diff < 0) return 'just now';
+  const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+  if (days >= 1) return `${days} day${days === 1 ? '' : 's'} ago`;
+  const hours = Math.floor(diff / (60 * 60 * 1000));
+  if (hours >= 1) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+  const mins = Math.max(1, Math.floor(diff / (60 * 1000)));
+  return `${mins} min${mins === 1 ? '' : 's'} ago`;
+}
+
+function greeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 18) return 'Good afternoon';
+  return 'Good evening';
+}
+
+function EmptyState({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-2 py-4 px-1 text-sm text-slate-400">
+      <svg className="w-4 h-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+      </svg>
+      <span>{label}</span>
+    </div>
+  );
+}
+
+function SectionLabel({ children, count, tone = 'emerald' }: { children: React.ReactNode; count: number; tone?: 'emerald' | 'red' | 'amber' }) {
+  const toneClasses =
+    count === 0
+      ? 'bg-slate-100 text-slate-400'
+      : tone === 'red'
+      ? 'bg-red-100 text-red-600'
+      : tone === 'amber'
+      ? 'bg-amber-100 text-amber-600'
+      : 'bg-emerald-100 text-emerald-600';
+  return (
+    <div className="flex items-center gap-2 mb-3">
+      <p className="text-xs uppercase tracking-wider text-slate-400 font-semibold">{children}</p>
+      <span className={`min-w-[1.25rem] px-1.5 py-0.5 rounded-full text-[10px] font-bold text-center ${toneClasses}`}>
+        {count}
+      </span>
+    </div>
+  );
 }
 
 export default function EducatorOverview() {
@@ -67,8 +154,20 @@ export default function EducatorOverview() {
     );
   }
 
+  const queue = data?.actionQueue;
+  const reviewCount = queue?.essaysAwaitingReview.count ?? 0;
+  const deadlineCount = queue?.upcomingDeadlines.count ?? 0;
+  const atRiskCount = queue?.atRiskStudents.count ?? 0;
+
+  // One-line summary of what needs attention.
+  const summaryParts: string[] = [];
+  if (reviewCount > 0) summaryParts.push(`${reviewCount} essay${reviewCount === 1 ? '' : 's'} to review`);
+  if (deadlineCount > 0) summaryParts.push(`${deadlineCount} deadline${deadlineCount === 1 ? '' : 's'} soon`);
+  if (atRiskCount > 0) summaryParts.push(`${atRiskCount} student${atRiskCount === 1 ? '' : 's'} to nudge`);
+  const summary = summaryParts.length > 0 ? summaryParts.join(' · ') : "You're all caught up — nothing needs attention right now.";
+
   const stats = [
-    { label: 'Total Students', value: data?.totalStudents || 0, icon: 'students', color: 'bg-emerald-500', href: '/educator/students' },
+    { label: 'Active Students', value: data?.activeStudents || 0, icon: 'students', color: 'bg-emerald-500', href: '/educator/students' },
     { label: 'Sessions Today', value: data?.upcomingToday || 0, icon: 'today', color: 'bg-blue-500', href: '/educator/schedule' },
     { label: 'This Month', value: formatCurrency(data?.monthRevenue || 0), icon: 'revenue', color: 'bg-amber-500', href: '/educator/earnings' },
     { label: 'Total Revenue', value: formatCurrency(data?.totalRevenue || 0), icon: 'total', color: 'bg-purple-500', href: '/educator/earnings' },
@@ -81,47 +180,162 @@ export default function EducatorOverview() {
       </Head>
 
       <div className="space-y-8">
+        {/* Greeting header */}
         <div>
           <h1 className="text-2xl font-bold font-display text-primary">
-            Welcome back, {session.user?.name?.split(' ')[0] || 'Educator'}
+            {greeting()}, {session.user?.name?.split(' ')[0] || 'Educator'}
           </h1>
-          <p className="mt-1 text-slate-500">Here&apos;s your teaching business at a glance.</p>
+          <p className="mt-1 text-slate-500">{summary}</p>
         </div>
 
-        {/* Stat Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((stat, i) => (
-            <Link
-              key={stat.label}
-              href={stat.href}
-              className="bg-white rounded-2xl border border-slate-100 p-5 dash-card-enter visible dash-card-hover"
-              style={{ transitionDelay: `${i * 100}ms` }}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-slate-500 font-medium">{stat.label}</p>
-                <div className={`w-8 h-8 rounded-lg ${stat.color} flex items-center justify-center opacity-80`}>
-                  {stat.icon === 'students' && (
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                  )}
-                  {stat.icon === 'today' && (
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                  )}
-                  {stat.icon === 'revenue' && (
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-                  )}
-                  {stat.icon === 'total' && (
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                  )}
-                </div>
+        {/* Action Queue — the centerpiece */}
+        <div className="grid gap-4 lg:grid-cols-3">
+          {/* Essays awaiting review */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex flex-col">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-9 h-9 rounded-lg bg-emerald-500 flex items-center justify-center flex-shrink-0">
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
               </div>
-              <span className="text-2xl font-bold font-display text-primary">{stat.value}</span>
-            </Link>
-          ))}
+              <h3 className="text-base font-bold font-display text-primary leading-tight">Essays awaiting your review</h3>
+            </div>
+            <SectionLabel count={reviewCount} tone="emerald">To review</SectionLabel>
+            {reviewCount === 0 ? (
+              <EmptyState label="You're all caught up ✓" />
+            ) : (
+              <div className="space-y-2 flex-1">
+                {queue!.essaysAwaitingReview.items.map((r) => (
+                  <Link
+                    key={r.reviewId}
+                    href="/educator/essay-reviews"
+                    className="block p-3 rounded-xl bg-surface border border-slate-100 hover:border-emerald-200 transition-all"
+                  >
+                    <p className="text-sm font-semibold text-primary truncate">{r.essayTitle}</p>
+                    <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
+                      <span className="truncate">{r.studentName}</span>
+                      <span>&middot;</span>
+                      <span className="flex-shrink-0">waited {timeAgo(r.submittedAt)}</span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+            {reviewCount > 0 && (
+              <Link href="/educator/essay-reviews" className="text-sm font-semibold text-emerald-600 hover:underline mt-3 inline-block">
+                Review all →
+              </Link>
+            )}
+          </div>
+
+          {/* Upcoming deadlines */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex flex-col">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-9 h-9 rounded-lg bg-red-500 flex items-center justify-center flex-shrink-0">
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              </div>
+              <h3 className="text-base font-bold font-display text-primary leading-tight">Upcoming deadlines</h3>
+            </div>
+            <SectionLabel count={deadlineCount} tone="red">This month</SectionLabel>
+            {deadlineCount === 0 ? (
+              <EmptyState label="No deadlines coming up ✓" />
+            ) : (
+              <div className="space-y-2 flex-1">
+                {queue!.upcomingDeadlines.items.map((d, i) => {
+                  const urgent = d.daysLeft <= 7;
+                  const warn = !urgent && d.daysLeft <= 14;
+                  const pill = urgent
+                    ? 'bg-red-100 text-red-600'
+                    : warn
+                    ? 'bg-amber-100 text-amber-600'
+                    : 'bg-slate-100 text-slate-500';
+                  return (
+                    <Link
+                      key={`${d.studentId}-${d.school}-${i}`}
+                      href={`/educator/student/${d.studentId}`}
+                      className="flex items-center gap-2 p-3 rounded-xl bg-surface border border-slate-100 hover:border-red-200 transition-all"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-primary truncate">{d.school}</p>
+                        <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
+                          <span className="truncate">{d.studentName}</span>
+                          <span>&middot;</span>
+                          <span className="flex-shrink-0">{d.type}</span>
+                        </div>
+                      </div>
+                      <span className={`flex-shrink-0 px-2 py-1 rounded-lg text-[11px] font-bold ${pill}`}>
+                        {d.daysLeft}d
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* At-risk students */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex flex-col">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-9 h-9 rounded-lg bg-amber-500 flex items-center justify-center flex-shrink-0">
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M5.07 19h13.86a2 2 0 001.74-2.99l-6.93-12a2 2 0 00-3.48 0l-6.93 12A2 2 0 005.07 19z" /></svg>
+              </div>
+              <h3 className="text-base font-bold font-display text-primary leading-tight">Students who may need a nudge</h3>
+            </div>
+            <SectionLabel count={atRiskCount} tone="amber">At risk</SectionLabel>
+            {atRiskCount === 0 ? (
+              <EmptyState label="Everyone's active ✓" />
+            ) : (
+              <div className="space-y-2 flex-1">
+                {queue!.atRiskStudents.items.map((s) => (
+                  <Link
+                    key={s.studentId}
+                    href={`/educator/student/${s.studentId}`}
+                    className="block p-3 rounded-xl bg-surface border border-slate-100 hover:border-amber-200 transition-all"
+                  >
+                    <p className="text-sm font-semibold text-primary truncate">{s.studentName}</p>
+                    <p className="text-xs text-amber-600 mt-0.5 truncate">{s.reason}</p>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
+        {/* Key stats strip */}
+        <div>
+          <p className="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-3">Your numbers</p>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {stats.map((stat) => (
+              <Link
+                key={stat.label}
+                href={stat.href}
+                className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 dash-card-hover"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm text-slate-500 font-medium">{stat.label}</p>
+                  <div className={`w-8 h-8 rounded-lg ${stat.color} flex items-center justify-center opacity-80`}>
+                    {stat.icon === 'students' && (
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                    )}
+                    {stat.icon === 'today' && (
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    )}
+                    {stat.icon === 'revenue' && (
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                    )}
+                    {stat.icon === 'total' && (
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    )}
+                  </div>
+                </div>
+                <span className="text-2xl font-bold font-display text-primary">{stat.value}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* Upcoming sessions + quick actions */}
         <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
           {/* Upcoming Sessions */}
-          <div className="bg-white rounded-2xl border border-slate-100 p-6">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-blue-500 flex items-center justify-center">
@@ -184,7 +398,7 @@ export default function EducatorOverview() {
           </div>
 
           {/* Quick Actions */}
-          <div className="bg-white rounded-2xl border border-slate-100 p-6 dash-card-hover">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
             <div className="flex items-center gap-3 mb-5">
               <div className="w-9 h-9 rounded-lg bg-emerald-500 flex items-center justify-center">
                 <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
@@ -216,15 +430,15 @@ export default function EducatorOverview() {
                 </div>
                 <svg className="w-5 h-5 text-slate-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
               </Link>
-              <Link href="/educator/services" className="flex items-center gap-4 p-4 rounded-xl bg-surface border border-slate-100 hover:border-emerald-200 hover:shadow-md hover:shadow-emerald-500/5 hover:-translate-y-0.5 transition-all">
+              <Link href="/educator/essay-reviews" className="flex items-center gap-4 p-4 rounded-xl bg-surface border border-slate-100 hover:border-emerald-200 hover:shadow-md hover:shadow-emerald-500/5 hover:-translate-y-0.5 transition-all">
                 <div className="w-10 h-10 rounded-xl bg-purple-500 flex items-center justify-center flex-shrink-0 shadow-sm">
                   <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-primary">Manage Services</p>
-                  <p className="text-xs text-slate-500 mt-0.5">Create or edit your service packages</p>
+                  <p className="text-sm font-semibold text-primary">Review Essays</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Give feedback on student essays</p>
                 </div>
                 <svg className="w-5 h-5 text-slate-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
               </Link>

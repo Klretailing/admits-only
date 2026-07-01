@@ -86,6 +86,16 @@ const sidebarLinks = [
     ),
   },
   {
+    href: '/educator/billing',
+    label: 'Billing',
+    mobileLabel: 'Billing',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 10h18M7 15h.01M11 15h2M5 6h14a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z" />
+      </svg>
+    ),
+  },
+  {
     href: '/educator/settings',
     label: 'Settings',
     mobileLabel: 'Settings',

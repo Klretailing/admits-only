@@ -283,6 +283,14 @@ export async function ensureSchema() {
       );
     `);
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "educator_students_educatorId_idx" ON "educator_students"("educatorId");`);
+    // Invite / account-linking columns: turn the CRM roster into an acquisition funnel.
+    // inviteStatus: 'none' (added manually) | 'invited' (link sent) | 'active' (student signed up & linked)
+    await prisma.$executeRawUnsafe(`ALTER TABLE "educator_students" ADD COLUMN IF NOT EXISTS "inviteStatus" TEXT NOT NULL DEFAULT 'none';`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "educator_students" ADD COLUMN IF NOT EXISTS "inviteToken" TEXT;`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "educator_students" ADD COLUMN IF NOT EXISTS "invitedAt" TIMESTAMP(3);`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "educator_students" ADD COLUMN IF NOT EXISTS "linkedUserId" TEXT;`);
+    await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "educator_students_inviteToken_key" ON "educator_students"("inviteToken");`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "educator_students_linkedUserId_idx" ON "educator_students"("linkedUserId");`);
 
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "bookings" (
