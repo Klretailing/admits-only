@@ -18,6 +18,9 @@ interface Student {
   notes: StudentNote[];
   status: string;
   startDate: string;
+  inviteStatus?: string;
+  inviteToken?: string | null;
+  linkedUserId?: string | null;
   _count?: { bookings: number };
 }
 
@@ -39,6 +42,8 @@ export default function EducatorStudents() {
   const [noteText, setNoteText] = useState('');
   const [saving, setSaving] = useState(false);
   const [addError, setAddError] = useState('');
+  const [invitingId, setInvitingId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/login');
@@ -128,6 +133,44 @@ export default function EducatorStudents() {
       body: JSON.stringify({ status: newStatus }),
     });
     fetchStudents();
+  };
+
+  const inviteLink = (token?: string | null) =>
+    token && typeof window !== 'undefined' ? `${window.location.origin}/join/${token}` : '';
+
+  const handleInvite = async (studentId: string) => {
+    setInvitingId(studentId);
+    try {
+      const res = await fetch('/api/educator/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setStudents(prev => prev.map(s =>
+          s.id === studentId ? { ...s, inviteStatus: 'invited', inviteToken: data.token } : s
+        ));
+        // Copy link straight to clipboard for convenience
+        const link = inviteLink(data.token);
+        if (link && navigator.clipboard) {
+          try { await navigator.clipboard.writeText(link); setCopiedId(studentId); setTimeout(() => setCopiedId(null), 2000); } catch {}
+        }
+      }
+    } catch {
+      // no-op; keep it simple
+    }
+    setInvitingId(null);
+  };
+
+  const handleCopyLink = async (student: Student) => {
+    const link = inviteLink(student.inviteToken);
+    if (!link) return;
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopiedId(student.id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {}
   };
 
   const toggleTag = (tag: string) => {
@@ -234,9 +277,67 @@ export default function EducatorStudents() {
                     ))}
                   </div>
                 )}
-                <div className="flex items-center justify-between text-xs text-slate-400">
+                <div className="flex items-center justify-between text-xs text-slate-400 mb-3">
                   <span>{student.notes.length} note{student.notes.length !== 1 ? 's' : ''}</span>
                   <span>Since {new Date(student.startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
+                </div>
+
+                {/* Invite / platform state */}
+                <div className="pt-3 border-t border-slate-100" onClick={e => e.stopPropagation()}>
+                  {student.inviteStatus === 'active' ? (
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-emerald-100 text-emerald-700">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> On platform
+                      </span>
+                      <a
+                        href={`/educator/student/${student.id}`}
+                        className="text-xs font-semibold text-emerald-600 hover:text-emerald-700"
+                      >
+                        View workspace →
+                      </a>
+                    </div>
+                  ) : student.inviteStatus === 'invited' ? (
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-amber-100 text-amber-700">Invited</span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleCopyLink(student)}
+                          className="text-xs font-semibold text-slate-600 hover:text-slate-900"
+                        >
+                          {copiedId === student.id ? 'Copied!' : 'Copy link'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleInvite(student.id)}
+                          disabled={invitingId === student.id}
+                          className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 disabled:opacity-50"
+                        >
+                          Resend
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between gap-2">
+                      <a
+                        href={`/educator/student/${student.id}`}
+                        className="text-xs font-semibold text-slate-500 hover:text-slate-700"
+                      >
+                        View workspace →
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => handleInvite(student.id)}
+                        disabled={invitingId === student.id}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 text-white text-xs font-semibold hover:bg-emerald-600 transition-colors disabled:opacity-50"
+                      >
+                        {invitingId === student.id ? 'Inviting...' : 'Invite to AdmitsOnly'}
+                      </button>
+                    </div>
+                  )}
+                  {copiedId === student.id && student.inviteStatus === 'invited' && (
+                    <p className="mt-2 text-[10px] text-emerald-600 font-medium">Invited — link copied and ready to share</p>
+                  )}
                 </div>
               </div>
             ))}

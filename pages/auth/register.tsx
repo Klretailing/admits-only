@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -8,8 +8,25 @@ export default function Register() {
   const [form, setForm] = useState({ name: '', email: '', password: '', role: 'student' as 'student' | 'parent' | 'educator' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [inviteToken, setInviteToken] = useState('');
+  const [tutorName, setTutorName] = useState('');
 
   const update = (field: string, value: string) => setForm((prev) => ({ ...prev, [field]: value }));
+
+  // Read invite/email from the query and prefill for an invited student
+  useEffect(() => {
+    if (!router.isReady) return;
+    const invite = typeof router.query.invite === 'string' ? router.query.invite : '';
+    const email = typeof router.query.email === 'string' ? router.query.email : '';
+    if (invite) {
+      setInviteToken(invite);
+      setForm((prev) => ({ ...prev, role: 'student', email: email || prev.email }));
+      fetch(`/api/join/${invite}`)
+        .then(r => (r.ok ? r.json() : null))
+        .then(data => { if (data?.tutorName) setTutorName(data.tutorName); })
+        .catch(() => {});
+    }
+  }, [router.isReady, router.query.invite, router.query.email]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,7 +37,7 @@ export default function Register() {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify(inviteToken ? { ...form, inviteToken } : form),
       });
 
       const data = await res.json();
@@ -65,6 +82,13 @@ export default function Register() {
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-100 shadow-xl shadow-slate-200/50 p-8">
+            {inviteToken && (
+              <div className="mb-5 p-3 bg-emerald-50 border border-emerald-100 rounded-xl text-sm text-emerald-700 font-medium">
+                {tutorName
+                  ? `You're joining ${tutorName}'s student roster`
+                  : "You're joining your tutor's student roster"}
+              </div>
+            )}
             {error && (
               <div className="mb-5 p-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600">
                 {error}
