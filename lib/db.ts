@@ -628,6 +628,48 @@ export async function ensureSchema() {
     `);
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "parent_action_items_userId_idx" ON "parent_action_items"("userId");`);
 
+    // Family financial plan — one row per parent per connected student.
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "parent_financial_plan" (
+        "id"            TEXT NOT NULL,
+        "userId"        TEXT NOT NULL,
+        "studentId"     TEXT,
+        "annualBudget"  DOUBLE PRECISION NOT NULL DEFAULT 0,
+        "savings"       DOUBLE PRECISION NOT NULL DEFAULT 0,
+        "estimatedEFC"  DOUBLE PRECISION,
+        "incomeBracket" TEXT,
+        "notes"         TEXT NOT NULL DEFAULT '',
+        "createdAt"     TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt"     TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "parent_financial_plan_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "parent_financial_plan_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "parent_financial_plan_userId_idx" ON "parent_financial_plan"("userId");`);
+    // Per-school net-cost overrides the parent enters as real award letters arrive (jsonb map schoolName -> netCost).
+    await prisma.$executeRawUnsafe(`ALTER TABLE "parent_financial_plan" ADD COLUMN IF NOT EXISTS "netCostOverrides" JSONB NOT NULL DEFAULT '{}';`);
+
+    // Scholarships / grants the parent is tracking toward the college bill.
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "parent_scholarships" (
+        "id"         TEXT NOT NULL,
+        "userId"     TEXT NOT NULL,
+        "studentId"  TEXT,
+        "name"       TEXT NOT NULL,
+        "amount"     DOUBLE PRECISION NOT NULL DEFAULT 0,
+        "type"       TEXT NOT NULL DEFAULT 'scholarship',
+        "status"     TEXT NOT NULL DEFAULT 'potential',
+        "schoolName" TEXT,
+        "deadline"   TEXT,
+        "notes"      TEXT NOT NULL DEFAULT '',
+        "createdAt"  TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt"  TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "parent_scholarships_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "parent_scholarships_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "parent_scholarships_userId_idx" ON "parent_scholarships"("userId");`);
+
     globalForPrisma.schemaReady = true;
   } catch (e) {
     // Tables likely already exist — mark as ready

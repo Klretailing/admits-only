@@ -7,24 +7,41 @@ import ParentLayout from '../../components/ParentLayout';
 interface ParentTask {
   id: string;
   label: string;
-  category: 'financial' | 'visit' | 'discussion' | 'custom';
+  category: string;
   schoolName?: string;
   done: boolean;
   dueDate?: string;
 }
 
+interface Suggestion {
+  label: string;
+  category: string;
+  schoolName?: string | null;
+  dueDate?: string | null;
+}
+
 const CATEGORY_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  financial: { label: 'Financial Aid', color: 'text-emerald-600', bg: 'bg-emerald-50' },
+  financial: { label: 'Financial', color: 'text-teal-600', bg: 'bg-teal-50' },
+  deadline: { label: 'Deadline', color: 'text-amber-600', bg: 'bg-amber-50' },
+  deposit: { label: 'Deposit', color: 'text-red-600', bg: 'bg-red-50' },
+  planning: { label: 'Planning', color: 'text-slate-600', bg: 'bg-slate-100' },
   visit: { label: 'Campus Visit', color: 'text-blue-600', bg: 'bg-blue-50' },
   discussion: { label: 'Discussion', color: 'text-purple-600', bg: 'bg-purple-50' },
   custom: { label: 'Custom', color: 'text-slate-600', bg: 'bg-slate-50' },
 };
 
-function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
-
-interface AppData {
-  id: string; name: string; deadline: string; type: string; status: string;
+function catConfig(category: string) {
+  return CATEGORY_CONFIG[category] || CATEGORY_CONFIG.custom;
 }
+
+function fmtDue(v?: string | null) {
+  if (!v) return '';
+  const d = new Date(v);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 
 export default function ParentActionItems() {
   const { data: session, status } = useSession();
@@ -32,7 +49,7 @@ export default function ParentActionItems() {
   useEffect(() => { if (status === 'unauthenticated') router.push('/auth/login'); }, [status, router]);
 
   const [tasks, setTasks] = useState<ParentTask[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [studentName, setStudentName] = useState('');
   const [connected, setConnected] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
@@ -43,38 +60,14 @@ export default function ParentActionItems() {
     Promise.all([
       fetch('/api/parent/overview').then(r => r.json()),
       fetch('/api/parent/action-items').then(r => r.json()),
-    ]).then(([overviewData, actionData]) => {
+      fetch('/api/parent/action-items?action=suggestions').then(r => r.json()),
+    ]).then(([overviewData, actionData, suggData]) => {
       setConnected(overviewData.connected);
       if (overviewData.students?.length) {
-        const student = overviewData.students[0];
-        setStudentName(student.name);
-
-        if (actionData.items && actionData.items.length > 0) {
-          setTasks(actionData.items);
-          setLoaded(true);
-        } else {
-          const apps: AppData[] = student.applications || [];
-          const generated: ParentTask[] = [];
-          generated.push({ id: genId(), label: 'Complete FAFSA application', category: 'financial', done: false });
-          generated.push({ id: genId(), label: `Discuss school preferences with ${student.name}`, category: 'discussion', done: false });
-          generated.push({ id: genId(), label: 'Review and compare financial aid award letters', category: 'financial', done: false });
-          generated.push({ id: genId(), label: 'Create a college visit schedule', category: 'visit', done: false });
-          apps.forEach((app: AppData) => {
-            generated.push({ id: genId(), label: `Submit CSS Profile for ${app.name}`, category: 'financial', schoolName: app.name, done: false, dueDate: app.deadline });
-            generated.push({ id: genId(), label: `Schedule campus visit to ${app.name}`, category: 'visit', schoolName: app.name, done: false });
-          });
-          generated.push({ id: genId(), label: 'Compare net costs across all schools', category: 'financial', done: false });
-          generated.push({ id: genId(), label: `Discuss safety/match/reach balance with ${student.name}`, category: 'discussion', done: false });
-
-          setTasks(generated);
-          fetch('/api/parent/action-items', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ items: generated }),
-          }).catch(() => {});
-          setLoaded(true);
-        }
+        setStudentName(overviewData.students[0].name);
       }
+      if (Array.isArray(actionData.items)) setTasks(actionData.items);
+      if (Array.isArray(suggData?.suggestions)) setSuggestions(suggData.suggestions);
     }).catch(() => {}).finally(() => setLoading(false));
   }, [status]);
 
@@ -108,6 +101,38 @@ export default function ParentActionItems() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ label: newTask.label, category: 'custom' }),
+    }).catch(() => {});
+  };
+
+  const suggestionToTask = (s: Suggestion): ParentTask => ({
+    id: genId(),
+    label: s.label,
+    category: s.category,
+    schoolName: s.schoolName || undefined,
+    done: false,
+    dueDate: s.dueDate || undefined,
+  });
+
+  const addSuggestion = (s: Suggestion) => {
+    const newTask = suggestionToTask(s);
+    setTasks(prev => [...prev, newTask]);
+    setSuggestions(prev => prev.filter(x => x.label !== s.label));
+    fetch('/api/parent/action-items', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: [newTask] }),
+    }).catch(() => {});
+  };
+
+  const addAllSuggestions = () => {
+    if (suggestions.length === 0) return;
+    const newTasks = suggestions.map(suggestionToTask);
+    setTasks(prev => [...prev, ...newTasks]);
+    setSuggestions([]);
+    fetch('/api/parent/action-items', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: newTasks }),
     }).catch(() => {});
   };
 
@@ -168,7 +193,7 @@ export default function ParentActionItems() {
   }
 
   const TaskRow = ({ task }: { task: ParentTask }) => {
-    const cat = CATEGORY_CONFIG[task.category];
+    const cat = catConfig(task.category);
     return (
       <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors group">
         <button onClick={() => toggleTask(task.id)} className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 border-2 transition-all ${
@@ -233,6 +258,44 @@ export default function ParentActionItems() {
             </button>
           </div>
         </div>
+
+        {/* Suggested for you */}
+        {suggestions.length > 0 && (
+          <div className="bg-white rounded-2xl border border-slate-100 p-5">
+            <div className="flex items-center justify-between gap-3 mb-1">
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-teal-500" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>
+                <h3 className="text-xs font-bold text-teal-600 uppercase tracking-wider">Suggested for you</h3>
+              </div>
+              <button onClick={addAllSuggestions} className="text-xs font-semibold text-teal-600 hover:text-teal-700 shrink-0">
+                Add all
+              </button>
+            </div>
+            <p className="text-xs text-slate-400 mb-3">Based on {studentName ? `${studentName}'s` : 'your student’s'} applications and deadlines</p>
+            <div className="space-y-2">
+              {suggestions.map((s, i) => {
+                const cat = catConfig(s.category);
+                const due = fmtDue(s.dueDate);
+                return (
+                  <div key={`${s.label}-${i}`} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50/60">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-primary font-medium">{s.label}</p>
+                      {(s.schoolName || due) && (
+                        <p className="text-[10px] text-slate-400 mt-0.5">
+                          {s.schoolName}{s.schoolName && due ? ' · ' : ''}{due ? `Due ${due}` : ''}
+                        </p>
+                      )}
+                    </div>
+                    <span className={`px-2 py-1 rounded-lg text-[10px] font-bold shrink-0 ${cat.bg} ${cat.color}`}>{cat.label}</span>
+                    <button onClick={() => addSuggestion(s)} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-teal-500 hover:bg-teal-600 transition-colors shrink-0">
+                      Add
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Urgent */}
         {sections.urgent.length > 0 && (
