@@ -3465,8 +3465,8 @@ export default function Essays() {
                 <h4 className="text-sm font-bold text-primary mb-1">Start your first essay</h4>
                 <p className="text-xs text-slate-400 max-w-[200px] mx-auto mb-4">Personal statements can make or break your application. Our AI scores your writing in real time.</p>
                 <button
-                  onClick={createEssay}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-accent rounded-lg hover:bg-accent/90 transition-colors shadow-sm shadow-accent/20"
+                  onClick={() => setShowNewForm(true)}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-accent rounded-lg hover:bg-accent/90 transition-colors shadow-sm"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
                   Create Essay
