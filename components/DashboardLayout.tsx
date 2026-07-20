@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { signOut, useSession } from 'next-auth/react';
 import { useState, type ReactNode } from 'react';
-import HelpChatbot from './HelpChatbot';
+import { AdamPanel, AdamNavButton, AdamFloatingButton } from './AdamAssistant';
 import { useTheme } from '../lib/themeContext';
 import { tracker } from '../lib/analytics';
 
@@ -107,6 +107,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const isAdmin = (session?.user as any)?.role === 'admin';
   const isSubPage = router.pathname !== '/dashboard';
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [adamOpen, setAdamOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
 
   const currentLabel = sidebarLinks.find((l) => l.href === router.pathname)?.label || 'Dashboard';
@@ -149,6 +150,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               </Link>
             );
           })}
+
+          {/* Adam — pinned assistant launcher (intentionally orange) */}
+          <div className="pt-2 mt-2 border-t border-slate-100">
+            <AdamNavButton onClick={() => setAdamOpen((v) => !v)} active={adamOpen} />
+          </div>
         </nav>
 
         <div className="p-4 border-t border-slate-100">
@@ -226,6 +232,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   </Link>
                 );
               })}
+
+              {/* Adam — pinned assistant launcher (intentionally orange) */}
+              <div className="pt-2 mt-2 border-t border-slate-100">
+                <AdamNavButton
+                  onClick={() => { setMobileMenuOpen(false); setAdamOpen(true); }}
+                  active={adamOpen}
+                />
+              </div>
             </nav>
             <div className="p-4 border-t border-slate-100">
               <div className="flex items-center gap-3 px-4 py-3 mb-2">
@@ -357,8 +371,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </div>
       </nav>
 
-      {/* Help chatbot */}
-      <HelpChatbot />
+      {/* Adam — AI admissions assistant (mobile floating launcher + docked panel) */}
+      {!adamOpen && <AdamFloatingButton onClick={() => setAdamOpen(true)} />}
+      <AdamPanel open={adamOpen} onClose={() => setAdamOpen(false)} />
     </div>
   );
 }
