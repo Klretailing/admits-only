@@ -14,7 +14,7 @@ import { ADAM_PERSONA, ADAM_KNOWLEDGE } from '../../../lib/adamKnowledge';
 // so the cache stays warm across requests. Only the last block (the student's
 // synthesis + live data) changes per turn, and it is NOT cached.
 
-const ADAM_MODEL = process.env.ADAM_MODEL || 'claude-opus-4-8';
+const ADAM_MODEL = process.env.ADAM_MODEL || 'claude-haiku-4-5';
 const ADAM_MEMORY_MODEL = process.env.ADAM_MEMORY_MODEL || 'claude-haiku-4-5';
 
 const HISTORY_LIMIT = 20; // prior turns fed to the model
