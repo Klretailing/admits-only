@@ -8,6 +8,7 @@ import { analyzeSentences, computeStats, type AnalyzedSentence, type AnalysisSta
 import { checkGrammar, applyFix, type GrammarIssue } from '../../lib/grammarCheck';
 import { analyzeEssayInsights, type EssayInsights } from '../../lib/essayInsights';
 import { tracker } from '../../lib/analytics';
+import { analyzeActivities } from '../../lib/motifEngine';
 
 /* ══════════════════════════════════════════════════════════════════════
    TYPES
@@ -1464,41 +1465,197 @@ function generateMotifNarrative(bullets: MotifBullet[], themes: string[], connec
 /* ─── Full Analysis Pipeline (follows the 7-step model) ─── */
 
 function analyzeMotifs(rawBullets: string[]): MotifAnalysis {
-  // Step 1: Deep analysis of each bullet
-  const bullets: MotifBullet[] = rawBullets
-    .filter(t => t.trim().length > 0)
-    .map((text, i) => {
-      const trimmed = text.trim();
-      return {
-        id: `b_${i}`,
-        text: trimmed,
-        themes: detectThemes(trimmed),
-        domains: detectDomains(trimmed),
-        keywords: extractMotifKeywords(trimmed),
-        analysis: analyzeBulletDeeply(trimmed),
+  // The motif engine (lib/motifEngine.ts) drives CONNECTIONS + GROUPING; the
+  // existing per-bullet analyzers + presentation helpers below stay in charge of
+  // the per-card display and narrative/structure copy. Engine indices refer to
+  // the engine's FILTERED activity list, so we align bullet ids to those.
+  const engine = analyzeActivities(rawBullets);
+  const idOf = (i: number) => `b_${i}`;
+
+  // Build bullets aligned to engine indices (reuse existing deep analyzers).
+  const bullets: MotifBullet[] = engine.activities.map((act) => ({
+    id: idOf(act.index),
+    text: act.text,
+    themes: detectThemes(act.text),
+    domains: detectDomains(act.text),
+    keywords: extractMotifKeywords(act.text),
+    analysis: analyzeBulletDeeply(act.text),
+  }));
+  const bulletById: Record<string, MotifBullet> = {};
+  for (let i = 0; i < bullets.length; i++) bulletById[bullets[i].id] = bullets[i];
+
+  // Map engine connections -> MotifConnection[] (engine already sorts strongest-first).
+  const mappedConnections: MotifConnection[] = engine.connections.map((c) => {
+    const conn: MotifConnection = {
+      fromId: idOf(c.a),
+      toId: idOf(c.b),
+      strength: c.strength,
+      label: c.explanation,
+      type: c.kind === 'obvious' ? 'shared_domain' : 'deep_bridge',
+    };
+    // Hidden connections get a concept bridge so narrative/structure generators
+    // light up the "hidden thread" pathways.
+    if (c.kind === 'hidden') {
+      conn.bridge = { type: 'shared_craft', label: c.explanation };
+    }
+    return conn;
+  });
+
+  // Score a lens against a set of bullets using the same weighting the old
+  // generateCandidateMotifs used (themeMatch*2 + valueMatch*1.5 + tensionMatch*2 + imageryMatch*1).
+  const scoreLens = (lens: (typeof MOTIF_LENSES)[number], members: MotifBullet[]): number => {
+    let score = 0;
+    for (let bi = 0; bi < members.length; bi++) {
+      const b = members[bi];
+      const themeMatch = b.themes.filter(t => lens.matchThemes.includes(t)).length;
+      const valMatch = b.analysis.values.filter(v => lens.matchValues.includes(v)).length;
+      const tensionMatch = b.analysis.tensions.filter(t => lens.matchTensions.includes(t)).length;
+      let imgMatch = 0;
+      if (lens.matchImagery.length > 0) {
+        imgMatch = b.analysis.imagery.filter(im => lens.matchImagery.includes(im)).length;
+      }
+      score += themeMatch * 2 + valMatch * 1.5 + tensionMatch * 2 + imgMatch * 1;
+    }
+    return score;
+  };
+
+  // Map engine clusters -> MotifGroup[] (cap at 6). Compute naming once per
+  // cluster and reuse it for the candidateMotifs list below.
+  const clusters = engine.clusters.slice(0, 6);
+  const clusterNaming: { name: string; description: string; insight: string; symbolImage: string }[] = [];
+  const motifs: MotifGroup[] = clusters.map((cluster, idx) => {
+    const bulletIds = cluster.memberIndices.map(idOf);
+    const memberBullets = bulletIds.map(id => bulletById[id]).filter(Boolean);
+    const internalConns = mappedConnections.filter(cn =>
+      bulletIds.includes(cn.fromId) && bulletIds.includes(cn.toId)
+    );
+
+    // Dominant themes: frequency-rank across members, top 2.
+    const themeCount: Record<string, number> = {};
+    for (let mi = 0; mi < memberBullets.length; mi++) {
+      const ts = memberBullets[mi].themes;
+      for (let t = 0; t < ts.length; t++) themeCount[ts[t]] = (themeCount[ts[t]] || 0) + 1;
+    }
+    const dominantThemes = Object.entries(themeCount)
+      .sort((a, b) => b[1] - a[1])
+      .map(([t]) => t)
+      .slice(0, 2);
+
+    // Naming/presentation via best-fitting lens; fall back to the engine cluster.
+    let bestLens: (typeof MOTIF_LENSES)[number] | null = null;
+    let bestScore = 0;
+    for (let li = 0; li < MOTIF_LENSES.length; li++) {
+      const s = scoreLens(MOTIF_LENSES[li], memberBullets);
+      if (s > bestScore) { bestScore = s; bestLens = MOTIF_LENSES[li]; }
+    }
+
+    let naming: { name: string; description: string; insight: string; symbolImage: string };
+    if (bestLens && bestScore >= 3) {
+      naming = {
+        name: bestLens.name,
+        description: bestLens.description,
+        insight: bestLens.insightTemplate(memberBullets),
+        symbolImage: bestLens.symbolImage,
       };
+    } else {
+      const strongestInternal = internalConns.slice().sort((a, b) => b.strength - a.strength)[0];
+      naming = {
+        name: cluster.label,
+        description: 'Connected through ' + cluster.dominantConcepts.slice(0, 3).join(', ').replace(/_/g, ' '),
+        insight: strongestInternal
+          ? strongestInternal.label
+          : 'These experiences quietly circle the same center — worth naming in an essay.',
+        symbolImage: 'A set of distinct experiences orbiting one shared center of gravity.',
+      };
+    }
+    clusterNaming.push(naming);
+
+    const narrative = generateMotifNarrative(memberBullets, dominantThemes, internalConns);
+    const suggestedStructure = generateEssayStructure(memberBullets, internalConns, dominantThemes);
+    const weakConnections = flagWeakConnections(
+      {
+        name: naming.name,
+        description: naming.description,
+        bulletIds,
+        insight: naming.insight,
+        symbolImage: naming.symbolImage,
+      } as CandidateMotif,
+      memberBullets,
+      internalConns,
+      dominantThemes
+    );
+
+    // Central tension: top tension by frequency across members.
+    const tensionCount: Record<string, number> = {};
+    for (let mi = 0; mi < memberBullets.length; mi++) {
+      const tns = memberBullets[mi].analysis.tensions;
+      for (let t = 0; t < tns.length; t++) tensionCount[tns[t]] = (tensionCount[tns[t]] || 0) + 1;
+    }
+    const centralTension = Object.entries(tensionCount).sort((a, b) => b[1] - a[1])[0]?.[0];
+
+    return {
+      id: `motif_${idx}`,
+      name: naming.name,
+      narrative,
+      bulletIds,
+      dominantThemes,
+      colorIdx: idx % 6,
+      centralTension,
+      suggestedStructure,
+      weakConnections,
+    };
+  });
+
+  // candidateMotifs: one per cluster (reusing computed naming) ...
+  const candidateMotifs: CandidateMotif[] = clusters.map((cluster, idx) => ({
+    name: clusterNaming[idx].name,
+    description: clusterNaming[idx].description,
+    bulletIds: cluster.memberIndices.map(idOf),
+    insight: clusterNaming[idx].insight,
+    symbolImage: clusterNaming[idx].symbolImage,
+  }));
+
+  // ... then up to 3 strong HIDDEN bridges whose pair isn't already inside one cluster.
+  const pairInSameCluster = (aId: string, bId: string): boolean => {
+    for (let ci = 0; ci < clusters.length; ci++) {
+      const ids = clusters[ci].memberIndices.map(idOf);
+      if (ids.includes(aId) && ids.includes(bId)) return true;
+    }
+    return false;
+  };
+  let hiddenAdded = 0;
+  for (let ci = 0; ci < engine.connections.length && hiddenAdded < 3 && candidateMotifs.length < 10; ci++) {
+    const c = engine.connections[ci];
+    if (c.kind !== 'hidden' || c.strength < 0.3) continue;
+    const aId = idOf(c.a);
+    const bId = idOf(c.b);
+    if (pairInSameCluster(aId, bId)) continue;
+    candidateMotifs.push({
+      name: 'A Hidden Thread',
+      description: c.explanation,
+      bulletIds: [aId, bId],
+      insight: c.explanation,
+      symbolImage: 'An unexpected line drawn between two very different worlds.',
     });
+    hiddenAdded++;
+  }
+  if (candidateMotifs.length > 10) candidateMotifs.length = 10;
 
-  // Find all connections with bridge mechanisms
-  const connections = findMotifConnections(bullets);
-
-  // Step 2: Generate 6-10 candidate motifs
-  const candidateMotifs = generateCandidateMotifs(bullets, connections);
-
-  // Step 3: Select strongest 2-4 non-overlapping motifs
-  const { selected: motifs, reasoning } = selectStrongestMotifs(candidateMotifs, bullets, connections);
-
-  // Determine orphans (bullets not in any selected motif)
-  const assignedIds = new Set(motifs.flatMap(m => m.bulletIds));
-  const orphanIds = bullets.filter(b => !assignedIds.has(b.id)).map(b => b.id);
+  // Orphans: any bullet not placed in a selected motif.
+  const assignedIds: Record<string, boolean> = {};
+  for (let mi = 0; mi < motifs.length; mi++) {
+    const ids = motifs[mi].bulletIds;
+    for (let bi = 0; bi < ids.length; bi++) assignedIds[ids[bi]] = true;
+  }
+  const orphanIds = bullets.filter(b => !assignedIds[b.id]).map(b => b.id);
 
   return {
     bullets,
-    connections,
+    connections: mappedConnections,
     motifs,
     orphanIds,
     candidateMotifs,
-    bridges: connections.filter(c => c.bridge),
+    bridges: mappedConnections.filter(c => c.bridge),
   };
 }
 
