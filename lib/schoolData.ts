@@ -1263,7 +1263,7 @@ export function generateSmartTimeline(
     if (daysUntil < -30) continue; // skip very old deadlines
 
     // Generate smart tasks based on days remaining
-    const incompleteTasks = school.tasks.filter(t => !t.done);
+    const incompleteTasks = (school.tasks || []).filter(t => !t.done);
 
     for (const task of incompleteTasks) {
       let category: DeadlineTask['category'] = 'form';
@@ -1346,8 +1346,8 @@ export function generateWeeklyDigest(
   timeline: DeadlineTask[],
   schools: { status: string; tasks: { done: boolean }[] }[]
 ): WeeklyDigest {
-  const totalTasks = schools.reduce((s, sch) => s + sch.tasks.length, 0);
-  const doneTasks = schools.reduce((s, sch) => s + sch.tasks.filter(t => t.done).length, 0);
+  const totalTasks = schools.reduce((s, sch) => s + (sch.tasks || []).length, 0);
+  const doneTasks = schools.reduce((s, sch) => s + (sch.tasks || []).filter(t => t.done).length, 0);
 
   return {
     critical: timeline.filter(t => t.priority === 'critical'),
