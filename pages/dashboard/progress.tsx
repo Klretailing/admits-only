@@ -112,8 +112,41 @@ function getDaysUntil(deadline: string): number | null {
 }
 
 function getTaskCompletion(tasks: ApplicationTask[]): number {
-  if (tasks.length === 0) return 0;
+  if (!tasks || tasks.length === 0) return 0;
   return Math.round((tasks.filter(t => t.done).length / tasks.length) * 100);
+}
+
+/* Coerce any stored/foreign application object into a safe CollegeApp.
+   Other features (e.g. the Admissions Map) write into the same store, and
+   legacy entries may lack fields — this guarantees the shape so the page
+   never crashes on imperfect data. */
+const TYPE_ALIASES: Record<string, CollegeApp['type']> = {
+  'Regular Decision': 'RD', 'Early Action': 'EA', 'Early Decision': 'ED',
+  'Early Decision 2': 'ED2', 'Restrictive Early Action': 'REA', 'Rolling Admission': 'Rolling',
+};
+const STATUS_ALIASES: Record<string, CollegeApp['status']> = {
+  researching: 'not_started', planning: 'not_started', applying: 'in_progress', in_review: 'in_progress',
+};
+function normalizeApp(raw: any): CollegeApp {
+  const type = TYPE_ALIASES[raw?.type] || (APP_TYPES.includes(raw?.type) ? raw.type : 'RD');
+  const validStatuses = STATUS_OPTIONS.map(o => o.value);
+  const status = STATUS_ALIASES[raw?.status] || (validStatuses.includes(raw?.status) ? raw.status : 'not_started');
+  const rawTasks = Array.isArray(raw?.tasks) ? raw.tasks : [];
+  return {
+    id: raw?.id || generateId(),
+    name: (raw?.name || 'Untitled').toString(),
+    deadline: raw?.deadline || '',
+    type,
+    status,
+    priority: raw?.priority || '',
+    notes: raw?.notes || '',
+    tasks: rawTasks.filter(Boolean).map((t: any) => ({
+      id: t?.id || generateId(),
+      label: (t?.label || '').toString(),
+      done: !!t?.done,
+      category: t?.category || inferTaskCategory(t?.label || ''),
+    })),
+  };
 }
 
 function inferTaskCategory(label: string): TaskCategory {
@@ -247,15 +280,9 @@ export default function Applications() {
         merged = localApps;
       }
 
-      // Backward compatibility: ensure tasks have categories, apps have priority
-      merged = merged.map(app => ({
-        ...app,
-        priority: app.priority || '',
-        tasks: app.tasks.map(t => ({
-          ...t,
-          category: t.category || inferTaskCategory(t.label),
-        })),
-      }));
+      // Normalize every entry into a safe shape (guards against legacy/foreign
+      // records written by other features that may lack tasks/priority/etc.)
+      merged = (Array.isArray(merged) ? merged : []).filter(Boolean).map(normalizeApp);
 
       setApps(merged);
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(merged)); } catch {}
@@ -276,7 +303,10 @@ export default function Applications() {
   useEffect(() => {
     function onStorage(e: StorageEvent) {
       if (e.key !== STORAGE_KEY || !e.newValue) return;
-      try { setApps(JSON.parse(e.newValue)); } catch {}
+      try {
+        const parsed = JSON.parse(e.newValue);
+        if (Array.isArray(parsed)) setApps(parsed.filter(Boolean).map(normalizeApp));
+      } catch {}
     }
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);

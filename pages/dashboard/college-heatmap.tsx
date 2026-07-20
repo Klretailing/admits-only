@@ -1150,14 +1150,16 @@ export default function CollegeHeatmapPage() {
         id: `app_${Date.now()}`,
         name: college.name,
         deadline: '',
-        type: 'Regular Decision',
-        status: 'researching',
+        type: 'RD',
+        status: 'not_started',
+        priority: '',
+        notes: '',
         tasks: [
-          { id: `t1_${Date.now()}`, label: 'Research program requirements', done: false },
-          { id: `t2_${Date.now()}`, label: 'Write main essay', done: false },
-          { id: `t3_${Date.now()}`, label: 'Complete supplemental essays', done: false },
-          { id: `t4_${Date.now()}`, label: 'Request recommendation letters', done: false },
-          { id: `t5_${Date.now()}`, label: 'Submit application', done: false },
+          { id: `t1_${Date.now()}`, label: 'Research program requirements', done: false, category: 'misc' },
+          { id: `t2_${Date.now()}`, label: 'Write main essay', done: false, category: 'essays' },
+          { id: `t3_${Date.now()}`, label: 'Complete supplemental essays', done: false, category: 'essays' },
+          { id: `t4_${Date.now()}`, label: 'Request recommendation letters', done: false, category: 'recommendations' },
+          { id: `t5_${Date.now()}`, label: 'Submit application', done: false, category: 'misc' },
         ],
       });
       localStorage.setItem('admitsonly_applications', JSON.stringify(apps));
