@@ -670,6 +670,35 @@ export async function ensureSchema() {
     `);
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "parent_scholarships_userId_idx" ON "parent_scholarships"("userId");`);
 
+    // Adam (AI assistant) persistent memory — the "learns and grows" synthesis per student.
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "adam_memory" (
+        "userId"              TEXT NOT NULL,
+        "synthesis"           TEXT NOT NULL DEFAULT '',
+        "facts"               JSONB NOT NULL DEFAULT '[]',
+        "turnsSinceSynthesis" INTEGER NOT NULL DEFAULT 0,
+        "totalTurns"          INTEGER NOT NULL DEFAULT 0,
+        "createdAt"           TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt"           TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "adam_memory_pkey" PRIMARY KEY ("userId"),
+        CONSTRAINT "adam_memory_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+
+    // Adam conversation history — persisted so continuity survives across sessions.
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "adam_messages" (
+        "id"        TEXT NOT NULL,
+        "userId"    TEXT NOT NULL,
+        "role"      TEXT NOT NULL,
+        "content"   TEXT NOT NULL,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "adam_messages_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "adam_messages_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "adam_messages_userId_idx" ON "adam_messages"("userId", "createdAt");`);
+
     globalForPrisma.schemaReady = true;
   } catch (e) {
     // Tables likely already exist — mark as ready
