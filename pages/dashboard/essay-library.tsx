@@ -44,6 +44,8 @@ export default function EssaySamples() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [showAll, setShowAll] = useState<Record<string, boolean>>({});
+  const PAGE = 24; // cap rendered cards per bucket to keep the DOM light
 
   const [selected, setSelected] = useState<FullEssay | null>(null);
   const [loadingDoc, setLoadingDoc] = useState(false);
@@ -164,25 +166,39 @@ export default function EssaySamples() {
                     <svg className={`w-5 h-5 text-slate-300 flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                   </button>
 
-                  {/* Accordion body */}
-                  {open && (
-                    <div className="px-3 pb-3 grid gap-2 sm:grid-cols-2">
-                      {bucket.essays.map((e) => (
-                        <button
-                          key={e.id}
-                          onClick={() => openEssay(e.id)}
-                          className="text-left bg-white rounded-xl border border-slate-100 p-4 hover:border-accent/30 hover:shadow-sm transition-all group"
-                        >
-                          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${typeColor(e.essayType)}`}>{e.essayType}</span>
-                            <span className="text-[10px] text-slate-300 font-medium ml-auto">{e.wordCount} words</span>
-                          </div>
-                          {e.promptLabel && <h4 className="text-xs font-bold text-primary group-hover:text-accent transition-colors line-clamp-1">{e.promptLabel}</h4>}
-                          <p className="text-[11px] text-slate-400 mt-1 line-clamp-3 leading-relaxed">{e.preview}</p>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  {/* Accordion body — cap rendered cards to keep the DOM light on big buckets */}
+                  {open && (() => {
+                    const all = showAll[bucket.schoolSlug] || search.trim();
+                    const visible = all ? bucket.essays : bucket.essays.slice(0, PAGE);
+                    return (
+                      <div className="px-3 pb-3">
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {visible.map((e) => (
+                            <button
+                              key={e.id}
+                              onClick={() => openEssay(e.id)}
+                              className="text-left bg-white rounded-xl border border-slate-100 p-4 hover:border-accent/30 hover:shadow-sm transition-all group"
+                            >
+                              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${typeColor(e.essayType)}`}>{e.essayType}</span>
+                                <span className="text-[10px] text-slate-300 font-medium ml-auto">{e.wordCount} words</span>
+                              </div>
+                              {e.promptLabel && <h4 className="text-xs font-bold text-primary group-hover:text-accent transition-colors line-clamp-1">{e.promptLabel}</h4>}
+                              <p className="text-[11px] text-slate-400 mt-1 line-clamp-3 leading-relaxed">{e.preview}</p>
+                            </button>
+                          ))}
+                        </div>
+                        {!all && bucket.essays.length > PAGE && (
+                          <button
+                            onClick={() => setShowAll((p) => ({ ...p, [bucket.schoolSlug]: true }))}
+                            className="mt-3 w-full py-2 text-xs font-semibold text-accent hover:bg-accent/5 rounded-lg transition-colors"
+                          >
+                            Show all {bucket.essays.length} essays
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               );
             })}

@@ -1,29 +1,31 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import fs from 'fs';
-import path from 'path';
+import sampleData from '../../data/sampleEssays.json';
 
 /* ──────────────────────────────────────────────────────────────────────
    SAMPLE ESSAYS API
-   Serves the curated, anonymized library of successful admissions essays.
+   Serves the curated, anonymized library of admissions essays.
 
-   Performance model: the full essay text lives ONLY server-side in
-   data/sampleEssays.json and is never shipped in the client bundle.
+   Performance model:
+   - The full essay text is imported at build time (server bundle only — it is
+     NEVER shipped in the client page bundle) and the per-school INDEX is
+     precomputed ONCE at module load, so requests do no per-call work.
    - GET (no id)  → lightweight index: metadata + short preview per essay,
                     grouped into per-school buckets. Small payload.
-   - GET ?id=xxx  → the full text of a single essay, fetched on demand when
-                    a reader opens it.
-   View-only: there is no download endpoint.
+   - GET ?id=xxx  → the full text of a single essay (O(1) map lookup), fetched
+                    on demand when a reader opens it.
+   View-only: there is no download endpoint. Responses are CDN-cacheable since
+   the data is static.
    ────────────────────────────────────────────────────────────────────── */
 
 interface SampleEssay {
   id: string;
-  school: string;        // school the essay was written for (or "Common Application" / "University of California")
+  school: string;
   schoolSlug: string;
-  essayType: string;     // "Personal Statement" | "UC Personal Insight" | "Supplemental Essay" | ...
-  promptLabel: string;   // short human label
-  prompt: string;        // full prompt text
+  essayType: string;
+  promptLabel: string;
+  prompt: string;
   wordCount: number;
-  essay: string;         // full anonymized text (server-only)
+  essay: string;
 }
 
 interface EssayMeta {
@@ -44,46 +46,23 @@ interface SchoolBucket {
   essays: EssayMeta[];
 }
 
-let cache: { essays: SampleEssay[] } | null = null;
-
-function load(): SampleEssay[] {
-  if (cache) return cache.essays;
-  try {
-    const file = path.join(process.cwd(), 'data', 'sampleEssays.json');
-    const raw = fs.readFileSync(file, 'utf8');
-    const parsed = JSON.parse(raw);
-    const essays: SampleEssay[] = Array.isArray(parsed?.essays) ? parsed.essays : [];
-    cache = { essays };
-    return essays;
-  } catch {
-    return [];
-  }
-}
-
 function preview(text: string, n = 180): string {
   const clean = (text || '').replace(/\s+/g, ' ').trim();
   return clean.length > n ? clean.slice(0, n).trimEnd() + '…' : clean;
 }
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', ['GET']);
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+/* ─── Precompute once at module load (data is static) ─── */
+const ESSAYS: SampleEssay[] = ((sampleData as { essays?: SampleEssay[] }).essays) || [];
 
-  const essays = load();
-  const { id } = req.query;
+const BY_ID: Map<string, SampleEssay> = (() => {
+  const m = new Map<string, SampleEssay>();
+  for (const e of ESSAYS) m.set(e.id, e);
+  return m;
+})();
 
-  // Single essay (full text) on demand
-  if (id && typeof id === 'string') {
-    const found = essays.find((e) => e.id === id);
-    if (!found) return res.status(404).json({ error: 'Essay not found' });
-    return res.status(200).json({ essay: found });
-  }
-
-  // Index: group into per-school buckets, metadata + preview only
+const INDEX: { buckets: SchoolBucket[]; total: number } = (() => {
   const bucketMap = new Map<string, SchoolBucket>();
-  for (const e of essays) {
+  for (const e of ESSAYS) {
     let bucket = bucketMap.get(e.schoolSlug);
     if (!bucket) {
       bucket = { school: e.school, schoolSlug: e.schoolSlug, count: 0, essays: [] };
@@ -101,10 +80,30 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       preview: preview(e.essay),
     });
   }
-
   const buckets = Array.from(bucketMap.values()).sort(
     (a, b) => b.count - a.count || a.school.localeCompare(b.school),
   );
+  return { buckets, total: ESSAYS.length };
+})();
 
-  return res.status(200).json({ buckets, total: essays.length });
+export default function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', ['GET']);
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Static content → let the CDN/browser cache it.
+  res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+
+  const { id } = req.query;
+
+  // Single essay (full text) on demand
+  if (id && typeof id === 'string') {
+    const found = BY_ID.get(id);
+    if (!found) return res.status(404).json({ error: 'Essay not found' });
+    return res.status(200).json({ essay: found });
+  }
+
+  // Index (precomputed)
+  return res.status(200).json(INDEX);
 }
