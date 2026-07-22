@@ -699,6 +699,27 @@ export async function ensureSchema() {
     `);
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "adam_messages_userId_idx" ON "adam_messages"("userId", "createdAt");`);
 
+    // Essay Samples entitlements — who paid for access to premium essays.
+    // scope: 'all' (all-access pass) or a specific schoolSlug (per-school unlock).
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "essay_purchases" (
+        "id"              TEXT NOT NULL,
+        "userId"          TEXT NOT NULL,
+        "scope"           TEXT NOT NULL DEFAULT 'all',
+        "status"          TEXT NOT NULL DEFAULT 'active',
+        "provider"        TEXT NOT NULL DEFAULT 'paypal',
+        "providerOrderId" TEXT,
+        "amountCents"     INTEGER NOT NULL DEFAULT 0,
+        "currency"        TEXT NOT NULL DEFAULT 'USD',
+        "createdAt"       TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "essay_purchases_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "essay_purchases_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "essay_purchases_userId_idx" ON "essay_purchases"("userId");`);
+    // Idempotency: a captured PayPal order can only ever grant one entitlement.
+    await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "essay_purchases_order_key" ON "essay_purchases"("providerOrderId");`);
+
     globalForPrisma.schemaReady = true;
   } catch (e) {
     // Tables likely already exist — mark as ready
