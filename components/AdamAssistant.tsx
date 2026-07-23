@@ -265,9 +265,10 @@ export function AdamPanel({
       {/* Docked panel — slides in from the right edge */}
       <aside
         className={`fixed z-50 flex flex-col bg-white shadow-2xl transition-transform duration-300 ease-out
-          inset-0 lg:inset-y-0 lg:right-0 lg:left-auto lg:w-[400px] xl:w-[420px]
+          top-0 left-0 right-0 h-screen lg:left-auto lg:w-[400px] xl:w-[420px]
           lg:border-l lg:border-orange-100
           ${open ? 'translate-x-0' : 'translate-x-full'}`}
+        style={{ height: '100dvh' }}
         role="dialog"
         aria-label="Adam, your admissions guide"
       >
@@ -310,7 +311,7 @@ export function AdamPanel({
         </div>
 
         {/* Conversation */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 bg-orange-50/30" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4 bg-orange-50/30" style={{ WebkitOverflowScrolling: 'touch' }}>
           {/* Unavailable state — warm, never a raw error */}
           {!available && (
             <div className="flex flex-col items-center text-center py-10 px-4">
