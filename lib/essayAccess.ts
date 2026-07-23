@@ -56,18 +56,29 @@ export function previewOf(essay: string, fraction = PREVIEW_FRACTION): string {
   const text = (essay || '').trim();
   if (!text) return '';
   const target = Math.max(120, Math.floor(text.length * fraction));
+
+  // Accumulate whole paragraphs while we stay at or under the target.
   const paras = text.split(/\n\s*\n/);
   let out = '';
   for (const p of paras) {
-    if (out && out.length + p.length > target) break;
-    out = out ? out + '\n\n' + p : p;
+    if (!out) {
+      out = p; // always take the first paragraph, then cap below if it overshoots
+    } else if (out.length + 2 + p.length <= target) {
+      out = out + '\n\n' + p;
+    } else {
+      break;
+    }
     if (out.length >= target) break;
   }
-  // Fallback if the first paragraph already exceeds target: hard-cut on a word.
-  if (!out) {
-    out = text.slice(0, target);
-    const lastSpace = out.lastIndexOf(' ');
-    if (lastSpace > 80) out = out.slice(0, lastSpace);
+
+  // Hard cap: a single oversized (first) paragraph — or one with no blank-line
+  // breaks at all — must still be truncated to the target, on a word boundary.
+  // Without this, a single-paragraph essay would leak its full text.
+  if (out.length > target) {
+    let cut = out.slice(0, target);
+    const lastSpace = cut.lastIndexOf(' ');
+    if (lastSpace > 80) cut = cut.slice(0, lastSpace);
+    out = cut.trimEnd() + '…';
   }
   return out;
 }
