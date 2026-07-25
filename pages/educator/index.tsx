@@ -130,8 +130,12 @@ export default function EducatorOverview() {
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/login');
-    if (status === 'authenticated' && (session?.user as any)?.role !== 'educator') {
-      router.push('/dashboard');
+    if (status === 'authenticated') {
+      // Admins can preview the educator portal; only students/parents are redirected.
+      const role = (session?.user as any)?.role;
+      if (role !== 'educator' && role !== 'admin') {
+        router.push('/dashboard');
+      }
     }
   }, [status, session, router]);
 
