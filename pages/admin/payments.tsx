@@ -116,16 +116,16 @@ export default function AdminPayments() {
                   <thead>
                     <tr className="border-b border-slate-100">
                       <th className="text-left py-3 text-slate-500 font-medium">Name</th>
-                      <th className="text-left py-3 text-slate-500 font-medium hidden md:table-cell">Email</th>
+                      <th className="text-left py-3 text-slate-500 font-medium">Email</th>
                       <th className="text-left py-3 text-slate-500 font-medium">Plan</th>
-                      <th className="text-right py-3 text-slate-500 font-medium hidden sm:table-cell">Joined</th>
+                      <th className="text-right py-3 text-slate-500 font-medium">Joined</th>
                     </tr>
                   </thead>
                   <tbody>
                     {stats.recentSignups.map((user) => (
                       <tr key={user.id} className="border-b border-slate-50 last:border-0">
                         <td className="py-3 font-medium text-primary">{user.name}</td>
-                        <td className="py-3 text-slate-500 hidden md:table-cell">{user.email}</td>
+                        <td className="py-3 text-slate-500">{user.email}</td>
                         <td className="py-3">
                           {user.plan ? (
                             <span className="inline-flex px-2 py-0.5 rounded-md text-[11px] font-semibold bg-accent/10 text-accent">
@@ -137,7 +137,7 @@ export default function AdminPayments() {
                             </span>
                           )}
                         </td>
-                        <td className="py-3 text-right text-slate-400 text-xs hidden sm:table-cell">
+                        <td className="py-3 text-right text-slate-400 text-xs whitespace-nowrap">
                           {new Date(user.createdAt).toLocaleDateString()}
                         </td>
                       </tr>

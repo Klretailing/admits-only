@@ -91,8 +91,8 @@ export default function AdminUsers() {
               <thead>
                 <tr className="bg-slate-50/50 border-b border-slate-100">
                   <th className="text-left py-3.5 px-5 text-slate-500 font-medium">User</th>
-                  <th className="text-left py-3.5 px-5 text-slate-500 font-medium hidden sm:table-cell">Role</th>
-                  <th className="text-center py-3.5 px-5 text-slate-500 font-medium hidden lg:table-cell">Essays</th>
+                  <th className="text-left py-3.5 px-5 text-slate-500 font-medium">Role</th>
+                  <th className="text-center py-3.5 px-5 text-slate-500 font-medium">Essays</th>
                   <th className="text-right py-3.5 px-5 text-slate-500 font-medium">Joined</th>
                 </tr>
               </thead>
@@ -110,7 +110,7 @@ export default function AdminUsers() {
                         </div>
                       </div>
                     </td>
-                    <td className="py-3.5 px-5 hidden sm:table-cell">
+                    <td className="py-3.5 px-5">
                       <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-semibold ${
                         user.role === 'student' ? 'bg-accent/10 text-accent' :
                         user.role === 'admin' ? 'bg-red-50 text-red-700' :
@@ -119,7 +119,7 @@ export default function AdminUsers() {
                         {user.role}
                       </span>
                     </td>
-                    <td className="py-3.5 px-5 text-center text-slate-600 hidden lg:table-cell">{user._count.essays}</td>
+                    <td className="py-3.5 px-5 text-center text-slate-600">{user._count.essays}</td>
                     <td className="py-3.5 px-5 text-right text-slate-400">
                       {new Date(user.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </td>
