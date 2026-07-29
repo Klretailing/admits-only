@@ -2914,6 +2914,12 @@ export default function Essays() {
               >
                 Prompts
               </button>
+              <button
+                onClick={() => router.push('/dashboard/story-builder')}
+                className="px-3 lg:px-5 py-2 rounded-lg text-xs font-semibold transition-all text-slate-500 hover:text-primary"
+              >
+                Story Builder
+              </button>
             </div>
           </div>
           {mode === 'essays' && <button onClick={() => setShowNewForm(true)} className="px-4 lg:px-5 py-2 lg:py-2.5 text-sm font-semibold text-white bg-accent rounded-xl hover:opacity-90 transition-all shadow-sm hover:-translate-y-0.5 flex-shrink-0">+ New Essay</button>}
