@@ -39,6 +39,24 @@ export default function AdminSettings() {
   const [saved, setSaved] = useState(false);
   const [activeTab, setActiveTab] = useState<'general' | 'programs' | 'access' | 'integrations' | 'account'>('general');
 
+  // Adam (AI assistant) live connection check
+  const [adamChecking, setAdamChecking] = useState(false);
+  const [adamHealth, setAdamHealth] = useState<{ status: string; title: string; detail: string } | null>(null);
+
+  async function testAdam() {
+    setAdamChecking(true);
+    setAdamHealth(null);
+    try {
+      const r = await fetch('/api/admin/adam-health');
+      const data = await r.json();
+      setAdamHealth(data);
+    } catch {
+      setAdamHealth({ status: 'error', title: 'Could not run the test', detail: 'The check itself failed to run. Try again in a moment.' });
+    } finally {
+      setAdamChecking(false);
+    }
+  }
+
   // Master toggles
   const [registrationOpen, setRegistrationOpen] = useState(true);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
@@ -330,6 +348,70 @@ export default function AdminSettings() {
           {/* ─── INTEGRATIONS TAB ─── */}
           {activeTab === 'integrations' && (
             <>
+              {/* Adam (AI Assistant) — live connection check */}
+              <div className="bg-white rounded-2xl border border-slate-100 p-6">
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-bold">
+                      A
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold font-display text-primary">Adam (AI Assistant)</h3>
+                      <p className="text-xs text-slate-400">Checks whether Adam can reach the Anthropic API right now.</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={testAdam}
+                    disabled={adamChecking}
+                    className="px-4 py-2 text-sm font-semibold text-white bg-primary rounded-xl hover:bg-slate-800 transition-colors disabled:opacity-60 flex-shrink-0"
+                  >
+                    {adamChecking ? 'Testing…' : 'Test Connection'}
+                  </button>
+                </div>
+
+                {adamHealth && (
+                  <div
+                    className={`p-4 rounded-xl border ${
+                      adamHealth.status === 'connected'
+                        ? 'bg-green-50 border-green-100'
+                        : adamHealth.status === 'rate_limited'
+                        ? 'bg-amber-50 border-amber-100'
+                        : 'bg-red-50 border-red-100'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span
+                        className={`w-2 h-2 rounded-full ${
+                          adamHealth.status === 'connected'
+                            ? 'bg-green-500'
+                            : adamHealth.status === 'rate_limited'
+                            ? 'bg-amber-500'
+                            : 'bg-red-500'
+                        }`}
+                      />
+                      <p
+                        className={`text-sm font-bold ${
+                          adamHealth.status === 'connected'
+                            ? 'text-green-800'
+                            : adamHealth.status === 'rate_limited'
+                            ? 'text-amber-800'
+                            : 'text-red-800'
+                        }`}
+                      >
+                        {adamHealth.title}
+                      </p>
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed">{adamHealth.detail}</p>
+                  </div>
+                )}
+                {!adamHealth && !adamChecking && (
+                  <p className="text-sm text-slate-400">
+                    Click <span className="font-semibold text-slate-500">Test Connection</span> to check Adam&apos;s status. If he isn&apos;t
+                    replying to students, this will tell you exactly why.
+                  </p>
+                )}
+              </div>
+
               <div className="bg-white rounded-2xl border border-slate-100 p-6">
                 <h3 className="text-lg font-bold font-display text-primary mb-6">Connected Services</h3>
                 <div className="space-y-4">
