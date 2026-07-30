@@ -609,6 +609,12 @@ export async function ensureSchema() {
       );
     `);
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "tutor_session_notes_educatorId_idx" ON "tutor_session_notes"("educatorId");`);
+    // Structured lesson-log fields (for K-8 tutoring): who / subject / grade / date + which template.
+    await prisma.$executeRawUnsafe(`ALTER TABLE "tutor_session_notes" ADD COLUMN IF NOT EXISTS "student" TEXT NOT NULL DEFAULT '';`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "tutor_session_notes" ADD COLUMN IF NOT EXISTS "subject" TEXT NOT NULL DEFAULT '';`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "tutor_session_notes" ADD COLUMN IF NOT EXISTS "grade" TEXT NOT NULL DEFAULT '';`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "tutor_session_notes" ADD COLUMN IF NOT EXISTS "lessonDate" TEXT NOT NULL DEFAULT '';`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "tutor_session_notes" ADD COLUMN IF NOT EXISTS "template" TEXT NOT NULL DEFAULT 'blank';`);
 
     // ─── Parent Action Items ───
     await prisma.$executeRawUnsafe(`

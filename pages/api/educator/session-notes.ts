@@ -32,15 +32,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   /* ─── POST: Create a note ─── */
   if (req.method === 'POST') {
     try {
-      const { title, content, color } = req.body || {};
+      const { title, content, color, student, subject, grade, lessonDate, template } = req.body || {};
       const id = 'sn_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
       const noteTitle = typeof title === 'string' && title.trim() ? title.trim() : 'Untitled';
       const noteContent = typeof content === 'string' ? content : '';
       const noteColor = typeof color === 'string' && color.trim() ? color.trim() : 'default';
+      const str = (v: any) => (typeof v === 'string' ? v : '');
 
       await prisma.$executeRaw`
-        INSERT INTO "tutor_session_notes" ("id", "educatorId", "title", "content", "color")
-        VALUES (${id}, ${userId}, ${noteTitle}, ${noteContent}, ${noteColor})
+        INSERT INTO "tutor_session_notes"
+          ("id", "educatorId", "title", "content", "color", "student", "subject", "grade", "lessonDate", "template")
+        VALUES (${id}, ${userId}, ${noteTitle}, ${noteContent}, ${noteColor},
+                ${str(student)}, ${str(subject)}, ${str(grade)}, ${str(lessonDate)},
+                ${typeof template === 'string' && template.trim() ? template.trim() : 'blank'})
       `;
 
       const rows: any[] = await prisma.$queryRaw`
@@ -56,7 +60,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   /* ─── PUT: Update a note ─── */
   if (req.method === 'PUT') {
     try {
-      const { id, title, content, color, pinned, archived, sortOrder } = req.body || {};
+      const { id, title, content, color, pinned, archived, sortOrder, student, subject, grade, lessonDate, template } = req.body || {};
       if (!id || typeof id !== 'string') {
         return res.status(400).json({ error: 'Note id is required' });
       }
@@ -97,6 +101,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (typeof sortOrder === 'number') {
         values.push(sortOrder);
         sets.push(`"sortOrder" = $${values.length}`);
+      }
+      for (const [field, val] of [
+        ['student', student], ['subject', subject], ['grade', grade],
+        ['lessonDate', lessonDate], ['template', template],
+      ] as const) {
+        if (typeof val === 'string') {
+          values.push(val);
+          sets.push(`"${field}" = $${values.length}`);
+        }
       }
 
       values.push(id);
