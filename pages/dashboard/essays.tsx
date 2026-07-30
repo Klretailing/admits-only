@@ -3634,6 +3634,16 @@ export default function Essays() {
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
                   Create Essay
                 </button>
+                <div className="mt-4 pt-4 border-t border-slate-100 max-w-[240px] mx-auto">
+                  <p className="text-[11px] text-slate-400 mb-2">Not sure what to write about?</p>
+                  <button
+                    onClick={() => router.push('/dashboard/story-builder')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-accent border border-accent/30 rounded-lg hover:bg-accent/5 transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                    Try Story Builder for ideas
+                  </button>
+                </div>
               </div>
             ) : (
               essays.map(essay => {
