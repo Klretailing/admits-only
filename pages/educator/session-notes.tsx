@@ -127,11 +127,10 @@ export default function SessionNotes() {
   const [showArchived, setShowArchived] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<LessonTemplate | null>(null);
-  const [upsell, setUpsell] = useState(false);
 
-  // Premium templates are previewable by everyone; the owner (admin) can use
-  // them now. Wiring this to a paid plan later is a one-line change.
-  const premiumUnlocked = (session?.user as any)?.role === 'admin';
+  // Premium templates are preview-only for now (billing isn't set up yet).
+  // Flip to true once a paid plan / entitlement is live to make them usable.
+  const premiumLive = false;
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [mobileShowEditor, setMobileShowEditor] = useState(false);
@@ -220,7 +219,7 @@ export default function SessionNotes() {
   const createFromTemplate = async (templateId: string) => {
     const t = getTemplate(templateId);
     if (!t) return;
-    if (t.tier === 'premium' && !premiumUnlocked) return; // gated — preview only
+    if (t.tier === 'premium' && !premiumLive) return; // gated — preview only
     setShowGallery(false);
     setPreviewTemplate(null);
     try {
@@ -841,18 +840,16 @@ export default function SessionNotes() {
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
                   Premium · deeper, parent- &amp; data-ready
-                  <span className="text-[10px] font-bold text-amber-700 bg-amber-100 rounded px-1.5 py-0.5">PRO</span>
+                  <span className="text-[10px] font-bold text-amber-700 bg-amber-100 rounded px-1.5 py-0.5">COMING SOON</span>
                 </p>
+                <p className="text-xs text-slate-400 -mt-2 mb-3">Tap any premium template to preview what’s coming.</p>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {PREMIUM_TEMPLATES.map(t => (
                     <TemplateCard
                       key={t.id}
                       t={t}
-                      locked={!premiumUnlocked}
-                      onClick={() => {
-                        if (premiumUnlocked) { createFromTemplate(t.id); }
-                        else { setUpsell(false); setPreviewTemplate(t); }
-                      }}
+                      locked={!premiumLive}
+                      onClick={() => { if (premiumLive) createFromTemplate(t.id); else setPreviewTemplate(t); }}
                     />
                   ))}
                 </div>
@@ -884,35 +881,57 @@ export default function SessionNotes() {
               </button>
             </div>
 
-            <div className="px-6 pb-4 overflow-y-auto">
-              <div className="relative rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <pre className="text-[12px] leading-relaxed text-slate-600 whitespace-pre-wrap" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>{previewTemplate.body}</pre>
-                {!premiumUnlocked && <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-slate-50 to-transparent rounded-b-xl" />}
+            <div className="px-6 pb-4 overflow-y-auto space-y-4">
+              {previewTemplate.highlights && previewTemplate.highlights.length > 0 && (
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">What it is</p>
+                  <ul className="space-y-1">
+                    {previewTemplate.highlights.map(h => (
+                      <li key={h} className="text-xs text-slate-600 flex gap-2 leading-snug">
+                        <span className="text-emerald-500 flex-shrink-0">•</span>{h}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {previewTemplate.features && previewTemplate.features.length > 0 && (
+                <div className="rounded-xl border border-amber-100 bg-amber-50/60 p-3.5">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-amber-600 mb-1.5 flex items-center gap-2">
+                    Premium features
+                    <span className="text-[9px] font-bold text-amber-700 bg-amber-100 rounded px-1.5 py-0.5">SOON</span>
+                  </p>
+                  <ul className="space-y-1">
+                    {previewTemplate.features.map(f => (
+                      <li key={f} className="text-xs text-slate-700 flex gap-2 leading-snug">
+                        <span className="text-amber-500 flex-shrink-0">✦</span>{f}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Template preview</p>
+                <div className="relative rounded-xl border border-slate-200 bg-slate-50 p-4 max-h-56 overflow-hidden">
+                  <pre className="text-[12px] leading-relaxed text-slate-600 whitespace-pre-wrap" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>{previewTemplate.body}</pre>
+                  <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-slate-50 to-transparent rounded-b-xl" />
+                </div>
               </div>
             </div>
 
             <div className="px-6 py-4 border-t border-slate-100 flex-shrink-0">
-              {premiumUnlocked ? (
+              {premiumLive ? (
                 <button onClick={() => createFromTemplate(previewTemplate.id)} className="w-full py-2.5 bg-emerald-500 text-white rounded-xl font-semibold text-sm hover:bg-emerald-600 transition-colors">
                   Use this template
                 </button>
-              ) : upsell ? (
-                <div className="text-center">
-                  <p className="text-sm font-semibold text-slate-700">✨ Part of the Pro plan</p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Premium templates unlock with a Pro subscription. Billing isn’t switched on yet — once it is, these turn on for your account automatically.
-                  </p>
-                </div>
               ) : (
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-xs text-slate-500">Unlock the full premium library.</p>
-                  <button
-                    onClick={() => setUpsell(true)}
-                    className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-xl font-semibold text-sm inline-flex items-center gap-1.5 hover:opacity-90 transition-opacity flex-shrink-0"
-                  >
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
-                    Unlock Premium
-                  </button>
+                <div className="flex items-center justify-center gap-2.5 text-center">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 font-semibold text-xs border border-amber-200">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    Coming soon
+                  </span>
+                  <span className="text-xs text-slate-400">Premium templates unlock once billing is live.</span>
                 </div>
               )}
             </div>
