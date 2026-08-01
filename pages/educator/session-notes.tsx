@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import Head from 'next/head';
 import EducatorDashboardLayout from '../../components/EducatorDashboardLayout';
+import { FREE_TEMPLATES, PREMIUM_TEMPLATES, getTemplate, type LessonTemplate } from '../../lib/lessonTemplates';
 
 interface Note {
   id: string;
@@ -23,7 +24,7 @@ interface Note {
 }
 
 const SUBJECTS = ['Reading', 'Writing', 'Math', 'Science', 'Language', 'Test Prep', 'Study Skills', 'Other'];
-const GRADES = ['Pre-K', 'K', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'];
+const GRADES = ['Pre-K', 'K', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th'];
 
 const SUBJECT_STYLES: Record<string, string> = {
   Reading: 'bg-blue-50 text-blue-600',
@@ -36,27 +37,6 @@ const SUBJECT_STYLES: Record<string, string> = {
   Other: 'bg-slate-100 text-slate-500',
 };
 
-// Clean K-8 lesson skeleton — tutors just fill the bullets in.
-const LESSON_TEMPLATE = `🎯 Today's focus
--
-
-✏️ What we worked on
--
-
-👍 Went well
--
-
-🔧 Needs more practice
--
-
-📚 Homework assigned
--
-
-➡️ For next session
--
-
-👪 Note for parent
-- `;
 
 const NOTE_COLORS = [
   { key: 'default', dot: 'bg-slate-300', bg: 'bg-slate-50', ring: 'ring-slate-300' },
@@ -98,6 +78,43 @@ function getFirstLine(content: string): string {
   return firstLine.length > 80 ? firstLine.slice(0, 80) + '...' : firstLine;
 }
 
+function TemplateCard({ t, locked, onClick }: { t: LessonTemplate; locked: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="relative text-left rounded-xl border border-slate-200 bg-white hover:border-emerald-300 hover:shadow-md transition-all overflow-hidden group"
+    >
+      <div className={`h-1.5 bg-gradient-to-r ${t.accent}`} />
+      <div className="p-3.5">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-xl">{t.emoji}</span>
+          {t.tier === 'premium' && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-100 rounded px-1.5 py-0.5">
+              {locked ? (
+                <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+              ) : (
+                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+              )}
+              PREMIUM
+            </span>
+          )}
+        </div>
+        <p className="text-sm font-bold text-slate-800">{t.name}</p>
+        <p className="text-xs text-slate-500 mt-1 leading-snug min-h-[2.5rem]">{t.tagline}</p>
+        <div className="flex flex-wrap gap-1 mt-2.5">
+          {t.sections.slice(0, 4).map(s => (
+            <span key={s} className="text-[10px] text-slate-400 bg-slate-50 border border-slate-100 rounded px-1.5 py-0.5">{s}</span>
+          ))}
+          {t.sections.length > 4 && <span className="text-[10px] text-slate-300 self-center">+{t.sections.length - 4}</span>}
+        </div>
+        <p className="text-[11px] font-semibold text-emerald-600 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
+          {t.tier === 'free' || !locked ? 'Use this template →' : 'Preview →'}
+        </p>
+      </div>
+    </button>
+  );
+}
+
 export default function SessionNotes() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -108,7 +125,13 @@ export default function SessionNotes() {
   const [search, setSearch] = useState('');
   const [subjectFilter, setSubjectFilter] = useState('');
   const [showArchived, setShowArchived] = useState(false);
-  const [showNewMenu, setShowNewMenu] = useState(false);
+  const [showGallery, setShowGallery] = useState(false);
+  const [previewTemplate, setPreviewTemplate] = useState<LessonTemplate | null>(null);
+  const [upsell, setUpsell] = useState(false);
+
+  // Premium templates are previewable by everyone; the owner (admin) can use
+  // them now. Wiring this to a paid plan later is a one-line change.
+  const premiumUnlocked = (session?.user as any)?.role === 'admin';
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [mobileShowEditor, setMobileShowEditor] = useState(false);
@@ -152,7 +175,7 @@ export default function SessionNotes() {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
         e.preventDefault();
-        handleCreateNote();
+        setShowGallery(true);
       }
     };
     window.addEventListener('keydown', handler);
@@ -194,19 +217,24 @@ export default function SessionNotes() {
 
   // --- API helpers ---
 
-  const handleCreateNote = async (template: 'lesson' | 'blank' = 'lesson') => {
-    setShowNewMenu(false);
+  const createFromTemplate = async (templateId: string) => {
+    const t = getTemplate(templateId);
+    if (!t) return;
+    if (t.tier === 'premium' && !premiumUnlocked) return; // gated — preview only
+    setShowGallery(false);
+    setPreviewTemplate(null);
     try {
-      const isLesson = template === 'lesson';
+      const isLesson = t.id !== 'blank';
       const today = new Date().toISOString().slice(0, 10);
       const res = await fetch('/api/educator/session-notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: '',
-          content: isLesson ? LESSON_TEMPLATE : '',
-          color: isLesson ? 'green' : 'default',
-          template,
+          content: t.body,
+          color: t.color,
+          template: t.id,
+          subject: t.subject || '',
           lessonDate: isLesson ? today : '',
         }),
       });
@@ -379,44 +407,16 @@ export default function SessionNotes() {
           <div className="p-4 border-b border-slate-100">
             <div className="flex items-center justify-between mb-3">
               <h1 className="text-lg font-semibold text-slate-800">Lesson Notes</h1>
-              <div className="relative">
-                <div className="inline-flex rounded-lg shadow-sm overflow-hidden">
-                  <button
-                    onClick={() => handleCreateNote('lesson')}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-emerald-500 hover:bg-emerald-600 transition-all"
-                    title="New lesson log (Ctrl+N)"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    New lesson
-                  </button>
-                  <button
-                    onClick={() => setShowNewMenu(v => !v)}
-                    className="px-1.5 bg-emerald-500 hover:bg-emerald-600 border-l border-emerald-400/50 transition-colors"
-                    title="More options"
-                  >
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                </div>
-                {showNewMenu && (
-                  <>
-                    <div className="fixed inset-0 z-10" onClick={() => setShowNewMenu(false)} />
-                    <div className="absolute right-0 mt-1 w-44 bg-white rounded-xl border border-slate-200 shadow-lg z-20 py-1">
-                      <button onClick={() => handleCreateNote('lesson')} className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
-                        📋 Lesson log
-                        <span className="block text-[11px] text-slate-400">Structured K-8 template</span>
-                      </button>
-                      <button onClick={() => handleCreateNote('blank')} className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
-                        📝 Blank note
-                        <span className="block text-[11px] text-slate-400">Start from scratch</span>
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
+              <button
+                onClick={() => setShowGallery(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 transition-all shadow-sm"
+                title="New note from a template (Ctrl+N)"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                New
+              </button>
             </div>
 
             {/* Search */}
@@ -509,7 +509,7 @@ export default function SessionNotes() {
                 </p>
                 {!search && !showArchived && (
                   <button
-                    onClick={() => handleCreateNote('lesson')}
+                    onClick={() => setShowGallery(true)}
                     className="mt-2 text-sm text-emerald-600 hover:text-emerald-700 font-medium"
                   >
                     Log your first lesson
@@ -812,6 +812,113 @@ export default function SessionNotes() {
           )}
         </div>
       </div>
+
+      {/* ===== Template Gallery ===== */}
+      {showGallery && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => setShowGallery(false)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[88vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 flex-shrink-0">
+              <div>
+                <h2 className="text-lg font-bold text-slate-800">Choose a template</h2>
+                <p className="text-xs text-slate-400">Start fast with a format built for the way you tutor.</p>
+              </div>
+              <button onClick={() => setShowGallery(false)} className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <div className="overflow-y-auto px-6 py-5 space-y-6">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Free · quick & simple</p>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {FREE_TEMPLATES.map(t => (
+                    <TemplateCard key={t.id} t={t} locked={false} onClick={() => createFromTemplate(t.id)} />
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+                  Premium · deeper, parent- &amp; data-ready
+                  <span className="text-[10px] font-bold text-amber-700 bg-amber-100 rounded px-1.5 py-0.5">PRO</span>
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {PREMIUM_TEMPLATES.map(t => (
+                    <TemplateCard
+                      key={t.id}
+                      t={t}
+                      locked={!premiumUnlocked}
+                      onClick={() => {
+                        if (premiumUnlocked) { createFromTemplate(t.id); }
+                        else { setUpsell(false); setPreviewTemplate(t); }
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Premium template preview ===== */}
+      {previewTemplate && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setPreviewTemplate(null)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[88vh] flex flex-col overflow-hidden">
+            <div className={`h-1.5 bg-gradient-to-r ${previewTemplate.accent} flex-shrink-0`} />
+            <div className="flex items-start justify-between px-6 pt-5 pb-3 flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">{previewTemplate.emoji}</span>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-bold text-slate-800">{previewTemplate.name}</h3>
+                    <span className="text-[10px] font-bold text-amber-700 bg-amber-100 rounded px-1.5 py-0.5">PREMIUM</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5 max-w-sm">{previewTemplate.tagline}</p>
+                </div>
+              </div>
+              <button onClick={() => setPreviewTemplate(null)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex-shrink-0">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <div className="px-6 pb-4 overflow-y-auto">
+              <div className="relative rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <pre className="text-[12px] leading-relaxed text-slate-600 whitespace-pre-wrap" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>{previewTemplate.body}</pre>
+                {!premiumUnlocked && <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-slate-50 to-transparent rounded-b-xl" />}
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-slate-100 flex-shrink-0">
+              {premiumUnlocked ? (
+                <button onClick={() => createFromTemplate(previewTemplate.id)} className="w-full py-2.5 bg-emerald-500 text-white rounded-xl font-semibold text-sm hover:bg-emerald-600 transition-colors">
+                  Use this template
+                </button>
+              ) : upsell ? (
+                <div className="text-center">
+                  <p className="text-sm font-semibold text-slate-700">✨ Part of the Pro plan</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Premium templates unlock with a Pro subscription. Billing isn’t switched on yet — once it is, these turn on for your account automatically.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs text-slate-500">Unlock the full premium library.</p>
+                  <button
+                    onClick={() => setUpsell(true)}
+                    className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-xl font-semibold text-sm inline-flex items-center gap-1.5 hover:opacity-90 transition-opacity flex-shrink-0"
+                  >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                    Unlock Premium
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </EducatorDashboardLayout>
   );
 }
