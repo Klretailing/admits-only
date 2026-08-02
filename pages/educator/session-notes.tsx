@@ -4,6 +4,8 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import Head from 'next/head';
 import EducatorDashboardLayout from '../../components/EducatorDashboardLayout';
 import { FREE_TEMPLATES, PREMIUM_TEMPLATES, getTemplate, type LessonTemplate } from '../../lib/lessonTemplates';
+import { STRUCTURED_SCHEMAS, SAMPLE_DATA, isStructured, initData } from '../../lib/structuredTemplates';
+import StructuredLessonEditor from '../../components/StructuredLessonEditor';
 
 interface Note {
   id: string;
@@ -19,6 +21,7 @@ interface Note {
   grade: string;
   lessonDate: string;
   template: string;
+  data?: any;
   createdAt: string;
   updatedAt: string;
 }
@@ -101,6 +104,12 @@ function TemplateCard({ t, locked, onClick }: { t: LessonTemplate; locked: boole
         </div>
         <p className="text-sm font-bold text-slate-800">{t.name}</p>
         <p className="text-xs text-slate-500 mt-1 leading-snug min-h-[2.5rem]">{t.tagline}</p>
+        {t.tier === 'premium' && isStructured(t.id) && (
+          <span className="inline-flex items-center gap-1 mt-2 text-[10px] font-semibold text-emerald-700 bg-emerald-50 rounded px-1.5 py-0.5">
+            <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14c.015-.34.208-.646.477-.859a4 4 0 10-4.954 0c.27.213.462.519.476.859h4.001z" /></svg>
+            Interactive · charts &amp; dropdowns
+          </span>
+        )}
         <div className="flex flex-wrap gap-1 mt-2.5">
           {t.sections.slice(0, 4).map(s => (
             <span key={s} className="text-[10px] text-slate-400 bg-slate-50 border border-slate-100 rounded px-1.5 py-0.5">{s}</span>
@@ -127,6 +136,13 @@ export default function SessionNotes() {
   const [showArchived, setShowArchived] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<LessonTemplate | null>(null);
+  const [previewData, setPreviewData] = useState<any>({});
+
+  const openPreview = (t: LessonTemplate) => {
+    const schema = STRUCTURED_SCHEMAS[t.id];
+    setPreviewData(schema ? JSON.parse(JSON.stringify(SAMPLE_DATA[t.id] || initData(schema))) : {});
+    setPreviewTemplate(t);
+  };
 
   // Premium templates are preview-only for now (billing isn't set up yet).
   // Flip to true once a paid plan / entitlement is live to make them usable.
@@ -142,7 +158,7 @@ export default function SessionNotes() {
   // Auth guard
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/login');
-    if (status === 'authenticated' && (session?.user as any)?.role !== 'educator') router.push('/dashboard');
+    if (status === 'authenticated' && !['educator','admin'].includes((session?.user as any)?.role)) router.push('/dashboard');
   }, [status, session, router]);
 
   // Fetch notes
@@ -225,16 +241,18 @@ export default function SessionNotes() {
     try {
       const isLesson = t.id !== 'blank';
       const today = new Date().toISOString().slice(0, 10);
+      const structured = isStructured(t.id);
       const res = await fetch('/api/educator/session-notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: '',
-          content: t.body,
+          content: structured ? '' : t.body,
           color: t.color,
           template: t.id,
           subject: t.subject || '',
           lessonDate: isLesson ? today : '',
+          data: structured ? initData(STRUCTURED_SCHEMAS[t.id]) : {},
         }),
       });
       if (!res.ok) throw new Error('Failed to create');
@@ -283,6 +301,14 @@ export default function SessionNotes() {
       ),
     );
     debouncedSave(activeNote.id, { [field]: value });
+  };
+
+  const handleUpdateData = (nextData: any) => {
+    if (!activeNote) return;
+    setNotes(prev =>
+      prev.map(n => (n.id === activeNote.id ? { ...n, data: nextData, updatedAt: new Date().toISOString() } : n)),
+    );
+    debouncedSave(activeNote.id, { data: nextData } as Partial<Note>);
   };
 
   const handleSetColor = async (color: string) => {
@@ -395,7 +421,9 @@ export default function SessionNotes() {
         <title>Session Notes | AdmitsOnly</title>
       </Head>
 
-      <div className="flex h-[calc(100vh-4rem)] overflow-hidden -m-6 lg:-m-8">
+      {/* Mobile/tablet (< lg): dynamic viewport minus the 3.5rem header + 3.5rem bottom nav,
+          and -m-4 to match the p-4 main padding. Desktop keeps its original full-height calc. */}
+      <div className="flex h-[calc(100dvh-7rem)] lg:h-[calc(100vh-4rem)] overflow-hidden -m-4 lg:-m-8">
         {/* ===== LEFT PANEL: Note list sidebar ===== */}
         <div
           className={`${
@@ -403,7 +431,7 @@ export default function SessionNotes() {
           } flex-col w-full md:w-[300px] lg:w-[320px] border-r border-slate-200 bg-white flex-shrink-0`}
         >
           {/* Header */}
-          <div className="p-4 border-b border-slate-100">
+          <div className="p-4 border-b border-slate-100 flex-shrink-0">
             <div className="flex items-center justify-between mb-3">
               <h1 className="text-lg font-semibold text-slate-800">Lesson Notes</h1>
               <button
@@ -491,7 +519,7 @@ export default function SessionNotes() {
           </div>
 
           {/* Note list */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 min-h-0 overflow-y-auto">
             {loading ? (
               <div className="p-8 text-center">
                 <div className="animate-pulse text-slate-400 text-sm">Loading notes...</div>
@@ -610,7 +638,7 @@ export default function SessionNotes() {
           ) : (
             <>
               {/* Mobile back button + toolbar */}
-              <div className="border-b border-slate-100">
+              <div className="border-b border-slate-100 flex-shrink-0">
                 {/* Mobile back row */}
                 <div className="md:hidden flex items-center px-4 pt-3">
                   <button
@@ -713,7 +741,7 @@ export default function SessionNotes() {
 
               {/* Editor content area */}
               <div
-                className={`flex-1 overflow-y-auto ${getColorConfig(activeNote.color).bg} transition-colors duration-300`}
+                className={`flex-1 min-h-0 overflow-y-auto ${getColorConfig(activeNote.color).bg} transition-colors duration-300`}
               >
                 <div className="max-w-3xl mx-auto px-6 md:px-10 py-6">
                   {/* Title input */}
@@ -762,27 +790,46 @@ export default function SessionNotes() {
                     />
                   </div>
 
-                  {/* Content textarea */}
-                  <textarea
-                    ref={textareaRef}
-                    placeholder="Start writing..."
-                    value={activeNote.content}
-                    onChange={e => handleUpdateField('content', e.target.value)}
-                    onInput={resizeTextarea}
-                    className="w-full mt-4 text-base md:text-[17px] text-slate-700 placeholder-slate-300 bg-transparent border-none outline-none resize-none leading-relaxed"
-                    style={{
-                      minHeight: '300px',
-                      fontFamily: "'Inter', system-ui, sans-serif",
-                    }}
-                  />
+                  {/* Body — interactive framework for structured templates, else a plain page */}
+                  {isStructured(activeNote.template) ? (
+                    <div className="mt-6">
+                      <StructuredLessonEditor
+                        schema={STRUCTURED_SCHEMAS[activeNote.template]}
+                        value={activeNote.data || {}}
+                        onChange={handleUpdateData}
+                      />
+                    </div>
+                  ) : (
+                    <textarea
+                      ref={textareaRef}
+                      placeholder="Start writing..."
+                      value={activeNote.content}
+                      onChange={e => handleUpdateField('content', e.target.value)}
+                      onInput={resizeTextarea}
+                      className="w-full mt-4 text-base md:text-[17px] text-slate-700 placeholder-slate-300 bg-transparent border-none outline-none resize-none leading-relaxed"
+                      style={{
+                        minHeight: '300px',
+                        fontFamily: "'Inter', system-ui, sans-serif",
+                      }}
+                    />
+                  )}
                 </div>
               </div>
 
               {/* Footer */}
-              <div className="border-t border-slate-100 bg-white px-5 py-2.5 flex items-center justify-between text-xs text-slate-400">
+              <div className="border-t border-slate-100 bg-white px-5 py-2.5 flex items-center justify-between text-xs text-slate-400 flex-shrink-0">
                 <div className="flex items-center gap-4">
-                  <span>{(activeNote.content || '').length} characters</span>
-                  <span>{countWords(activeNote.content)} words</span>
+                  {isStructured(activeNote.template) ? (
+                    <span className="inline-flex items-center gap-1.5 text-emerald-600 font-medium">
+                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14c.015-.34.208-.646.477-.859a4 4 0 10-4.954 0c.27.213.462.519.476.859h4.001z" /></svg>
+                      Interactive lesson
+                    </span>
+                  ) : (
+                    <>
+                      <span>{(activeNote.content || '').length} characters</span>
+                      <span>{countWords(activeNote.content)} words</span>
+                    </>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   {saveStatus === 'saving' && (
@@ -816,7 +863,7 @@ export default function SessionNotes() {
       {showGallery && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => setShowGallery(false)} />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[88vh] flex flex-col overflow-hidden">
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85dvh] flex flex-col overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 flex-shrink-0">
               <div>
                 <h2 className="text-lg font-bold text-slate-800">Choose a template</h2>
@@ -849,7 +896,7 @@ export default function SessionNotes() {
                       key={t.id}
                       t={t}
                       locked={!premiumLive}
-                      onClick={() => { if (premiumLive) createFromTemplate(t.id); else setPreviewTemplate(t); }}
+                      onClick={() => { if (premiumLive) createFromTemplate(t.id); else openPreview(t); }}
                     />
                   ))}
                 </div>
@@ -863,7 +910,7 @@ export default function SessionNotes() {
       {previewTemplate && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setPreviewTemplate(null)} />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[88vh] flex flex-col overflow-hidden">
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[88dvh] flex flex-col overflow-hidden">
             <div className={`h-1.5 bg-gradient-to-r ${previewTemplate.accent} flex-shrink-0`} />
             <div className="flex items-start justify-between px-6 pt-5 pb-3 flex-shrink-0">
               <div className="flex items-center gap-3">
@@ -872,6 +919,9 @@ export default function SessionNotes() {
                   <div className="flex items-center gap-2">
                     <h3 className="text-base font-bold text-slate-800">{previewTemplate.name}</h3>
                     <span className="text-[10px] font-bold text-amber-700 bg-amber-100 rounded px-1.5 py-0.5">PREMIUM</span>
+                    {isStructured(previewTemplate.id) && (
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 rounded px-1.5 py-0.5">INTERACTIVE</span>
+                    )}
                   </div>
                   <p className="text-xs text-slate-500 mt-0.5 max-w-sm">{previewTemplate.tagline}</p>
                 </div>
@@ -912,11 +962,23 @@ export default function SessionNotes() {
               )}
 
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Template preview</p>
-                <div className="relative rounded-xl border border-slate-200 bg-slate-50 p-4 max-h-56 overflow-hidden">
-                  <pre className="text-[12px] leading-relaxed text-slate-600 whitespace-pre-wrap" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>{previewTemplate.body}</pre>
-                  <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-slate-50 to-transparent rounded-b-xl" />
-                </div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                  {isStructured(previewTemplate.id) ? 'Live preview — try it' : 'Template preview'}
+                </p>
+                {isStructured(previewTemplate.id) ? (
+                  <div className="rounded-xl border border-slate-200 bg-white p-4">
+                    <StructuredLessonEditor
+                      schema={STRUCTURED_SCHEMAS[previewTemplate.id]}
+                      value={previewData}
+                      onChange={setPreviewData}
+                    />
+                  </div>
+                ) : (
+                  <div className="relative rounded-xl border border-slate-200 bg-slate-50 p-4 max-h-56 overflow-hidden">
+                    <pre className="text-[12px] leading-relaxed text-slate-600 whitespace-pre-wrap" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>{previewTemplate.body}</pre>
+                    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-slate-50 to-transparent rounded-b-xl" />
+                  </div>
+                )}
               </div>
             </div>
 

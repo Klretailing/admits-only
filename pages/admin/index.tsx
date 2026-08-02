@@ -2,6 +2,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import AdminLayout from '../../components/AdminLayout';
+import AudienceInsights from '../../components/AudienceInsights';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
 
 /* ──────────────────────── TYPES ──────────────────────── */
@@ -473,6 +474,9 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </div>
+
+            {/* Audience & Usage — aggregate, privacy-safe */}
+            <AudienceInsights />
 
             {/* System Status */}
             <div className="bg-gradient-to-br from-primary to-slate-800 rounded-2xl p-6 text-white">

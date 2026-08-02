@@ -615,6 +615,8 @@ export async function ensureSchema() {
     await prisma.$executeRawUnsafe(`ALTER TABLE "tutor_session_notes" ADD COLUMN IF NOT EXISTS "grade" TEXT NOT NULL DEFAULT '';`);
     await prisma.$executeRawUnsafe(`ALTER TABLE "tutor_session_notes" ADD COLUMN IF NOT EXISTS "lessonDate" TEXT NOT NULL DEFAULT '';`);
     await prisma.$executeRawUnsafe(`ALTER TABLE "tutor_session_notes" ADD COLUMN IF NOT EXISTS "template" TEXT NOT NULL DEFAULT 'blank';`);
+    // Structured/interactive premium templates store their answers here (dropdowns, ratings, rows, chart data).
+    await prisma.$executeRawUnsafe(`ALTER TABLE "tutor_session_notes" ADD COLUMN IF NOT EXISTS "data" JSONB NOT NULL DEFAULT '{}';`);
 
     // ─── Parent Action Items ───
     await prisma.$executeRawUnsafe(`
