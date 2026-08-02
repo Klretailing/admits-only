@@ -45,7 +45,7 @@ export default function EducatorBilling() {
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/login');
-    if (status === 'authenticated' && (session?.user as any)?.role !== 'educator') router.push('/dashboard');
+    if (status === 'authenticated' && !['educator','admin'].includes((session?.user as any)?.role)) router.push('/dashboard');
   }, [status, session, router]);
 
   if (status === 'loading' || status === 'unauthenticated') {

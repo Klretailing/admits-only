@@ -6,7 +6,7 @@ import { prisma, ensureSchema } from '../../../lib/db';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getServerSession(req, res, authOptions);
-  if (!session?.user || (session.user as any).role !== 'educator') {
+  if (!session?.user || !['educator','admin'].includes((session.user as any).role)) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 

@@ -7,7 +7,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   const session = await getServerSession(req, res, authOptions);
-  if (!session?.user || (session.user as any).role !== 'educator') {
+  if (!session?.user || !['educator','admin'].includes((session.user as any).role)) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
