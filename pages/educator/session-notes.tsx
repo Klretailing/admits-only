@@ -421,7 +421,9 @@ export default function SessionNotes() {
         <title>Session Notes | AdmitsOnly</title>
       </Head>
 
-      <div className="flex h-[calc(100vh-4rem)] overflow-hidden -m-6 lg:-m-8">
+      {/* Mobile/tablet (< lg): dynamic viewport minus the 3.5rem header + 3.5rem bottom nav,
+          and -m-4 to match the p-4 main padding. Desktop keeps its original full-height calc. */}
+      <div className="flex h-[calc(100dvh-7rem)] lg:h-[calc(100vh-4rem)] overflow-hidden -m-4 lg:-m-8">
         {/* ===== LEFT PANEL: Note list sidebar ===== */}
         <div
           className={`${
@@ -429,7 +431,7 @@ export default function SessionNotes() {
           } flex-col w-full md:w-[300px] lg:w-[320px] border-r border-slate-200 bg-white flex-shrink-0`}
         >
           {/* Header */}
-          <div className="p-4 border-b border-slate-100">
+          <div className="p-4 border-b border-slate-100 flex-shrink-0">
             <div className="flex items-center justify-between mb-3">
               <h1 className="text-lg font-semibold text-slate-800">Lesson Notes</h1>
               <button
@@ -517,7 +519,7 @@ export default function SessionNotes() {
           </div>
 
           {/* Note list */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 min-h-0 overflow-y-auto">
             {loading ? (
               <div className="p-8 text-center">
                 <div className="animate-pulse text-slate-400 text-sm">Loading notes...</div>
@@ -636,7 +638,7 @@ export default function SessionNotes() {
           ) : (
             <>
               {/* Mobile back button + toolbar */}
-              <div className="border-b border-slate-100">
+              <div className="border-b border-slate-100 flex-shrink-0">
                 {/* Mobile back row */}
                 <div className="md:hidden flex items-center px-4 pt-3">
                   <button
@@ -739,7 +741,7 @@ export default function SessionNotes() {
 
               {/* Editor content area */}
               <div
-                className={`flex-1 overflow-y-auto ${getColorConfig(activeNote.color).bg} transition-colors duration-300`}
+                className={`flex-1 min-h-0 overflow-y-auto ${getColorConfig(activeNote.color).bg} transition-colors duration-300`}
               >
                 <div className="max-w-3xl mx-auto px-6 md:px-10 py-6">
                   {/* Title input */}
@@ -815,7 +817,7 @@ export default function SessionNotes() {
               </div>
 
               {/* Footer */}
-              <div className="border-t border-slate-100 bg-white px-5 py-2.5 flex items-center justify-between text-xs text-slate-400">
+              <div className="border-t border-slate-100 bg-white px-5 py-2.5 flex items-center justify-between text-xs text-slate-400 flex-shrink-0">
                 <div className="flex items-center gap-4">
                   {isStructured(activeNote.template) ? (
                     <span className="inline-flex items-center gap-1.5 text-emerald-600 font-medium">
@@ -861,7 +863,7 @@ export default function SessionNotes() {
       {showGallery && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => setShowGallery(false)} />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[88vh] flex flex-col overflow-hidden">
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85dvh] flex flex-col overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 flex-shrink-0">
               <div>
                 <h2 className="text-lg font-bold text-slate-800">Choose a template</h2>
@@ -908,7 +910,7 @@ export default function SessionNotes() {
       {previewTemplate && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setPreviewTemplate(null)} />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[88dvh] flex flex-col overflow-hidden">
             <div className={`h-1.5 bg-gradient-to-r ${previewTemplate.accent} flex-shrink-0`} />
             <div className="flex items-start justify-between px-6 pt-5 pb-3 flex-shrink-0">
               <div className="flex items-center gap-3">
