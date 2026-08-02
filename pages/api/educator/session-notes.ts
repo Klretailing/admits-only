@@ -32,19 +32,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   /* ─── POST: Create a note ─── */
   if (req.method === 'POST') {
     try {
-      const { title, content, color, student, subject, grade, lessonDate, template } = req.body || {};
+      const { title, content, color, student, subject, grade, lessonDate, template, data } = req.body || {};
       const id = 'sn_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
       const noteTitle = typeof title === 'string' && title.trim() ? title.trim() : 'Untitled';
       const noteContent = typeof content === 'string' ? content : '';
       const noteColor = typeof color === 'string' && color.trim() ? color.trim() : 'default';
       const str = (v: any) => (typeof v === 'string' ? v : '');
+      const dataJson = data && typeof data === 'object' ? JSON.stringify(data) : '{}';
 
       await prisma.$executeRaw`
         INSERT INTO "tutor_session_notes"
-          ("id", "educatorId", "title", "content", "color", "student", "subject", "grade", "lessonDate", "template")
+          ("id", "educatorId", "title", "content", "color", "student", "subject", "grade", "lessonDate", "template", "data")
         VALUES (${id}, ${userId}, ${noteTitle}, ${noteContent}, ${noteColor},
                 ${str(student)}, ${str(subject)}, ${str(grade)}, ${str(lessonDate)},
-                ${typeof template === 'string' && template.trim() ? template.trim() : 'blank'})
+                ${typeof template === 'string' && template.trim() ? template.trim() : 'blank'},
+                ${dataJson}::jsonb)
       `;
 
       const rows: any[] = await prisma.$queryRaw`
@@ -60,7 +62,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   /* ─── PUT: Update a note ─── */
   if (req.method === 'PUT') {
     try {
-      const { id, title, content, color, pinned, archived, sortOrder, student, subject, grade, lessonDate, template } = req.body || {};
+      const { id, title, content, color, pinned, archived, sortOrder, student, subject, grade, lessonDate, template, data } = req.body || {};
       if (!id || typeof id !== 'string') {
         return res.status(400).json({ error: 'Note id is required' });
       }
@@ -110,6 +112,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           values.push(val);
           sets.push(`"${field}" = $${values.length}`);
         }
+      }
+      if (data && typeof data === 'object') {
+        values.push(JSON.stringify(data));
+        sets.push(`"data" = $${values.length}::jsonb`);
       }
 
       values.push(id);
