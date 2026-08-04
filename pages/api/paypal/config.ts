@@ -5,7 +5,7 @@ import {
   isPaypalConfigured,
   paypalClientId,
   paypalEnv,
-  ESSAY_ACCESS_PRODUCT,
+  ESSAY_TIERS,
 } from '../../../lib/paypal';
 
 /*
@@ -39,12 +39,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const configured = isPaypalConfigured();
 
+  const tiers = [ESSAY_TIERS.uc, ESSAY_TIERS.all].map((t) => ({
+    id: t.id,
+    name: t.name,
+    scope: t.scope,
+    price: t.priceUsd,
+    anchor: t.anchorUsd,
+    includes: t.includes,
+    currency: t.currency,
+  }));
+
   return res.status(200).json({
     configured,
     clientId: configured ? paypalClientId() : null,
     env: paypalEnv(),
-    price: ESSAY_ACCESS_PRODUCT.priceUsd,
     currency: 'USD',
-    productName: ESSAY_ACCESS_PRODUCT.name,
+    tiers,
+    // Back-compat: keep a single `price` (full access) for any old client.
+    price: ESSAY_TIERS.all.priceUsd,
   });
 }

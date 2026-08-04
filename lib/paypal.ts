@@ -55,14 +55,60 @@ export async function checkPaypalConnection(): Promise<{ ok: boolean; status?: n
 }
 
 /**
- * Single all-access product. Kept as a small config object so pricing/name
- * are easy to change in one place.
+ * Purchasable access tiers. `scope` is what gets written to essay_purchases
+ * and checked by hasEssayAccess(): 'all' unlocks everything; a school slug
+ * unlocks just that school. `anchorUsd` is the "was" price shown struck-through.
+ * Prices/names live here so they're easy to change in one place.
  */
+export interface EssayTier {
+  id: 'uc' | 'all';
+  name: string;
+  scope: string;
+  priceUsd: number;   // launch price (what is charged)
+  anchorUsd: number;  // original price, shown struck-through
+  currency: 'USD';
+  description: string; // shown on the PayPal receipt
+  includes: string;    // one-line coverage summary for the UI
+}
+
+export const ESSAY_TIERS: Record<'uc' | 'all', EssayTier> = {
+  uc: {
+    id: 'uc',
+    name: 'UC Essay Vault',
+    scope: 'university-of-california',
+    priceUsd: 14.99,
+    anchorUsd: 24.99,
+    currency: 'USD',
+    description: 'AdmitsOnly — UC Essay Vault (all University of California essays)',
+    includes: 'Every University of California personal-insight essay',
+  },
+  all: {
+    id: 'all',
+    name: 'Full Repository',
+    scope: 'all',
+    priceUsd: 29.99,
+    anchorUsd: 44.99,
+    currency: 'USD',
+    description: 'AdmitsOnly — Full Essay Repository (all schools)',
+    includes: 'Every premium essay across all 46 schools (UC included)',
+  },
+};
+
+export function getEssayTier(id: any): EssayTier | null {
+  return id === 'uc' || id === 'all' ? ESSAY_TIERS[id] : null;
+}
+
+/** Identify a tier by the exact USD amount PayPal actually captured. */
+export function tierByAmount(amountUsd: number): EssayTier | null {
+  return Object.values(ESSAY_TIERS).find((t) => Math.abs(amountUsd - t.priceUsd) < 0.001) || null;
+}
+
+// Back-compat alias for existing references (config/scripts). Points at full access.
 export const ESSAY_ACCESS_PRODUCT = {
-  scope: 'all',
-  priceUsd: 19.0,
-  name: 'AdmitsOnly Essay Library — Full Access',
-  description: 'Unlock every premium essay and downloads.',
+  scope: ESSAY_TIERS.all.scope,
+  priceUsd: ESSAY_TIERS.all.priceUsd,
+  name: ESSAY_TIERS.all.name,
+  description: ESSAY_TIERS.all.description,
 } as const;
 
 /* ─── Access-token cache (module-scoped; refreshed on expiry) ─── */
@@ -126,21 +172,21 @@ export interface PaypalOrder {
  * Create a CAPTURE-intent order for the given USD amount.
  * Returns { id, status } — the order is NOT yet paid.
  */
-export async function createOrder(amountUsd: number): Promise<PaypalOrder> {
+export async function createOrder(
+  amountUsd: number,
+  opts?: { customId?: string; description?: string },
+): Promise<PaypalOrder> {
+  const unit: any = {
+    amount: { currency_code: 'USD', value: amountUsd.toFixed(2) },
+    description: opts?.description || ESSAY_ACCESS_PRODUCT.description,
+  };
+  // custom_id rides through to the capture response so the server can tell
+  // which tier was paid for without trusting anything the client sends.
+  if (opts?.customId) unit.custom_id = opts.customId;
+
   const data = await paypalFetch('/v2/checkout/orders', {
     method: 'POST',
-    body: JSON.stringify({
-      intent: 'CAPTURE',
-      purchase_units: [
-        {
-          amount: {
-            currency_code: 'USD',
-            value: amountUsd.toFixed(2),
-          },
-          description: ESSAY_ACCESS_PRODUCT.description,
-        },
-      ],
-    }),
+    body: JSON.stringify({ intent: 'CAPTURE', purchase_units: [unit] }),
   });
   return { id: data.id, status: data.status };
 }
