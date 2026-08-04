@@ -1,14 +1,15 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../lib/auth';
-import { isPaypalConfigured, createOrder, ESSAY_ACCESS_PRODUCT } from '../../../lib/paypal';
+import { isPaypalConfigured, createOrder, getEssayTier } from '../../../lib/paypal';
 
 /*
  * Create PayPal order — POST
  * ──────────────────────────
  * Auth: any logged-in user.
- * Body: { scope?: 'all' }  (defaults to 'all')
- * Only the single ESSAY_ACCESS_PRODUCT ('all') is supported for now.
+ * Body: { tier?: 'uc' | 'all' }  (defaults to 'all'; legacy scope:'all' accepted)
+ * Amount + description are set server-side from the tier — never trusted from
+ * the client. The tier id rides in custom_id so capture can verify it.
  *
  * Response:
  *   200 { id: string }                                  — PayPal order id
@@ -32,13 +33,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(503).json({ configured: false, error: 'PayPal is not configured yet.' });
   }
 
-  const scope = (req.body && req.body.scope) || 'all';
-  if (scope !== ESSAY_ACCESS_PRODUCT.scope) {
-    return res.status(400).json({ error: 'Unsupported scope' });
+  // Accept the tier id ('uc' | 'all'); default to full access. (Legacy callers
+  // may still send scope:'all'.)
+  const tierId = (req.body && (req.body.tier || (req.body.scope === 'all' ? 'all' : req.body.scope))) || 'all';
+  const tier = getEssayTier(tierId);
+  if (!tier) {
+    return res.status(400).json({ error: 'Unknown tier' });
   }
 
   try {
-    const order = await createOrder(ESSAY_ACCESS_PRODUCT.priceUsd);
+    const order = await createOrder(tier.priceUsd, { customId: tier.id, description: tier.description });
     return res.status(200).json({ id: order.id });
   } catch (e) {
     console.error('PayPal create-order error:', (e as Error).message);

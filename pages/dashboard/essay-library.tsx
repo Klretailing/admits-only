@@ -38,14 +38,25 @@ interface ReaderDoc {
   previewFraction?: number;
   fullWordCount?: number;
 }
+interface PaypalTier {
+  id: 'uc' | 'all';
+  name: string;
+  scope: string;
+  price: number;
+  anchor: number;
+  includes: string;
+  currency?: string;
+}
 interface PaypalConfig {
   configured: boolean;
   clientId: string | null;
   env?: 'sandbox' | 'live';
-  price: number;
+  price?: number;
   currency?: string;
-  productName?: string;
+  tiers?: PaypalTier[];
 }
+
+const UC_SLUG = 'university-of-california';
 
 const TYPE_COLORS: Record<string, string> = {
   'Personal Statement': 'bg-indigo-50 text-indigo-600',
@@ -99,10 +110,10 @@ export default function EssaySamples() {
   const [captureError, setCaptureError] = useState<string | null>(null);
   const [paypalLoadError, setPaypalLoadError] = useState(false);
   const [purchased, setPurchased] = useState(false); // just-purchased confirmation
+  const [purchasedScope, setPurchasedScope] = useState<string>('all');
 
   /* Refs used inside PayPal button callbacks (stable across renders) */
   const readerRef = useRef<ReaderDoc | null>(null);
-  const buttonsInstanceRef = useRef<any>(null);
 
   const applyReader = (doc: ReaderDoc | null) => {
     readerRef.current = doc;
@@ -159,79 +170,79 @@ export default function EssaySamples() {
     setPaypalLoadError(false);
   };
 
-  /* ── Render PayPal buttons when a locked paywall is visible ── */
+  /* Capture handler — shared by every tier button. The server decides the tier
+     from the actual payment, so the client only sends the order id. */
+  const handleApprove = async (orderID: string) => {
+    try {
+      const r = await fetch('/api/paypal/capture-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderID }),
+      });
+      const d = await r.json();
+      if (d.ok) {
+        setCaptureError(null);
+        setPurchased(true);
+        setPurchasedScope(d.scope || 'all');
+        if (d.scope === 'all') setAccess((a) => ({ ...a, all: true }));
+        else setAccess((a) => ({ ...a, schools: Array.from(new Set([...(a.schools || []), d.scope])) }));
+        try { await loadIndex(); } catch { /* ignore */ }
+        const cur = readerRef.current;
+        if (cur?.essay?.id) {
+          try {
+            const er = await fetch(`/api/sample-essays?id=${encodeURIComponent(cur.essay.id)}`);
+            const edata = await er.json();
+            if (edata.essay) applyReader(edata as ReaderDoc);
+          } catch { /* ignore */ }
+        }
+      } else {
+        setCaptureError("We couldn't confirm your payment. Please try again.");
+      }
+    } catch {
+      setCaptureError("We couldn't confirm your payment. Please try again.");
+    }
+  };
+
+  /* ── Render a PayPal button into each visible tier's container ── */
   useEffect(() => {
     if (!reader?.locked) return;
     if (!config?.configured || !config.clientId) return;
 
     let cancelled = false;
     setPaypalLoadError(false);
+    const instances: any[] = [];
 
     ensurePaypalSdk(config.clientId)
       .then((paypal) => {
         if (cancelled) return;
-        const container = document.getElementById('paypal-buttons-container');
-        if (!container) return;
-        container.innerHTML = ''; // avoid double-rendering into the same node
 
-        const btns = paypal.Buttons({
-          style: { color: 'gold', shape: 'pill', label: 'pay' },
-          createOrder: async () => {
-            const r = await fetch('/api/paypal/create-order', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ scope: 'all' }),
-            });
-            const d = await r.json();
-            return d.id;
-          },
-          onApprove: async (data: any) => {
-            try {
-              const r = await fetch('/api/paypal/capture-order', {
+        const mount = (tierId: 'uc' | 'all', containerId: string) => {
+          const container = document.getElementById(containerId);
+          if (!container) return;
+          container.innerHTML = '';
+          const btns = paypal.Buttons({
+            style: { color: tierId === 'all' ? 'gold' : 'blue', shape: 'pill', label: 'pay', height: 42 },
+            createOrder: async () => {
+              const r = await fetch('/api/paypal/create-order', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ orderID: data.orderID }),
+                body: JSON.stringify({ tier: tierId }),
               });
               const d = await r.json();
-              if (d.ok) {
-                setCaptureError(null);
-                setPurchased(true);
-                setAccess((a) => ({ ...a, all: true }));
-                // Refetch the index so every lock clears…
-                try {
-                  await loadIndex();
-                } catch {
-                  /* ignore */
-                }
-                // …and refetch the open essay so it returns full text.
-                const cur = readerRef.current;
-                if (cur?.essay?.id) {
-                  try {
-                    const er = await fetch(
-                      `/api/sample-essays?id=${encodeURIComponent(cur.essay.id)}`,
-                    );
-                    const edata = await er.json();
-                    if (edata.essay) applyReader(edata as ReaderDoc);
-                  } catch {
-                    /* ignore */
-                  }
-                }
-              } else {
-                setCaptureError("We couldn't confirm your payment. Please try again.");
-              }
-            } catch {
-              setCaptureError("We couldn't confirm your payment. Please try again.");
-            }
-          },
-          onError: () => {
-            setCaptureError('Something went wrong with checkout. Please try again.');
-          },
-        });
+              return d.id;
+            },
+            onApprove: async (data: any) => { await handleApprove(data.orderID); },
+            onError: () => setCaptureError('Something went wrong with checkout. Please try again.'),
+          });
+          instances.push(btns);
+          if (typeof btns.isEligible === 'function' && !btns.isEligible()) return;
+          const rendered = btns.render('#' + containerId);
+          if (rendered && typeof rendered.catch === 'function') rendered.catch(() => {});
+        };
 
-        buttonsInstanceRef.current = btns;
-        if (typeof btns.isEligible === 'function' && !btns.isEligible()) return;
-        const rendered = btns.render('#paypal-buttons-container');
-        if (rendered && typeof rendered.catch === 'function') rendered.catch(() => {});
+        // Only mount into containers that are actually on screen.
+        mount('uc', 'paypal-btn-uc');
+        mount('all', 'paypal-btn-all');
       })
       .catch(() => {
         if (!cancelled) setPaypalLoadError(true);
@@ -239,17 +250,10 @@ export default function EssaySamples() {
 
     return () => {
       cancelled = true;
-      if (buttonsInstanceRef.current) {
-        try {
-          buttonsInstanceRef.current.close();
-        } catch {
-          /* ignore */
-        }
-        buttonsInstanceRef.current = null;
-      }
+      instances.forEach((b) => { try { b.close(); } catch { /* ignore */ } });
     };
-    // Re-render buttons when the paywall shows for a different essay or config arrives.
-  }, [reader?.locked, reader?.essay?.id, config]);
+    // Re-mount when the essay, config, or the user's access changes.
+  }, [reader?.locked, reader?.essay?.id, reader?.essay?.schoolSlug, config, (access.schools || []).join(',')]);
 
   // Filter buckets/essays by the search query
   const filtered = useMemo(() => {
@@ -277,7 +281,11 @@ export default function EssaySamples() {
 
   if (status !== 'authenticated') return null;
 
-  const price = config?.price ?? 0;
+  const ucTier = config?.tiers?.find((t) => t.id === 'uc') || null;
+  const allTier = config?.tiers?.find((t) => t.id === 'all') || null;
+  const readerIsUc = reader?.essay?.schoolSlug === UC_SLUG;
+  const ownsUc = (access.schools || []).includes(UC_SLUG);
+  const savePct = (t: PaypalTier) => Math.round(((t.anchor - t.price) / t.anchor) * 100);
 
   return (
     <DashboardLayout>
@@ -433,7 +441,11 @@ export default function EssaySamples() {
                 {purchased && !reader.locked && (
                   <div className="mx-6 mt-4 flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3">
                     <svg className="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    <p className="text-xs font-semibold text-emerald-700">You now have full access. Enjoy the complete library.</p>
+                    <p className="text-xs font-semibold text-emerald-700">
+                      {purchasedScope === 'all'
+                        ? 'You now have full access to every essay. Enjoy the complete library.'
+                        : 'Your UC Essay Vault is unlocked. Every University of California essay is now open.'}
+                    </p>
                   </div>
                 )}
 
@@ -452,43 +464,89 @@ export default function EssaySamples() {
                   </div>
                 </div>
 
-                {/* Paywall gate */}
+                {/* Paywall gate — two clear access tiers */}
                 {reader.locked && (
                   <div className="px-6 pb-6">
-                    <div className="rounded-2xl border border-slate-100 bg-slate-50 p-6 text-center">
-                      <div className="w-12 h-12 mx-auto rounded-2xl bg-amber-50 flex items-center justify-center mb-3">
-                        <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                    <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5 sm:p-6">
+                      {/* Header */}
+                      <div className="text-center mb-5">
+                        <div className="w-12 h-12 mx-auto rounded-2xl bg-amber-50 flex items-center justify-center mb-3">
+                          <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        </div>
+                        <h3 className="text-lg font-bold text-primary">Choose your access</h3>
+                        <p className="text-sm text-slate-500 mt-1.5 max-w-md mx-auto leading-relaxed">
+                          You&rsquo;re previewing ~{Math.round((reader.previewFraction ?? 0.25) * 100)}% of this{' '}
+                          <span className="font-medium text-slate-600">{reader.essay.school}</span> essay. Unlock the full text (plus downloads):
+                        </p>
+                        <span className="inline-flex items-center gap-1.5 mt-2.5 text-[11px] font-bold text-rose-600 bg-rose-50 border border-rose-100 rounded-full px-2.5 py-1">
+                          🔥 Launch pricing — limited time
+                        </span>
                       </div>
-                      <h3 className="text-lg font-bold text-primary">Unlock the full essay</h3>
-                      <p className="text-sm text-slate-500 mt-1.5 max-w-md mx-auto leading-relaxed">
-                        You&rsquo;re reading ~{Math.round((reader.previewFraction ?? 0.25) * 100)}% of a{' '}
-                        {reader.fullWordCount ?? reader.essay.wordCount}-word essay. Get the full AdmitsOnly essay
-                        library — every premium essay, plus downloads — for a one-time{' '}
-                        {price ? `$${price}` : 'payment'}.
-                      </p>
 
-                      {/* Checkout */}
-                      <div className="mt-5 max-w-xs mx-auto">
-                        {config === null ? (
-                          <p className="text-xs text-slate-400">Loading checkout…</p>
-                        ) : !config.configured ? (
-                          <div className="rounded-xl border border-slate-100 bg-white px-4 py-3">
-                            <p className="text-xs text-slate-500">
-                              Checkout is coming soon — full access will be available shortly.
-                            </p>
-                          </div>
-                        ) : paypalLoadError ? (
-                          <p className="text-xs text-rose-500">
-                            Checkout couldn&rsquo;t load. Please refresh and try again.
-                          </p>
-                        ) : (
-                          <div id="paypal-buttons-container" className="min-h-[45px]" />
-                        )}
+                      {config === null ? (
+                        <p className="text-xs text-slate-400 text-center">Loading checkout…</p>
+                      ) : !config.configured ? (
+                        <div className="rounded-xl border border-slate-100 bg-white px-4 py-3 text-center max-w-xs mx-auto">
+                          <p className="text-xs text-slate-500">Checkout is coming soon — access will be available shortly.</p>
+                        </div>
+                      ) : paypalLoadError ? (
+                        <p className="text-xs text-rose-500 text-center">Checkout couldn&rsquo;t load. Please refresh and try again.</p>
+                      ) : (
+                        <div className="grid gap-4 sm:grid-cols-2 max-w-2xl mx-auto items-start">
+                          {/* ── UC Essay Vault ── */}
+                          {ucTier && !ownsUc && (
+                            <div className="relative rounded-2xl border border-slate-200 bg-white p-5 flex flex-col">
+                              <div className="flex items-center justify-between gap-2">
+                                <h4 className="text-base font-bold text-primary">{ucTier.name}</h4>
+                                <span className="text-[10px] font-bold text-blue-700 bg-blue-50 rounded px-1.5 py-0.5 whitespace-nowrap">UC APPLICANTS</span>
+                              </div>
+                              <p className="text-xs text-slate-500 mt-1 leading-snug min-h-[2rem]">{ucTier.includes}</p>
+                              <div className={`mt-2 flex items-center gap-1.5 text-xs font-medium ${readerIsUc ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                {readerIsUc ? (
+                                  <><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>Unlocks this essay</>
+                                ) : (
+                                  <><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>Doesn&rsquo;t unlock this essay</>
+                                )}
+                              </div>
+                              <div className="mt-3 flex items-end gap-2">
+                                <span className="text-2xl font-bold font-display text-primary">${ucTier.price.toFixed(2)}</span>
+                                <span className="text-sm text-slate-400 line-through mb-1">${ucTier.anchor.toFixed(2)}</span>
+                                <span className="mb-1.5 text-[10px] font-bold text-emerald-700 bg-emerald-50 rounded px-1.5 py-0.5">SAVE {savePct(ucTier)}%</span>
+                              </div>
+                              <div className="mt-4"><div id="paypal-btn-uc" className="min-h-[42px]" /></div>
+                              {!readerIsUc && (
+                                <p className="mt-2 text-[11px] text-amber-600 leading-snug">
+                                  Unlocks University of California essays only — not this {reader.essay.school} essay.
+                                </p>
+                              )}
+                            </div>
+                          )}
 
-                        {captureError && (
-                          <p className="mt-3 text-xs text-rose-500">{captureError}</p>
-                        )}
-                      </div>
+                          {/* ── Full Repository (best value) ── */}
+                          {allTier && (
+                            <div className="relative rounded-2xl border-2 border-accent bg-white p-5 flex flex-col shadow-sm">
+                              <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[10px] font-bold text-white bg-accent rounded-full px-2.5 py-0.5 whitespace-nowrap">BEST VALUE · INCLUDES UC</span>
+                              <div className="flex items-center justify-between gap-2">
+                                <h4 className="text-base font-bold text-primary">{allTier.name}</h4>
+                              </div>
+                              <p className="text-xs text-slate-500 mt-1 leading-snug min-h-[2rem]">{allTier.includes}</p>
+                              <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-emerald-600">
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                                Unlocks this essay + all 46 schools
+                              </div>
+                              <div className="mt-3 flex items-end gap-2">
+                                <span className="text-2xl font-bold font-display text-primary">${allTier.price.toFixed(2)}</span>
+                                <span className="text-sm text-slate-400 line-through mb-1">${allTier.anchor.toFixed(2)}</span>
+                                <span className="mb-1.5 text-[10px] font-bold text-emerald-700 bg-emerald-50 rounded px-1.5 py-0.5">SAVE {savePct(allTier)}%</span>
+                              </div>
+                              <div className="mt-4"><div id="paypal-btn-all" className="min-h-[42px]" /></div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {captureError && <p className="mt-3 text-xs text-rose-500 text-center">{captureError}</p>}
+                      <p className="mt-4 text-[11px] text-slate-400 text-center">One-time payment · instant access · secure checkout by PayPal</p>
                     </div>
                   </div>
                 )}

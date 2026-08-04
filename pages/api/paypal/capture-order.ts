@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../lib/auth';
 import { prisma, ensureSchema } from '../../../lib/db';
-import { isPaypalConfigured, captureOrder, ESSAY_ACCESS_PRODUCT } from '../../../lib/paypal';
+import { isPaypalConfigured, captureOrder, getEssayTier, tierByAmount } from '../../../lib/paypal';
 
 /*
  * Capture PayPal order — POST  [SECURITY-CRITICAL]
@@ -58,25 +58,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // The order-level status AND the individual capture status must both be
   // COMPLETED. Anything else (PENDING, DECLINED, ...) grants nothing.
+  const pu = capture?.purchase_units?.[0];
+  const capObj = pu?.payments?.captures?.[0];
   const orderCompleted = capture?.status === 'COMPLETED';
-  const captureStatus =
-    capture?.purchase_units?.[0]?.payments?.captures?.[0]?.status;
-  const paymentCompleted = captureStatus === 'COMPLETED';
+  const paymentCompleted = capObj?.status === 'COMPLETED';
 
   if (!orderCompleted || !paymentCompleted) {
     return res.status(402).json({ ok: false, error: 'Payment not completed' });
+  }
+
+  // ─── Determine the tier from the ACTUAL captured order (never the client) ───
+  // Prefer the custom_id we stamped at create time; then require the amount
+  // PayPal actually captured to match that tier's price. Fall back to matching
+  // purely by captured amount. If neither resolves, grant nothing.
+  const paidValue = Number(capObj?.amount?.value);
+  const customId = capObj?.custom_id || pu?.custom_id;
+  let tier = getEssayTier(customId);
+  if (!tier || !(Math.abs(paidValue - tier.priceUsd) < 0.001)) {
+    tier = tierByAmount(paidValue);
+  }
+  if (!tier) {
+    console.error('PayPal capture: unrecognized amount/tier', { paidValue, customId });
+    return res.status(402).json({ ok: false, error: 'Payment amount not recognized' });
   }
 
   // ─── Grant the entitlement, idempotently keyed on the PayPal order id ───
   try {
     await ensureSchema();
     const id = genId('ep');
-    const amountCents = Math.round(ESSAY_ACCESS_PRODUCT.priceUsd * 100);
+    const amountCents = Math.round(paidValue * 100);
     await prisma.$executeRaw`
       INSERT INTO "essay_purchases"
         ("id", "userId", "scope", "status", "provider", "providerOrderId", "amountCents", "currency")
       VALUES
-        (${id}, ${userId}, ${ESSAY_ACCESS_PRODUCT.scope}, 'active', 'paypal', ${orderID}, ${amountCents}, 'USD')
+        (${id}, ${userId}, ${tier.scope}, 'active', 'paypal', ${orderID}, ${amountCents}, 'USD')
       ON CONFLICT ("providerOrderId") DO NOTHING
     `;
   } catch (e) {
@@ -86,5 +101,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(502).json({ ok: false, error: 'capture_failed' });
   }
 
-  return res.status(200).json({ ok: true, scope: ESSAY_ACCESS_PRODUCT.scope });
+  return res.status(200).json({ ok: true, scope: tier.scope, tier: tier.id });
 }
