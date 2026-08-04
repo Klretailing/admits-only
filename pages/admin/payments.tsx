@@ -1,6 +1,7 @@
 import Head from 'next/head';
 import { useState, useEffect } from 'react';
 import AdminLayout from '../../components/AdminLayout';
+import EssaySales from '../../components/EssaySales';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
 
 interface StatsData {
@@ -82,7 +83,7 @@ export default function AdminPayments() {
       <div className="space-y-8">
         <div>
           <h1 className="text-2xl font-bold font-display text-primary">Payments &amp; Revenue</h1>
-          <p className="mt-1 text-slate-500">Live financial overview based on plan subscriptions.</p>
+          <p className="mt-1 text-slate-500">Subscription plans and one-time essay-library sales.</p>
         </div>
 
         {error && (
@@ -90,6 +91,9 @@ export default function AdminPayments() {
             Failed to load stats. Please refresh.
           </div>
         )}
+
+        {/* One-time essay purchases (PayPal) */}
+        <EssaySales />
 
         {/* Revenue stat cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
