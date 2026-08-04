@@ -38,6 +38,23 @@ export function paypalClientId(): string {
 }
 
 /**
+ * Admin health check: verify the configured credentials can obtain an access
+ * token from PayPal — without creating an order or charging anything.
+ * Returns a discriminated result the admin UI can render in plain language.
+ */
+export async function checkPaypalConnection(): Promise<{ ok: boolean; status?: number; message?: string }> {
+  if (!isPaypalConfigured()) return { ok: false, message: 'not_configured' };
+  try {
+    await getAccessToken();
+    return { ok: true };
+  } catch (e: any) {
+    const msg = e?.message || String(e);
+    const m = msg.match(/\((\d{3})\)/);
+    return { ok: false, status: m ? Number(m[1]) : undefined, message: msg };
+  }
+}
+
+/**
  * Single all-access product. Kept as a small config object so pricing/name
  * are easy to change in one place.
  */

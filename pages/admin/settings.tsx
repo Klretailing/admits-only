@@ -57,6 +57,24 @@ export default function AdminSettings() {
     }
   }
 
+  // PayPal (payments) live connection check
+  const [paypalChecking, setPaypalChecking] = useState(false);
+  const [paypalHealth, setPaypalHealth] = useState<{ status: string; title: string; detail: string } | null>(null);
+
+  async function testPaypal() {
+    setPaypalChecking(true);
+    setPaypalHealth(null);
+    try {
+      const r = await fetch('/api/admin/paypal-health');
+      const data = await r.json();
+      setPaypalHealth(data);
+    } catch {
+      setPaypalHealth({ status: 'error', title: 'Could not run the test', detail: 'The check itself failed to run. Try again in a moment.' });
+    } finally {
+      setPaypalChecking(false);
+    }
+  }
+
   // Master toggles
   const [registrationOpen, setRegistrationOpen] = useState(true);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
@@ -408,6 +426,67 @@ export default function AdminSettings() {
                   <p className="text-sm text-slate-400">
                     Click <span className="font-semibold text-slate-500">Test Connection</span> to check Adam&apos;s status. If he isn&apos;t
                     replying to students, this will tell you exactly why.
+                  </p>
+                )}
+              </div>
+
+              {/* PayPal (Payments) — live connection check */}
+              <div className="bg-white rounded-2xl border border-slate-100 p-6">
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#003087] flex items-center justify-center text-white font-bold italic">P</div>
+                    <div>
+                      <h3 className="text-lg font-bold font-display text-primary">PayPal (Payments)</h3>
+                      <p className="text-xs text-slate-400">Confirms your keys work — without making a real purchase.</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={testPaypal}
+                    disabled={paypalChecking}
+                    className="px-4 py-2 text-sm font-semibold text-white bg-primary rounded-xl hover:bg-slate-800 transition-colors disabled:opacity-60 flex-shrink-0"
+                  >
+                    {paypalChecking ? 'Testing…' : 'Test Connection'}
+                  </button>
+                </div>
+
+                {paypalHealth && (
+                  <div
+                    className={`p-4 rounded-xl border ${
+                      paypalHealth.status === 'connected'
+                        ? 'bg-green-50 border-green-100'
+                        : paypalHealth.status === 'sandbox'
+                        ? 'bg-amber-50 border-amber-100'
+                        : 'bg-red-50 border-red-100'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span
+                        className={`w-2 h-2 rounded-full ${
+                          paypalHealth.status === 'connected'
+                            ? 'bg-green-500'
+                            : paypalHealth.status === 'sandbox'
+                            ? 'bg-amber-500'
+                            : 'bg-red-500'
+                        }`}
+                      />
+                      <p
+                        className={`text-sm font-bold ${
+                          paypalHealth.status === 'connected'
+                            ? 'text-green-800'
+                            : paypalHealth.status === 'sandbox'
+                            ? 'text-amber-800'
+                            : 'text-red-800'
+                        }`}
+                      >
+                        {paypalHealth.title}
+                      </p>
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed">{paypalHealth.detail}</p>
+                  </div>
+                )}
+                {!paypalHealth && !paypalChecking && (
+                  <p className="text-sm text-slate-400">
+                    Click <span className="font-semibold text-slate-500">Test Connection</span> to verify PayPal is hooked up and in live mode — no charge is made.
                   </p>
                 )}
               </div>
