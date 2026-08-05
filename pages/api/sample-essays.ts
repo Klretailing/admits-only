@@ -70,9 +70,12 @@ function preview(text: string, n = 180): string {
 }
 
 function wordCountOf(text: string): number {
+  // Count the way Common App / UC do: whitespace-separated tokens that contain
+  // at least one letter or number. A standalone "—" or "-" is not a word, so a
+  // naive split (which counts them) over-reports by a few on dash-heavy essays.
   const t = (text || '').trim();
   if (!t) return 0;
-  return t.split(/\s+/).length;
+  return t.split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
 }
 
 /* ─── Precompute once at module load (data + premium flags are static) ─── */
