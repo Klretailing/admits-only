@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import AdminLayout from '../../components/AdminLayout';
+import AccessPricing from '../../components/AccessPricing';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
 
 interface EssayDoc {
@@ -145,6 +146,18 @@ export default function AdminEssayLibrary() {
           >
             {showForm ? 'Cancel' : '+ Upload Essay'}
           </button>
+        </div>
+
+        {/* Live access pricing (the two tiers students actually pay) */}
+        <AccessPricing />
+
+        <div className="flex items-start gap-2 p-3.5 rounded-xl bg-amber-50 border border-amber-100">
+          <svg className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <p className="text-xs text-amber-800 leading-relaxed">
+            <span className="font-semibold">Heads up:</span> the storefront students buy runs on the curated essay
+            library and the two access tiers above — set in one place. The per-essay uploads below are a separate
+            tool and their individual prices don&rsquo;t change what students pay for tier access.
+          </p>
         </div>
 
         {/* Upload / Edit Form */}
