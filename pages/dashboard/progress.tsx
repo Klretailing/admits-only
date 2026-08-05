@@ -271,8 +271,8 @@ export default function Applications() {
       let merged: CollegeApp[];
       if (serverApps.length > 0 && localApps.length > 0) {
         const serverIds = new Set(serverApps.map(a => a.id));
-        const serverNames = new Set(serverApps.map(a => a.name.toLowerCase()));
-        const localOnly = localApps.filter(a => !serverIds.has(a.id) && !serverNames.has(a.name.toLowerCase()));
+        const serverNames = new Set(serverApps.map(a => (a.name || '').toLowerCase()));
+        const localOnly = localApps.filter(a => !serverIds.has(a.id) && !serverNames.has((a.name || '').toLowerCase()));
         merged = [...serverApps, ...localOnly];
       } else if (serverApps.length > 0) {
         merged = serverApps;
@@ -382,8 +382,6 @@ export default function Applications() {
   const timeline = useMemo(() => generateSmartTimeline(apps), [apps]);
   const digest = useMemo(() => generateWeeklyDigest(timeline, apps), [timeline, apps]);
 
-  if (status !== 'authenticated' || !loaded) return null;
-
   const getStatusInfo = (s: CollegeApp['status']) => STATUS_OPTIONS.find(o => o.value === s) || STATUS_OPTIONS[0];
   const selectedApp = detailApp ? apps.find(a => a.id === detailApp) : null;
 
@@ -459,6 +457,11 @@ export default function Applications() {
         apps: appList.sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime()),
       }));
   }, [apps]);
+
+  // Guard AFTER all hooks so the hook count never changes between renders
+  // (loading → loaded). An early return above any hook throws React's
+  // "rendered more hooks than during the previous render" invariant.
+  if (status !== 'authenticated' || !loaded) return null;
 
   return (
     <DashboardLayout>

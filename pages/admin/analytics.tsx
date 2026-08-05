@@ -188,8 +188,6 @@ export default function AdminAnalyticsPage() {
       .finally(() => setLoading(false));
   }, [guardLoading, days]);
 
-  if (guardLoading) return null;
-
   // Aggregate feature usage by feature ID
   const featureAgg = useMemo(() => {
     if (!data) return [];
@@ -201,6 +199,9 @@ export default function AdminAnalyticsPage() {
       .map(([feature, count]) => ({ feature, count }))
       .sort((a, b) => b.count - a.count);
   }, [data]);
+
+  // Guard AFTER all hooks so the hook count is stable across renders.
+  if (guardLoading) return null;
 
   return (
     <AdminLayout>
