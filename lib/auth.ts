@@ -2,6 +2,7 @@ import type { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { compare, hash } from 'bcryptjs';
 import { prisma, ensureSchema } from './db';
+import { seedDemoStudent } from './seedDemoStudent';
 
 export type UserRole = 'student' | 'parent' | 'educator' | 'admin';
 
@@ -24,6 +25,11 @@ async function seedAccounts() {
       { name: 'Linda Park', email: 'parent@demo.admitsonly.com', password: 'Parent@2026', role: 'parent' },
       { name: 'Marcus Thompson', email: 'tutor@demo.admitsonly.com', password: 'Tutor@2026', role: 'educator' },
       { name: 'Test Tutor', email: 'testtutor@admitsonly.com', password: 'TestTutor@2026', role: 'educator' },
+      // Fully-populated demo student + his Study Pod mates (see seedDemoStudent).
+      { name: 'Ethan Nakamura', email: 'demo.student@admitsonly.com', password: 'Student@2026', role: 'student' },
+      { name: 'Priya Sharma', email: 'priya@demo.admitsonly.com', password: 'Student@2026', role: 'student' },
+      { name: 'Daniel Kim', email: 'daniel@demo.admitsonly.com', password: 'Student@2026', role: 'student' },
+      { name: 'Sofia Alvarez', email: 'sofia@demo.admitsonly.com', password: 'Student@2026', role: 'student' },
     ];
 
     for (const acct of accounts) {
@@ -42,6 +48,9 @@ async function seedAccounts() {
 
     // Pre-wire demo connections: link parent & tutor accounts to Maya Johnson
     await seedDemoConnections();
+
+    // Fully-populate the demo student's profile, tracker, pod, essays, Adam.
+    await seedDemoStudent();
   } catch (e) {
     // Log but don't crash — allows login to proceed if users table exists
     console.error('Seed error (non-fatal):', (e as Error).message);
