@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import DashboardLayout from '../../components/DashboardLayout';
+import TodaysFocus from '../../components/TodaysFocus';
 import { useCountUp, useInView } from '../../hooks/useAnimations';
 
 /* ─── Upcoming Deadlines Widget ─── */
@@ -248,6 +249,9 @@ export default function Dashboard() {
           </h1>
           <p className="mt-1 text-slate-500">Here&apos;s your academic progress at a glance.</p>
         </div>
+
+        {/* Today's Focus — daily nudge */}
+        <TodaysFocus checklist={readiness?.checklist} />
 
         {/* Smart Nudges Banner */}
         {readiness?.nudges && readiness.nudges.filter(n => !dismissedNudges.has(n.id)).length > 0 && (
