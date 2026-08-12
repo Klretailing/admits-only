@@ -7,6 +7,8 @@ import { SCHOOLS, PROMPT_TYPES as SUPP_PROMPT_TYPES, getPromptTypeInfo, findScho
 import { analyzeSentences, computeStats, type AnalyzedSentence, type AnalysisStats } from '../../lib/sentenceAnalysis';
 import { checkGrammar, applyFix, type GrammarIssue } from '../../lib/grammarCheck';
 import { analyzeEssayInsights, type EssayInsights } from '../../lib/essayInsights';
+import { analyzeCraft } from '../../lib/essayCraft';
+import CraftStudio from '../../components/CraftStudio';
 import { tracker } from '../../lib/analytics';
 import { analyzeActivities } from '../../lib/motifEngine';
 
@@ -312,114 +314,6 @@ function generateMentionedFeedback(ec: Extracurricular, content: string, promptT
     return `Strong use of ${ec.name} — you're showing rather than telling, which is exactly what admissions readers want to see.`;
   }
   return `You mention ${ec.name}, which is great. To make this section more vivid, try to ${improvements.join(', and ')}. These details separate memorable essays from forgettable ones.`;
-}
-
-/* ══════════════════════════════════════════════════════════════════════
-   LIVE WRITING TIPS ENGINE
-   ══════════════════════════════════════════════════════════════════════ */
-
-function generateLiveTips(content: string, prompt: string, ecs: Extracurricular[]): string[] {
-  if (!content || content.trim().length < 30) return [];
-
-  const text = content.trim();
-  const wordCount = text.split(/\s+/).length;
-  const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
-  const tips: string[] = [];
-
-  // ─── Opening analysis ───
-  const firstLine = text.split(/[.!?\n]/)[0] || '';
-  if (/^I have always /i.test(firstLine)) tips.push('Your opening "I have always..." is one of the most common essay starters. Try opening with a specific moment instead — drop the reader into a scene mid-action.');
-  else if (/^Since I was /i.test(firstLine)) tips.push('Starting with "Since I was..." tells your story chronologically. Instead, start with a vivid present-day moment, then flash back. In medias res openings are more engaging.');
-  else if (/^Growing up/i.test(firstLine)) tips.push('"Growing up..." is a common opening that distances the reader. Start in a specific moment: describe what you see, hear, or feel RIGHT NOW in the scene.');
-  else if (/^In this essay/i.test(firstLine)) tips.push('Never announce what your essay will do. Instead, just do it. Drop the reader directly into your story.');
-  else if (/^"[^"]+"/.test(firstLine)) tips.push('Starting with a quote can work if it\'s a line YOU said or heard. Generic inspirational quotes feel impersonal. If this is your own dialogue, great — make sure the reader knows who\'s speaking.');
-
-  // ─── Show vs Tell detection ───
-  if (/\bI (?:learned|realized|understood|discovered) that\b/i.test(text)) {
-    tips.push('You wrote "I learned/realized that..." — this is telling, not showing. Instead of stating the lesson, show the moment of realization through your actions, thoughts, or a specific scene. Let the reader draw the conclusion.');
-  }
-  if (/\bI felt (?:happy|sad|proud|nervous|excited|grateful)\b/i.test(text)) {
-    tips.push('Instead of "I felt [emotion]," show the emotion through physical sensations: sweaty palms (nervous), a tight chest (anxious), an uncontrollable smile (joy). Admissions readers respond to visceral details.');
-  }
-  if (/\b(?:it|this) was (?:an? )?(?:amazing|incredible|life-changing|meaningful|important) (?:experience|moment|event)\b/i.test(text)) {
-    tips.push('Calling something "amazing" or "meaningful" tells the reader how to feel. Instead, describe the experience so vividly that the reader concludes it was meaningful on their own. Show, don\'t label.');
-  }
-  if (/\bthis (?:experience|activity|moment) taught me\b/i.test(text)) {
-    tips.push('"This experience taught me..." is a tell phrase. Rewrite this section to show the lesson through a specific moment of change in your behavior, perspective, or understanding.');
-  }
-
-  // ─── Coherence / topic drift ───
-  if (paragraphs.length >= 3) {
-    const paraKeywords = paragraphs.map(p => {
-      const words = p.toLowerCase().split(/\s+/).map(w => w.replace(/[^a-z']/g, ''));
-      return new Set(words.filter(w => w.length > 4));
-    });
-
-    for (let i = 1; i < paraKeywords.length; i++) {
-      const prev = paraKeywords[i - 1];
-      const curr = paraKeywords[i];
-      if (prev.size < 4 || curr.size < 4) continue;
-      let overlap = 0;
-      for (const w of curr) { if (prev.has(w)) overlap++; }
-      const ratio = overlap / Math.min(prev.size, curr.size);
-      if (ratio < 0.03) {
-        tips.push(`Paragraph ${i + 1} shifts topics abruptly from the previous paragraph. Add a transition sentence that bridges the two ideas, or reconsider whether this paragraph belongs in this essay.`);
-        break; // Only flag the first major drift
-      }
-    }
-
-    // Prompt alignment check
-    if (prompt && prompt.trim().length > 10) {
-      const promptKeywords = new Set(
-        prompt.toLowerCase().split(/\s+/).map(w => w.replace(/[^a-z']/g, '')).filter(w => w.length > 4)
-      );
-      const lastPara = paragraphs[paragraphs.length - 1].toLowerCase();
-      const lastWords = new Set(lastPara.split(/\s+/).map(w => w.replace(/[^a-z']/g, '')).filter(w => w.length > 4));
-      let promptOverlap = 0;
-      for (const w of lastWords) { if (promptKeywords.has(w)) promptOverlap++; }
-      if (promptOverlap === 0 && paragraphs.length >= 3) {
-        tips.push('Your conclusion doesn\'t circle back to the prompt. Revisit the core question in your final paragraph — not by restating the prompt, but by showing how your story answers it.');
-      }
-    }
-  }
-
-  // ─── Structural tips ───
-  if (wordCount > 100 && paragraphs.length === 1) {
-    tips.push('Your essay is a single paragraph. Break it into 3-5 paragraphs for better readability. Each paragraph should cover one scene, idea, or shift.');
-  }
-  if (/\b(?:in conclusion|to summarize|overall|in summary|to conclude)\b/i.test(text)) {
-    tips.push('Phrases like "in conclusion" or "to summarize" feel formulaic in a personal essay. End with a forward-looking thought, a return to your opening image, or a quiet realization.');
-  }
-
-  // ─── Cliche detection ───
-  const cliches: Record<string, string> = {
-    'changed my life': '"Changed my life" is overused. Show HOW you changed through specific behavior differences.',
-    'step outside my comfort zone': '"Step outside my comfort zone" is a cliche. Describe the specific discomfort: what did it feel like physically? What did you almost do instead?',
-    'made me who i am today': '"Made me who I am today" is abstract. Show who you are through a specific action or decision you make differently now.',
-    'passion for helping others': '"Passion for helping others" is generic. Name ONE person you helped and describe the specific interaction.',
-    'opened my eyes': '"Opened my eyes" is a cliche. Describe what you literally saw differently after this experience.',
-    'broaden my horizons': '"Broaden my horizons" is vague. What specific new perspective did you gain? Name it precisely.',
-  };
-  const lowerText = text.toLowerCase();
-  for (const [phrase, tip] of Object.entries(cliches)) {
-    if (lowerText.includes(phrase)) { tips.push(tip); break; } // Only show first cliche
-  }
-
-  // ─── EC-aware tips ───
-  if (ecs.length > 0 && wordCount > 100) {
-    const { primary } = classifyPrompt(prompt);
-    if (primary && !tips.some(t => t.includes('activity'))) {
-      const mentionedECs = ecs.filter(ec => {
-        const nameWords = ec.name.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-        return nameWords.some(w => lowerText.includes(w));
-      });
-      if (mentionedECs.length === 0 && wordCount > 150) {
-        tips.push('Your essay doesn\'t reference any of your activities yet. Personal essays that ground abstract claims in real experiences are significantly more persuasive. Check the Activity Insights panel for specific suggestions.');
-      }
-    }
-  }
-
-  return tips.slice(0, 4); // Cap at 4 tips to avoid overwhelming
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -2686,11 +2580,11 @@ export default function Essays() {
     return analyzeEssayECConnections(editContent, activeEssay.prompt || '', ecs);
   }, [editContent, activeEssay, ecs]);
 
-  // Live writing tips
-  const liveTips = useMemo(() => {
-    if (!activeEssay) return [];
-    return generateLiveTips(editContent, activeEssay.prompt || '', ecs);
-  }, [editContent, activeEssay, ecs]);
+  // Deep craft analysis (rhythm, readability, tone, sequence, line edits, angle)
+  const craftReport = useMemo(() => {
+    if (!activeEssay) return null;
+    return analyzeCraft(editContent, activeEssay.prompt || '');
+  }, [editContent, activeEssay]);
 
   // Prompt classification
   const promptAnalysis = useMemo(() => {
@@ -4172,20 +4066,8 @@ export default function Essays() {
                       </div>
                     </div>
 
-                    {/* Live Writing Tips */}
-                    {liveTips.length > 0 && (
-                      <div className="bg-white rounded-xl border border-amber-200 p-4">
-                        <h4 className="text-[11px] font-bold text-amber-700 uppercase tracking-wider mb-2">Writing Coach</h4>
-                        <div className="space-y-2">
-                          {liveTips.map((tip, i) => (
-                            <div key={i} className="flex items-start gap-2">
-                              <div className="w-1 h-1 rounded-full bg-amber-400 mt-1.5 flex-shrink-0" />
-                              <p className="text-[11px] text-slate-600 leading-relaxed">{tip}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    {/* Craft Studio — deep writing craft coaching */}
+                    {craftReport && <CraftStudio report={craftReport} />}
 
                     {/* EC Insights */}
                     {!ecsLoading && ecs.length > 0 && (
@@ -4365,20 +4247,8 @@ export default function Essays() {
                   </div>
                 )}
 
-                {/* Live Writing Tips */}
-                {liveTips.length > 0 && (
-                  <div className="bg-white rounded-xl border border-amber-200 p-4">
-                    <h4 className="text-[11px] font-bold text-amber-700 uppercase tracking-wider mb-2">Writing Coach</h4>
-                    <div className="space-y-2">
-                      {liveTips.map((tip, i) => (
-                        <div key={i} className="flex items-start gap-2">
-                          <div className="w-1 h-1 rounded-full bg-amber-400 mt-1.5 flex-shrink-0" />
-                          <p className="text-[11px] text-slate-600 leading-relaxed">{tip}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                {/* Craft Studio — deep writing craft coaching */}
+                {craftReport && <CraftStudio report={craftReport} />}
 
                 {/* EC Insights */}
                 {!ecsLoading && ecs.length > 0 && (
