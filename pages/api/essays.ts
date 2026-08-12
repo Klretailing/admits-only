@@ -709,7 +709,7 @@ function analyzeImpact(
 
 function scoreEssay(content: string, prompt: string = '') {
   if (!content || content.trim().length < 50) {
-    return { aiScore: null, vocabScore: null, grammarScore: null, originalityScore: null, overallScore: null };
+    return { aiScore: null, vocabScore: null, grammarScore: null, originalityScore: null, overallScore: null, insights: null };
   }
 
   const text = content.trim();
@@ -774,7 +774,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Title is required' });
     }
 
-    const scores = scoreEssay(content || '', prompt || '');
+    // `insights` is computed for penalty weighting but is NOT a DB column —
+    // strip it before writing, or Prisma rejects the whole request.
+    const { insights: _postInsights, ...scores } = scoreEssay(content || '', prompt || '');
 
     const essay = await prisma.essay.create({
       data: {
@@ -798,7 +800,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const essayPrompt = prompt != null ? prompt.trim() : (existing.prompt || '');
     const essayContent = content != null ? content.trim() : (existing.content || '');
-    const scores = scoreEssay(essayContent, essayPrompt);
+    // Drop `insights` (not a DB column) before persisting — see POST above.
+    const { insights: _putInsights, ...scores } = scoreEssay(essayContent, essayPrompt);
 
     const essay = await prisma.essay.update({
       where: { id },
