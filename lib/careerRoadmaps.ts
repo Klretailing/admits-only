@@ -1,4 +1,5 @@
 import { colleges } from './colleges';
+import { BASE_OVERVIEWS } from './careerOverviewsBase';
 
 /* ──────────────────────── TYPES ──────────────────────── */
 
@@ -28,6 +29,19 @@ export interface Major {
   paths: CareerPath[];
 }
 
+/** Rich, in-depth context for a single career path (keyed by path id in
+    PATH_OVERVIEWS). Optional per path; the UI renders whatever is present. */
+export interface CareerOverview {
+  summary: string;
+  keySkills: string[];
+  outlook: string;
+  entryTips: string[];
+  licenses: string[];
+  topEmployers: string[];
+  workStyle: string;
+  alsoConsider: string[];
+}
+
 export interface QuizQuestion {
   id: string;
   text: string;
@@ -48,6 +62,7 @@ export const categoryConfig: Record<string, { bg: string; text: string; border: 
   business: { bg: 'from-amber-500 to-orange-500',   text: 'text-amber-400',  border: 'border-amber-500/30' },
   social:   { bg: 'from-purple-500 to-fuchsia-500', text: 'text-purple-400', border: 'border-purple-500/30' },
   creative: { bg: 'from-rose-500 to-pink-500',      text: 'text-rose-400',   border: 'border-rose-500/30' },
+  aviation: { bg: 'from-sky-500 to-cyan-500',       text: 'text-sky-400',    border: 'border-sky-500/30' },
 };
 
 export const milestoneColor: Record<string, string> = {
@@ -512,7 +527,291 @@ export const MAJORS: Major[] = [
       },
     ],
   },
+
+  /* ──────────── FINANCE ──────────── */
+  {
+    id: 'finance',
+    name: 'Finance',
+    description: 'High-stakes capital markets, deals, and money management — where quantitative rigor meets big compensation.',
+    icon: '💰',
+    category: 'business',
+    paths: [
+      {
+        id: 'fin-ib',
+        name: 'Investment Banking',
+        peakSalary: 600000,
+        milestones: [
+          { id: 'fin-ib-1', label: "Bachelor's in Finance / Econ", type: 'education', durationYears: 4, requirements: ['Financial modeling & valuation', 'Accounting & corporate finance', 'Target-school recruiting & networking'], salaryRange: [0, 0], matchingStrengths: ['Finance', 'Business', 'Economics'] },
+          { id: 'fin-ib-2', label: 'IB Analyst', type: 'early', durationYears: 2, requirements: ['DCF / LBO / comps modeling', 'Pitch books & due diligence', '80-100 hour weeks'], salaryRange: [110000, 175000], matchingStrengths: [] },
+          { id: 'fin-ib-3', label: 'Associate', type: 'mid', durationYears: 3, requirements: ['Manage analyst teams', 'Direct client interaction', 'Deal execution'], salaryRange: [200000, 350000], matchingStrengths: [] },
+          { id: 'fin-ib-4', label: 'VP → Managing Director', type: 'senior', durationYears: 6, requirements: ['Originate & close deals', 'Own client relationships', 'Revenue generation'], salaryRange: [400000, 1000000], matchingStrengths: [] },
+        ],
+      },
+      {
+        id: 'fin-pe',
+        name: 'Private Equity',
+        peakSalary: 1000000,
+        milestones: [
+          { id: 'fin-pe-1', label: "Bachelor's + IB foundation", type: 'education', durationYears: 4, requirements: ['Finance / Econ degree', 'LBO modeling mastery', 'Recruit into banking first'], salaryRange: [0, 0], matchingStrengths: ['Finance', 'Business', 'Economics'] },
+          { id: 'fin-pe-2', label: 'PE Associate', type: 'early', durationYears: 3, requirements: ['Deal sourcing & diligence', 'Leveraged buyout models', 'Portfolio company monitoring'], salaryRange: [150000, 300000], matchingStrengths: [] },
+          { id: 'fin-pe-3', label: 'Vice President / Principal', type: 'mid', durationYears: 4, requirements: ['Lead deal teams', 'Portfolio value creation', 'Investor relations'], salaryRange: [350000, 600000], matchingStrengths: [] },
+          { id: 'fin-pe-4', label: 'Partner', type: 'senior', durationYears: 6, requirements: ['Raise & deploy funds', 'Board seats', 'Carried interest / strategy'], salaryRange: [700000, 3000000], matchingStrengths: [] },
+        ],
+      },
+      {
+        id: 'fin-wealth',
+        name: 'Wealth Management',
+        peakSalary: 400000,
+        milestones: [
+          { id: 'fin-wealth-1', label: "Bachelor's in Finance / Business", type: 'education', durationYears: 4, requirements: ['Investments & personal finance', 'Series 7 & 66 prep', 'Relationship-building skills'], salaryRange: [0, 0], matchingStrengths: ['Finance', 'Business', 'Communications'] },
+          { id: 'fin-wealth-2', label: 'Associate Advisor', type: 'early', durationYears: 3, requirements: ['Pass Series 7 & 66', 'Financial planning software', 'Begin building a client book'], salaryRange: [60000, 100000], matchingStrengths: [] },
+          { id: 'fin-wealth-3', label: 'Financial Advisor (CFP)', type: 'mid', durationYears: 4, requirements: ['Earn CFP certification', '$50M+ assets under management', 'Estate & tax planning'], salaryRange: [100000, 200000], matchingStrengths: [] },
+          { id: 'fin-wealth-4', label: 'Senior Advisor / Partner', type: 'senior', durationYears: 5, requirements: ['$200M+ AUM', 'High-net-worth clients', 'Team leadership'], salaryRange: [200000, 600000], matchingStrengths: [] },
+        ],
+      },
+    ],
+  },
+
+  /* ──────────── MANAGEMENT & OPERATIONS ──────────── */
+  {
+    id: 'management',
+    name: 'Management & Operations',
+    description: 'The people who ship products, run programs, and drive revenue — connecting teams, customers, and strategy.',
+    icon: '📈',
+    category: 'business',
+    paths: [
+      {
+        id: 'mgmt-product',
+        name: 'Product Manager',
+        peakSalary: 350000,
+        milestones: [
+          { id: 'mgmt-product-1', label: "Bachelor's (Business / Tech)", type: 'education', durationYears: 4, requirements: ['Business or technical fundamentals', 'Product / APM internships', 'User research & analytics'], salaryRange: [0, 0], matchingStrengths: ['Business', 'CS', 'Communications'] },
+          { id: 'mgmt-product-2', label: 'Associate PM', type: 'early', durationYears: 2, requirements: ['APM program or rotation', 'Roadmapping & prioritization', 'A/B testing & metrics'], salaryRange: [90000, 130000], matchingStrengths: [] },
+          { id: 'mgmt-product-3', label: 'Product Manager', type: 'mid', durationYears: 3, requirements: ['Own a product area', 'Stakeholder alignment', 'Data-driven decisions'], salaryRange: [130000, 190000], matchingStrengths: [] },
+          { id: 'mgmt-product-4', label: 'Director / VP of Product', type: 'senior', durationYears: 5, requirements: ['Product vision & strategy', 'P&L ownership', 'Lead PM teams'], salaryRange: [200000, 350000], matchingStrengths: [] },
+        ],
+      },
+      {
+        id: 'mgmt-program',
+        name: 'Program Manager',
+        peakSalary: 280000,
+        milestones: [
+          { id: 'mgmt-program-1', label: "Bachelor's (Business / Eng)", type: 'education', durationYears: 4, requirements: ['Business or engineering degree', 'Project coordination experience', 'Agile / Scrum fundamentals'], salaryRange: [0, 0], matchingStrengths: ['Business', 'Communications', 'Engineering'] },
+          { id: 'mgmt-program-2', label: 'Program Coordinator / Jr PM', type: 'early', durationYears: 2, requirements: ['Manage timelines & dependencies', 'Stakeholder communication', 'PMP or CSM certification'], salaryRange: [70000, 100000], matchingStrengths: [] },
+          { id: 'mgmt-program-3', label: 'Technical Program Manager', type: 'mid', durationYears: 3, requirements: ['Drive cross-team delivery', 'Risk & dependency management', 'Own complex launches'], salaryRange: [120000, 180000], matchingStrengths: [] },
+          { id: 'mgmt-program-4', label: 'Sr TPM / Director of Programs', type: 'senior', durationYears: 5, requirements: ['Org-wide programs', 'Executive reporting', 'Process design'], salaryRange: [180000, 280000], matchingStrengths: [] },
+        ],
+      },
+      {
+        id: 'mgmt-sales',
+        name: 'Sales / Account Executive',
+        peakSalary: 400000,
+        milestones: [
+          { id: 'mgmt-sales-1', label: "Bachelor's (any) + comms skills", type: 'education', durationYears: 4, requirements: ['Any major', 'Sales / business-development internships', 'CRM & communication skills'], salaryRange: [0, 0], matchingStrengths: ['Business', 'Communications'] },
+          { id: 'mgmt-sales-2', label: 'Sales Development Rep (SDR)', type: 'early', durationYears: 2, requirements: ['Prospecting & cold outreach', 'Hit pipeline quotas', 'Master the product'], salaryRange: [50000, 90000], matchingStrengths: [] },
+          { id: 'mgmt-sales-3', label: 'Account Executive', type: 'mid', durationYears: 3, requirements: ['Close deals & manage the cycle', 'Consistent quota attainment', 'Negotiation'], salaryRange: [100000, 200000], matchingStrengths: [] },
+          { id: 'mgmt-sales-4', label: 'Enterprise AE / Sales Director', type: 'senior', durationYears: 5, requirements: ['Large enterprise accounts', 'Lead a sales team', 'Strategic account growth'], salaryRange: [200000, 500000], matchingStrengths: [] },
+        ],
+      },
+    ],
+  },
+
+  /* ──────────── AVIATION ──────────── */
+  {
+    id: 'aviation',
+    name: 'Aviation',
+    description: 'A cockpit career path from first flight lesson to the left seat of an airliner — highly regulated, seniority-driven, and in demand.',
+    icon: '✈️',
+    category: 'aviation',
+    paths: [
+      {
+        id: 'avi-airline',
+        name: 'Airline Pilot',
+        peakSalary: 400000,
+        milestones: [
+          { id: 'avi-airline-1', label: "Bachelor's + Flight School", type: 'education', durationYears: 4, requirements: ["Bachelor's degree (preferred by majors)", 'Private Pilot & Instrument ratings', 'Commercial Pilot License'], salaryRange: [0, 0], matchingStrengths: ['Aviation'] },
+          { id: 'avi-airline-2', label: 'Flight Instructor / Hour Building', type: 'training', durationYears: 2, requirements: ['Certified Flight Instructor (CFI)', 'Build ~1,500 hours for the ATP', 'Multi-engine time'], salaryRange: [40000, 70000], matchingStrengths: [] },
+          { id: 'avi-airline-3', label: 'Regional Airline First Officer', type: 'early', durationYears: 3, requirements: ['ATP certificate', 'Aircraft type rating', 'Regional carrier experience'], salaryRange: [80000, 150000], matchingStrengths: [] },
+          { id: 'avi-airline-4', label: 'Major Airline Captain', type: 'senior', durationYears: 6, requirements: ['Upgrade to Captain', 'Wide-body / international routes', 'Build seniority'], salaryRange: [200000, 400000], matchingStrengths: [] },
+        ],
+      },
+      {
+        id: 'avi-corporate',
+        name: 'Corporate / Charter Pilot',
+        peakSalary: 250000,
+        milestones: [
+          { id: 'avi-corporate-1', label: 'Flight Training & Licenses', type: 'education', durationYears: 4, requirements: ['Commercial Pilot License', 'Instrument & Multi-engine ratings', "Bachelor's helpful"], salaryRange: [0, 0], matchingStrengths: ['Aviation'] },
+          { id: 'avi-corporate-2', label: 'Charter (Part 135) Pilot', type: 'early', durationYears: 3, requirements: ['Build turbine time', 'Aircraft type ratings', 'Part 135 operations'], salaryRange: [60000, 110000], matchingStrengths: [] },
+          { id: 'avi-corporate-3', label: 'Corporate Jet First Officer', type: 'mid', durationYears: 3, requirements: ['Business-jet type rating', 'International operations', 'Client service'], salaryRange: [100000, 160000], matchingStrengths: [] },
+          { id: 'avi-corporate-4', label: 'Captain / Chief Pilot', type: 'senior', durationYears: 5, requirements: ['Flight department leadership', 'Scheduling & safety oversight', 'Owner / executive relations'], salaryRange: [150000, 250000], matchingStrengths: [] },
+        ],
+      },
+    ],
+  },
+
+  /* ──────────── LAW & LEGAL STUDIES ──────────── */
+  {
+    id: 'law',
+    name: 'Law & Legal Studies',
+    description: 'From LSAT to law school to the bar — the paths into corporate practice, the courtroom, and public-interest advocacy.',
+    icon: '⚖️',
+    category: 'social',
+    paths: [
+      {
+        id: 'law-corporate',
+        name: 'Corporate Lawyer',
+        peakSalary: 700000,
+        milestones: [
+          { id: 'law-corporate-1', label: "Bachelor's (any) + LSAT", type: 'education', durationYears: 4, requirements: ['Strong GPA in any major', 'LSAT preparation', 'Pre-law internships'], salaryRange: [0, 0], matchingStrengths: ['Political Science', 'Business', 'Economics'] },
+          { id: 'law-corporate-2', label: 'Juris Doctor (JD)', type: 'education', durationYears: 3, requirements: ['Top law school for BigLaw', 'Law review / journal', 'Summer associate position'], salaryRange: [0, 0], matchingStrengths: ['Political Science', 'Business'] },
+          { id: 'law-corporate-3', label: 'BigLaw Associate', type: 'early', durationYears: 4, requirements: ['Pass the Bar exam', 'M&A / securities work', '2,000+ billable hours'], salaryRange: [200000, 315000], matchingStrengths: [] },
+          { id: 'law-corporate-4', label: 'Partner / General Counsel', type: 'senior', durationYears: 6, requirements: ['Book of business / origination', 'Firm equity or in-house GC role', 'Client leadership'], salaryRange: [400000, 1000000], matchingStrengths: [] },
+        ],
+      },
+      {
+        id: 'law-litigator',
+        name: 'Litigator / Trial Attorney',
+        peakSalary: 450000,
+        milestones: [
+          { id: 'law-litigator-1', label: "Bachelor's (any) + LSAT", type: 'education', durationYears: 4, requirements: ['Any major', 'LSAT preparation', 'Mock trial / debate'], salaryRange: [0, 0], matchingStrengths: ['Political Science', 'Communications'] },
+          { id: 'law-litigator-2', label: 'JD + Trial Advocacy', type: 'education', durationYears: 3, requirements: ['Trial advocacy coursework', 'Clerkship or DA internship', 'Moot court'], salaryRange: [0, 0], matchingStrengths: ['Political Science', 'Communications'] },
+          { id: 'law-litigator-3', label: 'Litigation Associate', type: 'early', durationYears: 4, requirements: ['Pass the Bar exam', 'Depositions & motions', 'Build courtroom experience'], salaryRange: [90000, 200000], matchingStrengths: [] },
+          { id: 'law-litigator-4', label: 'Trial Partner / Senior Litigator', type: 'senior', durationYears: 6, requirements: ['First-chair trials', 'Case strategy', 'Client origination'], salaryRange: [250000, 600000], matchingStrengths: [] },
+        ],
+      },
+      {
+        id: 'law-public',
+        name: 'Public Interest Lawyer',
+        peakSalary: 180000,
+        milestones: [
+          { id: 'law-public-1', label: "Bachelor's (any) + LSAT", type: 'education', durationYears: 4, requirements: ['Any major', 'LSAT preparation', 'Advocacy / volunteer work'], salaryRange: [0, 0], matchingStrengths: ['Political Science'] },
+          { id: 'law-public-2', label: 'JD (Public Interest focus)', type: 'education', durationYears: 3, requirements: ['Legal clinics & externships', 'Public-interest fellowship', 'Loan repayment (LRAP) planning'], salaryRange: [0, 0], matchingStrengths: ['Political Science'] },
+          { id: 'law-public-3', label: 'Public Defender / Agency Attorney', type: 'early', durationYears: 4, requirements: ['Pass the Bar exam', 'High caseload management', 'Courtroom / agency work'], salaryRange: [60000, 90000], matchingStrengths: [] },
+          { id: 'law-public-4', label: 'Senior Attorney / Nonprofit Director', type: 'senior', durationYears: 6, requirements: ['Impact litigation', 'Policy advocacy', 'Organizational leadership'], salaryRange: [100000, 180000], matchingStrengths: [] },
+        ],
+      },
+    ],
+  },
 ];
+
+/* ──────────────────────── CAREER PATH OVERVIEWS ────────────────────────
+   Rich, in-depth context per path (keyed by path id). Rendered by the
+   roadmap view above the timeline so each career is a real deep-dive, not a
+   dead-end. Existing-major overviews are appended below the new ones. */
+
+export const PATH_OVERVIEWS: Record<string, CareerOverview> = {
+  ...BASE_OVERVIEWS,
+  'fin-ib': {
+    summary: 'Advise companies on raising capital and executing mergers and acquisitions — building financial models and valuations, then running deals from pitch to close.',
+    keySkills: ['Financial modeling (DCF, LBO, comps)', 'Valuation', 'Accounting fluency', 'Precision under deadline', 'Client communication'],
+    outlook: 'Highly competitive entry; steady demand at bulge-bracket and boutique banks, with strong exits into PE, hedge funds, and corporate roles.',
+    entryTips: ['Recruit early — sophomore-year internships matter', 'Target a core/semi-target school or network relentlessly', 'Master modeling (WSP/BIWS or equivalent)', 'Keep a high GPA and a clean, quantitative resume'],
+    licenses: ['SIE', 'Series 79', 'Series 63'],
+    topEmployers: ['Goldman Sachs', 'Morgan Stanley', 'J.P. Morgan', 'Evercore', 'Centerview', 'Lazard'],
+    workStyle: 'Prestigious and lucrative but brutal hours (80-100/week as an analyst), especially in the first two years.',
+    alsoConsider: ['Private Equity', 'Management Consulting', 'Corporate Development'],
+  },
+  'fin-pe': {
+    summary: 'Buy, improve, and sell companies using investor capital and debt — sourcing deals, building leveraged-buyout models, and driving value in portfolio companies.',
+    keySkills: ['LBO modeling', 'Deal diligence', 'Operational analysis', 'Negotiation', 'Investor relations'],
+    outlook: 'Small, elite field that almost always requires 2+ years of banking or consulting first. Exceptional pay, very hard to break into.',
+    entryTips: ['Land investment banking (or top consulting) out of undergrad', 'Recruit during the on-cycle PE process', 'Develop a sharp LBO-modeling skill set', 'Form a point of view on industries and value creation'],
+    licenses: [],
+    topEmployers: ['Blackstone', 'KKR', 'Apollo', 'Carlyle', 'TPG', 'Bain Capital'],
+    workStyle: 'Long hours but more analytical and less production-line than banking; intense during live deals.',
+    alsoConsider: ['Investment Banking', 'Venture Capital', 'Hedge Funds'],
+  },
+  'fin-wealth': {
+    summary: 'Help individuals and families grow and protect their money — building financial plans, managing portfolios, and advising on retirement, taxes, and estates.',
+    keySkills: ['Financial planning', 'Investment knowledge', 'Relationship-building', 'Communication', 'Business development'],
+    outlook: 'Growing steadily as wealth transfers between generations; success hinges on building a client book, which takes years.',
+    entryTips: ['Pass the Series 7 and 66 early', 'Pursue the CFP certification', 'Join an established advisor or firm to learn', 'Develop a niche (physicians, tech, business owners)'],
+    licenses: ['Series 7', 'Series 66', 'CFP'],
+    topEmployers: ['Morgan Stanley', 'Merrill Lynch', 'Fidelity', 'Charles Schwab', 'Edward Jones', 'Independent RIAs'],
+    workStyle: 'Relationship-driven with more schedule control as your client base matures; the early years are sales-heavy.',
+    alsoConsider: ['Financial Planning', 'Corporate Finance', 'Insurance & Estate Planning'],
+  },
+  'mgmt-product': {
+    summary: "Own the 'why' and 'what' of a product — talking to users, defining the roadmap, prioritizing features, and steering engineering, design, and business toward launch.",
+    keySkills: ['User empathy & research', 'Prioritization', 'Data analysis', 'Cross-functional communication', 'Strategic thinking'],
+    outlook: 'Strong demand across tech and non-tech companies; APM roles are competitive but a reliable on-ramp.',
+    entryTips: ['Do an APM or product internship', 'Ship a side project or lead a product initiative', 'Learn analytics (SQL, A/B testing) and basic UX', 'Practice product-sense and case interviews'],
+    licenses: [],
+    topEmployers: ['Google', 'Microsoft', 'Amazon', 'Atlassian', 'Fintech & SaaS companies', 'Startups'],
+    workStyle: 'Collaborative and fast-paced; you have wide influence but rarely direct authority, so persuasion is everything.',
+    alsoConsider: ['Program Manager', 'UX Research', 'Management Consulting'],
+  },
+  'mgmt-program': {
+    summary: 'Keep complex, multi-team initiatives on track — mapping dependencies, managing risk and timelines, and driving cross-functional launches to completion.',
+    keySkills: ['Organization & planning', 'Risk management', 'Stakeholder communication', 'Agile / Scrum', 'Cross-team coordination'],
+    outlook: 'Steady demand, especially for technical program managers (TPMs) in tech; a strong path for organized, people-savvy generalists.',
+    entryTips: ['Earn a PMP or CSM certification', 'Own a real project end-to-end', 'Build fluency in Agile tools (Jira, etc.)', 'Develop technical literacy for TPM roles'],
+    licenses: ['PMP', 'CSM'],
+    topEmployers: ['Amazon', 'Microsoft', 'Google', 'Meta', 'Consulting firms', 'Large enterprises'],
+    workStyle: 'Structured and coordination-heavy; you are the glue across teams and the person accountable for delivery.',
+    alsoConsider: ['Product Manager', 'Management Consulting', 'Operations Manager'],
+  },
+  'mgmt-sales': {
+    summary: 'Drive revenue by finding prospects, understanding their needs, and closing deals — from first cold outreach to a signed contract and renewal.',
+    keySkills: ['Communication & persuasion', 'Relationship-building', 'Negotiation', 'Resilience', 'CRM & pipeline management'],
+    outlook: 'Abundant openings and fast advancement; top performers in tech/SaaS sales can out-earn many prestige careers.',
+    entryTips: ['Start as an SDR/BDR to learn the craft', 'Target high-growth SaaS or tech companies', 'Develop deep product and industry expertise', 'Track and optimize your own metrics obsessively'],
+    licenses: [],
+    topEmployers: ['Salesforce', 'Oracle', 'SAP', 'HubSpot', 'High-growth SaaS startups', 'Medical-device firms'],
+    workStyle: 'Quota-driven and high-pressure but high-upside; income scales directly with performance through commission.',
+    alsoConsider: ['Marketing', 'Customer Success', 'Business Development'],
+  },
+  'avi-airline': {
+    summary: 'Fly passengers or cargo for a commercial airline — operating advanced aircraft safely under FAA rules and advancing by seniority from first officer to captain.',
+    keySkills: ['Airmanship & judgment', 'Situational awareness', 'ATC / crew communication', 'Stress management', 'Systems knowledge'],
+    outlook: 'Strong hiring from retirements and travel demand, though cyclical; a well-defined seniority ladder rewards longevity.',
+    entryTips: ['Earn PPL, Instrument, and Commercial licenses', 'Instruct (CFI) to build the ~1,500 hours for an ATP', 'Start at a regional airline, then move to a major', 'Consider a university aviation program or the military route'],
+    licenses: ['FAA ATP', 'Class 1 Medical', 'Aircraft Type Ratings'],
+    topEmployers: ['Delta', 'United', 'American', 'Southwest', 'FedEx', 'UPS'],
+    workStyle: 'Structured but variable schedule with overnights away from home; seniority dictates routes, pay, and quality of life.',
+    alsoConsider: ['Corporate / Charter Pilot', 'Aerospace Engineer', 'Air Traffic Control'],
+  },
+  'avi-corporate': {
+    summary: 'Fly business jets for companies, charter operators, or private owners — high-touch, flexible service on tailored routes rather than fixed airline schedules.',
+    keySkills: ['Airmanship', 'Customer service', 'Flexibility', 'International operations', 'Attention to detail'],
+    outlook: 'Steady demand from business aviation; often a faster route to a captain seat than the airlines, but with less standardized pay.',
+    entryTips: ['Earn Commercial, Instrument, and Multi-engine ratings', 'Build turbine time via Part 135 charter', 'Add business-jet type ratings', 'Network within flight departments and FBOs'],
+    licenses: ['FAA Commercial / ATP', 'Aircraft Type Ratings', 'Class 1 Medical'],
+    topEmployers: ['NetJets', 'Flexjet', 'Corporate flight departments', 'Charter operators', 'Fractional-ownership fleets'],
+    workStyle: 'More schedule variety and client contact than the airlines; on-call demands but often home more often.',
+    alsoConsider: ['Airline Pilot', 'Aerospace Engineer', 'Flight Instructor'],
+  },
+  'law-corporate': {
+    summary: 'Advise businesses on transactions and compliance — drafting and negotiating contracts, structuring mergers and financings, and managing legal risk.',
+    keySkills: ['Legal analysis & writing', 'Attention to detail', 'Negotiation', 'Business acumen', 'Stamina'],
+    outlook: 'BigLaw pays extremely well but is pyramid-shaped and demanding; in-house counsel roles offer strong pay with better balance.',
+    entryTips: ['Maximize GPA and LSAT for a top law school', 'Aim for law review and a summer-associate offer', 'Take corporate, tax, and securities coursework', 'Network for the 2L summer that converts to full-time'],
+    licenses: ['Juris Doctor (JD)', 'State Bar admission'],
+    topEmployers: ['Kirkland & Ellis', 'Latham & Watkins', 'Skadden', 'Cravath', 'Wachtell', 'In-house legal departments'],
+    workStyle: 'Prestigious and lucrative with long, deadline-driven hours; billable-hour targets define the first several years.',
+    alsoConsider: ['Investment Banking', 'Litigator', 'Compliance / Regulatory'],
+  },
+  'law-litigator': {
+    summary: 'Represent clients in disputes — investigating cases, taking depositions, filing motions, and arguing before judges and juries to resolve or win at trial.',
+    keySkills: ['Persuasive writing & speaking', 'Legal research', 'Case strategy', 'Cross-examination', 'Composure under pressure'],
+    outlook: 'Consistent demand across firms, government, and public interest; genuine trial experience is increasingly rare and valued.',
+    entryTips: ['Do mock trial or moot court', 'Seek a judicial clerkship or DA/PD internship', 'Take trial advocacy and evidence courses', 'Build clear, persuasive writing and speaking'],
+    licenses: ['Juris Doctor (JD)', 'State Bar admission'],
+    topEmployers: ['Litigation boutiques', 'US Attorney / DA offices', 'Public Defender offices', 'Full-service law firms', 'Government agencies'],
+    workStyle: 'Adversarial and deadline-intensive with courtroom highs; heavy preparation between the dramatic moments.',
+    alsoConsider: ['Corporate Lawyer', 'Public Interest Lawyer', 'Government / Public Service'],
+  },
+  'law-public': {
+    summary: 'Use the law to serve people and causes — defending clients who cannot afford counsel, litigating for civil rights, or advocating policy at nonprofits and agencies.',
+    keySkills: ['Advocacy', 'Legal research & writing', 'Empathy', 'Caseload management', 'Resilience'],
+    outlook: 'Deeply mission-driven with modest pay; loan-repayment (LRAP) and forgiveness (PSLF) programs help offset law-school debt.',
+    entryTips: ['Pursue legal clinics and public-interest externships', 'Apply for fellowships (Skadden, Equal Justice Works)', 'Leverage LRAP/PSLF for loan relief', 'Build a real track record of advocacy'],
+    licenses: ['Juris Doctor (JD)', 'State Bar admission'],
+    topEmployers: ['Public Defender offices', 'ACLU', 'Legal Aid societies', 'Government agencies', 'Advocacy nonprofits'],
+    workStyle: 'High caseloads and lower pay, but meaningful, people-centered work with real community impact.',
+    alsoConsider: ['Litigator', 'Government / Public Service', 'International Relations / Diplomacy'],
+  },
+};
 
 /* ──────────────────────── EXPLORATION QUIZ ──────────────────────── */
 
@@ -542,7 +841,7 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
     text: 'Which type of frustration would bother you the LEAST?',
     options: [
       { label: 'Spending weeks debugging something with no guarantee it works', weights: { cs: 3, engineering: 2, economics: 1 } },
-      { label: 'Navigating bureaucracy and politics to get approval for a project', weights: { polisci: 3, business: 2, communications: 1, nursing: 1 } },
+      { label: 'Navigating bureaucracy and politics to get approval for a project', weights: { polisci: 3, law: 2, business: 2, management: 1, communications: 1, nursing: 1 } },
       { label: 'Memorizing large amounts of detailed, technical material', weights: { biology: 3, nursing: 2, economics: 1, polisci: 1 } },
       { label: 'Having your work critiqued subjectively with no clear "right answer"', weights: { 'art-design': 3, communications: 2, psychology: 2 } },
     ],
@@ -551,7 +850,7 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
     id: 'q4',
     text: 'When choosing between two options, which factor carries more weight for you?',
     options: [
-      { label: 'Financial stability and clear advancement milestones', weights: { business: 3, economics: 3, engineering: 2, cs: 1 } },
+      { label: 'Financial stability and clear advancement milestones', weights: { business: 3, economics: 3, finance: 3, engineering: 2, aviation: 1, cs: 1 } },
       { label: 'Daily sense of meaning and direct positive impact', weights: { nursing: 3, biology: 2, psychology: 2, polisci: 1 } },
       { label: 'Autonomy and creative freedom in how I spend my time', weights: { 'art-design': 3, communications: 2, cs: 1, business: 1 } },
       { label: 'Intellectual challenge and continuous learning', weights: { cs: 2, economics: 2, biology: 2, engineering: 2, psychology: 1 } },
@@ -562,8 +861,8 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
     text: 'In group projects, which role do you naturally gravitate toward?',
     options: [
       { label: 'The one who builds the deliverable or does the technical work', weights: { cs: 3, engineering: 3, 'art-design': 2 } },
-      { label: 'The one who organizes the team and keeps everyone on track', weights: { business: 3, nursing: 2, communications: 1 } },
-      { label: 'The one who presents the final result and fields questions', weights: { communications: 3, polisci: 2, business: 1 } },
+      { label: 'The one who organizes the team and keeps everyone on track', weights: { business: 3, management: 3, nursing: 2, communications: 1 } },
+      { label: 'The one who presents the final result and fields questions', weights: { communications: 3, polisci: 2, law: 2, business: 1 } },
       { label: 'The one who does deep research and provides the analysis', weights: { economics: 3, biology: 2, psychology: 2, polisci: 1 } },
     ],
   },
@@ -592,6 +891,10 @@ const reasoningMap: Record<string, string> = {
   polisci: 'Your interest in policy, debate, and how institutions shape society aligns with political science.',
   communications: 'You\'re drawn to storytelling, persuasion, and connecting with audiences — core skills in communications.',
   'art-design': 'Your visual thinking and drive for creative expression make art and design a natural fit.',
+  finance: 'Your comfort with numbers, risk, and high-stakes decisions points toward a career in finance.',
+  management: 'You gravitate toward organizing people, shipping products, and driving outcomes — the heart of management and operations.',
+  aviation: 'Your love of precision, focus, and a clear path to mastery fits a career in aviation.',
+  law: 'Your skill with argument, analysis, and dense text — and interest in how rules shape society — points toward law.',
 };
 
 export function scoreQuiz(answers: number[]): QuizResult[] {

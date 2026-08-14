@@ -1,13 +1,13 @@
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, type ReactNode } from 'react';
 import Head from 'next/head';
 import DashboardLayout from '../../components/DashboardLayout';
 import { useStaggerReveal } from '../../hooks/useAnimations';
 import {
   MAJORS, QUIZ_QUESTIONS, categoryConfig, milestoneColor,
-  getRecommendedColleges, scoreQuiz,
-  type Major, type CareerPath, type Milestone, type QuizResult,
+  getRecommendedColleges, scoreQuiz, PATH_OVERVIEWS,
+  type Major, type CareerPath, type Milestone, type QuizResult, type CareerOverview,
 } from '../../lib/careerRoadmaps';
 
 /* ──────────────────────── HELPERS ──────────────────────── */
@@ -252,6 +252,93 @@ function QuizResults({
 
 /* ──────────────────────── ROADMAP VIEW ──────────────────────── */
 
+/* ──────────────────────── CAREER OVERVIEW PANEL ──────────────────────── */
+
+function Chip({ children, tone = 'slate' }: { children: ReactNode; tone?: 'slate' | 'accent' | 'amber' }) {
+  const tones: Record<string, string> = {
+    slate: 'bg-slate-50 text-slate-600 border-slate-100',
+    accent: 'bg-accent/10 text-accent border-accent/10',
+    amber: 'bg-amber-50 text-amber-700 border-amber-100',
+  };
+  return <span className={`inline-block px-2.5 py-1 rounded-lg text-[11px] font-medium border ${tones[tone]}`}>{children}</span>;
+}
+
+function CareerOverviewPanel({ overview }: { overview: CareerOverview }) {
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 p-5 sm:p-6 space-y-5">
+      {/* What the job actually is */}
+      <div>
+        <div className="flex items-center gap-2 mb-1.5">
+          <span className="text-base">🧭</span>
+          <h3 className="text-sm font-bold text-primary">What this career really is</h3>
+        </div>
+        <p className="text-sm text-slate-600 leading-relaxed">{overview.summary}</p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        {/* Key skills */}
+        <div>
+          <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Key Skills</h4>
+          <div className="flex flex-wrap gap-1.5">
+            {overview.keySkills.map((s, i) => <Chip key={i} tone="accent">{s}</Chip>)}
+          </div>
+        </div>
+
+        {/* How to break in */}
+        <div>
+          <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">How to Break In</h4>
+          <ul className="space-y-1.5">
+            {overview.entryTips.map((t, i) => (
+              <li key={i} className="text-xs text-slate-600 flex items-start gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1 shrink-0" />
+                {t}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Outlook */}
+        <div>
+          <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Job Outlook</h4>
+          <p className="text-xs text-slate-600 leading-relaxed">{overview.outlook}</p>
+        </div>
+
+        {/* Work style */}
+        <div>
+          <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Lifestyle Reality</h4>
+          <p className="text-xs text-slate-600 leading-relaxed">{overview.workStyle}</p>
+        </div>
+
+        {/* Licenses & exams (only if any) */}
+        {overview.licenses.length > 0 && (
+          <div>
+            <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Licenses & Exams</h4>
+            <div className="flex flex-wrap gap-1.5">
+              {overview.licenses.map((l, i) => <Chip key={i} tone="amber">{l}</Chip>)}
+            </div>
+          </div>
+        )}
+
+        {/* Top employers */}
+        <div>
+          <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Where People Work</h4>
+          <div className="flex flex-wrap gap-1.5">
+            {overview.topEmployers.map((e, i) => <Chip key={i}>{e}</Chip>)}
+          </div>
+        </div>
+      </div>
+
+      {/* Also consider */}
+      <div className="pt-1 border-t border-slate-100">
+        <div className="flex flex-wrap items-center gap-1.5 pt-3">
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1">Also explore</span>
+          {overview.alsoConsider.map((a, i) => <Chip key={i} tone="accent">{a}</Chip>)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function RoadmapView({
   majorId,
   pathIndex,
@@ -275,6 +362,7 @@ function RoadmapView({
   const path = major.paths[pathIndex];
   const milestones = path.milestones;
   const expandedMilestone = expandedId ? milestones.find(m => m.id === expandedId) : null;
+  const overview = PATH_OVERVIEWS[path.id];
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -321,6 +409,16 @@ function RoadmapView({
       <div className="flex items-center gap-2">
         <span className="text-xs text-slate-400">Peak salary for this path:</span>
         <span className="text-sm font-bold font-display text-primary">${formatSalary(path.peakSalary)}</span>
+      </div>
+
+      {/* In-depth career overview */}
+      {overview && <CareerOverviewPanel overview={overview} />}
+
+      {/* Timeline heading */}
+      <div className="flex items-center gap-2 pt-1">
+        <span className="text-base">🗺️</span>
+        <h3 className="text-sm font-bold text-primary">Your step-by-step path</h3>
+        <span className="text-[11px] text-slate-400">— tap any stage for details</span>
       </div>
 
       {/* Desktop horizontal timeline */}
