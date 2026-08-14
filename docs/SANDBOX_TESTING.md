@@ -74,7 +74,7 @@ Once sandbox passes end-to-end:
 ## Tuning
 
 - **Price / product:** `ESSAY_ACCESS_PRODUCT.priceUsd` in `lib/paypal.ts`.
-- **How many free essays per school:** `FREE_PER_SCHOOL` in `lib/essayAccess.ts`.
+- **How many free essays per school:** `FREE_PER_SCHOOL` in `lib/essayAccess.ts` (per-school overrides in `FREE_PER_SCHOOL_OVERRIDE` — e.g. UC gives 3 free samples across distinct PIQ prompts).
 - **Preview size:** `PREVIEW_FRACTION` in `lib/essayAccess.ts` (default 0.25).
 - **Per-school pricing instead of all-access:** the `essay_purchases.scope`
   column already supports a school slug — a small follow-up, not a rewrite.

@@ -20,7 +20,7 @@
    ══════════════════════════════════════════════════════════════════════ */
 
 export type CraftCategory =
-  | 'sequence' | 'rhythm' | 'readability' | 'tone' | 'rewrite' | 'coherence' | 'angle';
+  | 'sequence' | 'rhythm' | 'readability' | 'tone' | 'rewrite' | 'coherence' | 'angle' | 'narrative';
 
 export type CraftSeverity = 'praise' | 'tip' | 'caution';
 
@@ -35,7 +35,7 @@ export interface CraftSuggestion {
 }
 
 export interface CraftMetric {
-  key: 'rhythm' | 'readability' | 'tone';
+  key: 'rhythm' | 'readability' | 'tone' | 'narrative';
   label: string;
   value: number;                         // 0–100
   status: 'good' | 'warn' | 'bad';
@@ -61,6 +61,7 @@ const CATEGORY_LABEL: Record<CraftCategory, string> = {
   rewrite: 'Line Edit',
   coherence: 'Coherence',
   angle: 'Fresh Angle',
+  narrative: 'Narrative Craft',
 };
 
 export function craftCategoryLabel(c: CraftCategory): string {
@@ -109,6 +110,17 @@ function id(cat: CraftCategory, n: number): string {
   return `${cat}-${n}`;
 }
 
+// Common 5+ letter function words to exclude from "distinctive image" matching
+// in the bookend/circularity check (which only looks at words length ≥ 5).
+const STOP_WORDS_LITE = new Set([
+  'which', 'there', 'their', 'would', 'could', 'should', 'about', 'these',
+  'those', 'being', 'because', 'while', 'where', 'when', 'what', 'after',
+  'before', 'again', 'still', 'every', 'other', 'another', 'through',
+  'around', 'really', 'always', 'never', 'thing', 'things', 'something',
+  'someone', 'myself', 'himself', 'herself', 'themselves', 'people',
+  'started', 'wanted', 'though', 'without', 'between',
+]);
+
 /* ─── Curated word lists ─────────────────────────────────────────────── */
 
 // "Thesaurus reach" words → simpler, more confident alternatives.
@@ -137,9 +149,10 @@ const INTENSIFIERS = [
   'totally', 'utterly', 'literally', 'undoubtedly', 'truly', 'immensely',
   'tremendously', 'insanely', 'unbelievably', 'wildly', 'hugely', 'so',
 ];
+// Only true overgeneralizations — NOT common words like "every"/"all"/"ever"
+// that have specific, legitimate uses ("every Sunday", "everything changed").
 const ABSOLUTES = [
-  'always', 'never', 'everyone', 'everybody', 'no one', 'nobody', 'nothing',
-  'everything', 'anything', 'forever', 'ever', 'none', 'all', 'every',
+  'always', 'never', 'everyone', 'everybody', 'no one', 'nobody',
 ];
 const HYPERBOLE = [
   'life-changing', 'life changing', 'the best', 'the worst', 'the most',
@@ -197,6 +210,48 @@ const CLICHES: Record<string, string> = {
   'give back to the community': 'Which community, which need, which afternoon? Get specific.',
   'i realized that anything is possible': 'Cut the platitude; end on a small, true, concrete image instead.',
 };
+
+/* ─── Narrative-craft signals ────────────────────────────────────────── */
+
+// Causal / consequential connectives — the texture of cause-and-effect
+// storytelling ("this happened, BUT that forced…, SO I…").
+const CAUSAL_CONNECTIVES = [
+  'but', 'yet', 'however', 'because', 'so', 'therefore', 'thus', 'since',
+  'although', 'though', 'despite', 'unless', 'which meant', 'which forced',
+  'as a result', 'so that', 'even though', 'instead',
+];
+// Additive connectives — the texture of a flat list ("and then… and then").
+const ADDITIVE_CONNECTIVES = [
+  'and then', 'then', 'next', 'after that', 'also', 'plus', 'additionally',
+  'furthermore', 'moreover', 'as well', 'and after',
+];
+
+// Interiority / reflection markers — a narrative earns its meaning when the
+// writer turns inward, not just recounts events.
+const REFLECTION_MARKERS = [
+  /\bi (?:realized|realised|understood|wondered|questioned|noticed|feared|doubted|assumed|believed|expected)\b/i,
+  /\bwhat i (?:didn'?t|hadn'?t|never) (?:know|realize|realise|understand|expect|see)\b/i,
+  /\blooking back\b/i, /\bin (?:that|hindsight|retrospect)\b/i, /\bit struck me\b/i,
+  /\bi (?:began|started|came) to (?:see|understand|realize|realise|question)\b/i,
+  /\bi now (?:see|know|understand|realize|realise)\b/i, /\bfor the first time\b/i,
+  /\bi asked myself\b/i, /\bit dawned on me\b/i, /\bi couldn'?t help but\b/i,
+];
+
+// Figurative language cues (simile / explicit metaphor framing).
+const FIGURATIVE_CUES = [
+  /\blike a\b/i, /\blike an\b/i, /\blike the way\b/i, /\bas if\b/i, /\bas though\b/i,
+  /\bas \w+ as (?:a|an|the)\b/i, /\breminded me of\b/i, /\bfelt like\b/i,
+  /\bas small as\b/i, /\ba kind of\b/i,
+];
+
+// Concrete-scene signals — sensory + action + specific anchors.
+const SCENE_SIGNALS = [
+  /["“][^"”]{4,}["”]/,                                    // dialogue
+  /\b(?:saw|heard|felt|smelled|tasted|touched|watched|listened)\b/i,
+  /\b\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)\b/i,      // a specific time
+  /\b(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|January|February|March|April|June|July|August|September|October|November|December)\b/,
+  /\b(?:ran|grabbed|slammed|whispered|shouted|reached|stumbled|knelt|gripped|dropped)\b/i,
+];
 
 /* ─── Theme detection & angle library ───────────────────────────────── */
 
@@ -668,6 +723,101 @@ export function analyzeCraft(rawText: string, prompt?: string): CraftReport {
     });
   }
 
+  /* ─── Narrative craft (the sophisticated moves of strong storytelling) ─── */
+  let narrativeScore = 55;
+
+  // (a) Cause-and-effect texture vs a flat "and then… and then" list.
+  const causalCount = CAUSAL_CONNECTIVES.reduce((n, c) => n + (lowerText.split(new RegExp(`\\b${c}\\b`, 'g')).length - 1), 0);
+  const additiveCount = ADDITIVE_CONNECTIVES.reduce((n, c) => n + (lowerText.split(new RegExp(`\\b${c}\\b`, 'g')).length - 1), 0);
+  const causalRatio = causalCount / Math.max(causalCount + additiveCount, 1);
+  narrativeScore += causalRatio >= 0.6 ? 10 : causalRatio <= 0.3 ? -8 : 0;
+  if (wordCount > 160 && additiveCount >= 3 && causalRatio < 0.4) {
+    suggestions.push({
+      id: id('narrative', 1),
+      category: 'narrative',
+      severity: 'tip',
+      title: 'Build cause-and-effect, not a list',
+      detail: 'Your story moves mostly by addition — this happened, and then this, and then this. The most gripping narratives move by consequence: each beat should force the next. Recast the "and then" links as "but…" (a complication) or "so…" (a consequence).',
+      example: { before: 'I joined the team. Then we practiced. Then we lost.', after: 'I joined the team — but I could barely keep up, so I stayed after every practice.' },
+    });
+  }
+
+  // (b) Interiority: does the writer turn inward, or only recount events?
+  const reflectionHits = REFLECTION_MARKERS.reduce((n, re) => n + (re.test(text) ? 1 : 0), 0);
+  const sceneHits = SCENE_SIGNALS.reduce((n, re) => n + (re.test(text) ? 1 : 0), 0);
+  narrativeScore += reflectionHits >= 2 ? 8 : 0;
+  narrativeScore += sceneHits >= 2 ? 8 : 0;
+  if (wordCount > 180 && reflectionHits === 0) {
+    suggestions.push({
+      id: id('narrative', 2),
+      category: 'narrative',
+      severity: 'tip',
+      title: 'Add a moment of reflection',
+      detail: 'You narrate what happened, but never step back to show what you made of it. A personal essay earns its weight in the turn inward — a line where you reveal what you realized, feared, or misjudged. Let the reader watch you think, not just act.',
+    });
+  } else if (wordCount > 180 && sceneHits === 0) {
+    suggestions.push({
+      id: id('narrative', 3),
+      category: 'narrative',
+      severity: 'tip',
+      title: 'Ground the ideas in one real scene',
+      detail: 'This reads as reflection without a stage to stand on — lots of insight, but no concrete moment we can see. Anchor it in a single scene: a place, a time, an action, a line of dialogue. Abstraction persuades no one; a vivid moment does.',
+    });
+  }
+
+  // (c) Figurative language — one resonant image lifts strong prose.
+  const figurativeHits = FIGURATIVE_CUES.reduce((n, re) => n + (re.test(text) ? 1 : 0), 0);
+  narrativeScore += figurativeHits >= 1 ? 6 : 0;
+  if (wordCount > 260 && figurativeHits === 0) {
+    suggestions.push({
+      id: id('narrative', 4),
+      category: 'narrative',
+      severity: 'tip',
+      title: 'Reach for one resonant image',
+      detail: 'There is no figurative language here — no simile, metaphor, or comparison that makes an abstract feeling concrete. You do not need many; one well-placed image ("the silence sat between us like a third person") can carry a whole paragraph. Find the one that fits your story.',
+    });
+  }
+
+  // (d) Sentence-opening variety — the "I did… I felt… I saw…" trap.
+  if (sentences.length >= 6) {
+    const iOpeners = sentences.filter((s) => /^i\b/i.test(s.trim())).length;
+    const iRatio = iOpeners / sentences.length;
+    narrativeScore += iRatio <= 0.35 ? 6 : iRatio >= 0.55 ? -8 : 0;
+    if (iRatio >= 0.55) {
+      suggestions.push({
+        id: id('narrative', 5),
+        category: 'narrative',
+        severity: 'tip',
+        title: 'Vary how your sentences begin',
+        detail: `About ${Math.round(iRatio * 100)}% of your sentences start with "I," which makes the prose feel like a checklist. Open some with a dependent clause, an object, or an -ing phrase so the reader's ear stays awake.`,
+        example: { before: 'I stepped onto the stage. I gripped the mic. I started to sing.', after: 'Onstage, the lights found me. The mic was cold in my hand. Somehow, the first note came out steady.' },
+      });
+    }
+  }
+
+  // (e) Circular structure (bookend) — a callback to the opening image.
+  if (paragraphs.length >= 3 && wordCount >= 150) {
+    const distinct = (s: string) => new Set(
+      s.toLowerCase().split(/\s+/).map((w) => w.replace(/[^a-z]/g, '')).filter((w) => w.length >= 5 && !STOP_WORDS_LITE.has(w)),
+    );
+    const firstKeys = distinct(paragraphs[0]);
+    const lastKeys = distinct(paragraphs[paragraphs.length - 1]);
+    let echo = 0;
+    for (const w of lastKeys) if (firstKeys.has(w)) echo++;
+    if (echo >= 2) {
+      narrativeScore += 10;
+      suggestions.push({
+        id: id('narrative', 6),
+        category: 'narrative',
+        severity: 'praise',
+        title: 'Nice circular structure',
+        detail: 'Your ending calls back to the image you opened with — a bookend that makes the essay feel whole and deliberate. It is one of the most satisfying moves in narrative writing; you have earned it.',
+      });
+    }
+  }
+
+  narrativeScore = Math.max(5, Math.min(100, Math.round(narrativeScore)));
+
   /* ─── Assemble metrics ─── */
   const metrics: CraftMetric[] = [
     {
@@ -685,11 +835,27 @@ export function analyzeCraft(rawText: string, prompt?: string): CraftReport {
       status: toneScore >= 65 ? 'good' : toneScore >= 45 ? 'warn' : 'bad',
       hint: toneScore >= 65 ? 'Measured and credible' : intensifierDensity >= 2.2 ? 'Leans exaggerated' : negDensity >= 3 && !hasGrowthTurn ? 'Heavy — needs a turn' : 'Watch overstatement',
     },
+    {
+      key: 'narrative', label: 'Narrative', value: narrativeScore,
+      status: narrativeScore >= 65 ? 'good' : narrativeScore >= 45 ? 'warn' : 'bad',
+      hint: narrativeScore >= 65 ? 'Scene, reflection & causality' : narrativeScore >= 45 ? 'Solid — deepen the craft' : 'Recount → story',
+    },
   ];
 
-  // Order suggestions: cautions first, then tips, praise last; cap at 8.
+  // Order suggestions: cautions first, then tips, praise last.
   const sevRank: Record<CraftSeverity, number> = { caution: 0, tip: 1, praise: 2 };
   suggestions.sort((a, b) => sevRank[a.severity] - sevRank[b.severity]);
+
+  // Cap at 2 per category so one dimension can't crowd out the others, then
+  // cap the whole list so the panel stays scannable.
+  const perCategory = new Map<CraftCategory, number>();
+  const balanced: CraftSuggestion[] = [];
+  for (const s of suggestions) {
+    const n = perCategory.get(s.category) || 0;
+    if (n >= 2) continue;
+    perCategory.set(s.category, n + 1);
+    balanced.push(s);
+  }
 
   return {
     ready: true,
@@ -697,6 +863,6 @@ export function analyzeCraft(rawText: string, prompt?: string): CraftReport {
     readingGrade,
     theme,
     metrics,
-    suggestions: suggestions.slice(0, 8),
+    suggestions: balanced.slice(0, 9),
   };
 }

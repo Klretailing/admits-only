@@ -12,6 +12,56 @@ import { prisma, ensureSchema } from './db';
 /** Free essays per school bucket; the rest of that bucket is premium (locked). */
 export const FREE_PER_SCHOOL = 1;
 
+/**
+ * Per-school overrides of the free quota. UC is the flagship free-value
+ * bucket — free users get 3 UC Personal Insight samples (across different
+ * PIQ prompts, see the selection logic in the sample-essays API) instead of
+ * the default 1, so the free tier demonstrates real breadth.
+ */
+export const FREE_PER_SCHOOL_OVERRIDE: Record<string, number> = {
+  'university-of-california': 3,
+};
+
+/** Number of free samples for a given school bucket. */
+export function freeQuotaFor(schoolSlug: string): number {
+  return FREE_PER_SCHOOL_OVERRIDE[schoolSlug] ?? FREE_PER_SCHOOL;
+}
+
+export interface ClassifiableEssay {
+  id: string;
+  schoolSlug: string;
+  promptLabel?: string;
+  prompt?: string;
+}
+
+/**
+ * Single source of truth for which essays are premium (locked) vs free.
+ * Within each school bucket, the free quota (freeQuotaFor) is spent on the
+ * FIRST essay of each DISTINCT prompt — so free users get variety (e.g. three
+ * different UC PIQs) rather than repeats of one prompt. Every other essay in
+ * the bucket is premium. Both the index route and the download route MUST use
+ * this so their access decisions can never drift apart.
+ *
+ * Returns a Map of essay id → isPremium.
+ */
+export function buildPremiumMap(essays: ClassifiableEssay[]): Map<string, boolean> {
+  const state = new Map<string, { freed: number; prompts: Set<string> }>();
+  const m = new Map<string, boolean>();
+  for (const e of essays) {
+    const quota = freeQuotaFor(e.schoolSlug);
+    let st = state.get(e.schoolSlug);
+    if (!st) { st = { freed: 0, prompts: new Set<string>() }; state.set(e.schoolSlug, st); }
+    const key = (e.promptLabel || e.prompt || e.id)
+      .toLowerCase()
+      .replace(/\s*\([^)]*\)\s*$/, '')
+      .trim();
+    const isFree = st.freed < quota && !st.prompts.has(key);
+    if (isFree) { st.freed++; st.prompts.add(key); }
+    m.set(e.id, !isFree); // premium = not free
+  }
+  return m;
+}
+
 /** Fraction of a locked essay shown as a teaser before the paywall. */
 export const PREVIEW_FRACTION = 0.25;
 

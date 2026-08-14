@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../lib/auth';
 import sampleData from '../../../data/sampleEssays.json';
-import { FREE_PER_SCHOOL, hasEssayAccess } from '../../../lib/essayAccess';
+import { buildPremiumMap, hasEssayAccess } from '../../../lib/essayAccess';
 
 /* ──────────────────────────────────────────────────────────────────────
    SAMPLE ESSAYS — DOWNLOAD ENDPOINT  (access-gated)
@@ -33,17 +33,9 @@ const BY_ID: Map<string, SampleEssay> = (() => {
   return m;
 })();
 
-/** Deterministic premium classification per essay id (matches the index route). */
-const PREMIUM_BY_ID: Map<string, boolean> = (() => {
-  const seen = new Map<string, number>();
-  const m = new Map<string, boolean>();
-  for (const e of ESSAYS) {
-    const n = seen.get(e.schoolSlug) || 0;
-    m.set(e.id, n >= FREE_PER_SCHOOL);
-    seen.set(e.schoolSlug, n + 1);
-  }
-  return m;
-})();
+/** Deterministic premium classification per essay id (shared source of truth,
+    identical to the index route so access decisions can never drift). */
+const PREMIUM_BY_ID: Map<string, boolean> = buildPremiumMap(ESSAYS);
 
 function safeName(...parts: string[]): string {
   const raw = parts.filter(Boolean).join('-');

@@ -3,8 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../../lib/auth';
 import sampleData from '../../data/sampleEssays.json';
 import {
-  FREE_PER_SCHOOL,
   PREVIEW_FRACTION,
+  buildPremiumMap,
   hasEssayAccess,
   getEntitlements,
   previewOf,
@@ -15,9 +15,11 @@ import {
    Serves the curated, anonymized library of admissions essays.
 
    Access model:
-   - Within each school bucket the FIRST FREE_PER_SCHOOL essays (by their
-     existing order) are FREE; every later essay is PREMIUM. This premium
-     flag is deterministic and precomputed ONCE at module load.
+   - Within each school bucket a free quota (freeQuotaFor) is spent on the
+     first essay of each DISTINCT prompt, so free users see variety; every
+     other essay is PREMIUM. This is computed by buildPremiumMap() — the
+     single source of truth shared with the download route — and precomputed
+     ONCE at module load.
    - PREMIUM essays are LOCKED for a user who lacks access to that school.
      A locked essay's full text is NEVER placed in any response — the index
      ships only a short preview, and the single-essay route serves only a
@@ -87,17 +89,8 @@ const BY_ID: Map<string, SampleEssay> = (() => {
   return m;
 })();
 
-/** Deterministic premium classification per essay id (stable across requests). */
-const PREMIUM_BY_ID: Map<string, boolean> = (() => {
-  const seen = new Map<string, number>(); // schoolSlug -> count so far
-  const m = new Map<string, boolean>();
-  for (const e of ESSAYS) {
-    const n = seen.get(e.schoolSlug) || 0;
-    m.set(e.id, n >= FREE_PER_SCHOOL);
-    seen.set(e.schoolSlug, n + 1);
-  }
-  return m;
-})();
+/** Deterministic premium classification per essay id (shared source of truth). */
+const PREMIUM_BY_ID: Map<string, boolean> = buildPremiumMap(ESSAYS);
 
 /** Precomputed buckets with static fields only (no per-user `locked`). */
 const STATIC_INDEX: { buckets: SchoolBucket[]; total: number } = (() => {
