@@ -158,30 +158,39 @@ function inferTaskCategory(label: string): TaskCategory {
   return 'misc';
 }
 
-/* ── Progress Ring SVG ── */
+/* ── Progress Ring ──
+   The arc is rotated to start at 12 o'clock via the SVG `transform` attribute
+   (not a CSS transform on the whole <svg>), and the percentage is overlaid as a
+   centered HTML span rather than a rotated SVG <text>. This avoids the SVG
+   text-rotation quirks that pushed the number off-center and let it overlap
+   neighbouring words. The wrapper is flex-shrink-0 so the ring keeps its size
+   in tight flex rows. */
 function ProgressRing({ pct, size = 36, stroke = 3 }: { pct: number; size?: number; stroke?: number }) {
+  const safePct = Math.max(0, Math.min(100, Math.round(pct || 0)));
   const r = (size - stroke) / 2;
   const circ = 2 * Math.PI * r;
-  const offset = circ - (pct / 100) * circ;
+  const offset = circ - (safePct / 100) * circ;
+  const center = size / 2;
   return (
-    <svg width={size} height={size} className="transform -rotate-90">
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#e2e8f0" strokeWidth={stroke} />
-      <circle
-        cx={size / 2} cy={size / 2} r={r} fill="none"
-        stroke="#6366f1" strokeWidth={stroke}
-        strokeDasharray={circ} strokeDashoffset={offset}
-        strokeLinecap="round"
-        className="transition-all duration-500"
-      />
-      <text
-        x={size / 2} y={size / 2}
-        textAnchor="middle" dominantBaseline="central"
-        className="fill-slate-600 transform rotate-90 origin-center"
-        style={{ fontSize: size < 40 ? '9px' : '11px', fontWeight: 700 }}
+    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <circle cx={center} cy={center} r={r} fill="none" stroke="#e2e8f0" strokeWidth={stroke} />
+        <circle
+          cx={center} cy={center} r={r} fill="none"
+          stroke="#6366f1" strokeWidth={stroke}
+          strokeDasharray={circ} strokeDashoffset={offset}
+          strokeLinecap="round"
+          transform={`rotate(-90 ${center} ${center})`}
+          className="transition-all duration-500"
+        />
+      </svg>
+      <span
+        className="absolute inset-0 flex items-center justify-center font-bold text-slate-600 tabular-nums leading-none"
+        style={{ fontSize: size < 40 ? 9 : 11 }}
       >
-        {pct}%
-      </text>
-    </svg>
+        {safePct}%
+      </span>
+    </div>
   );
 }
 
@@ -621,7 +630,7 @@ export default function Applications() {
                       >
                         <div className="min-w-0">
                           <p className="font-medium text-primary truncate">{school.name}</p>
-                          <p className="text-[11px] text-slate-400">{school.location} &middot; {school.acceptanceRate}% acceptance</p>
+                          <p className="text-[11px] text-slate-400">{school.location} &middot; {school.acceptanceRate} acceptance</p>
                         </div>
                         {school.deadlines?.rd && (
                           <span className="text-[10px] text-slate-400 flex-shrink-0">RD: {school.deadlines.rd}</span>
