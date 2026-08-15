@@ -497,9 +497,12 @@ function ScoreRing({ score, label, size = 100, color = '#6366f1', glowColor }: {
           <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#e2e8f0" strokeWidth="6" opacity="1" />
           <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={`url(#ring-grad-${label.replace(/\s/g, '')})`} strokeWidth="7" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset} className="transition-all duration-1000" />
         </svg>
+        {/* The ring keeps its vivid brand color (a graphic, exempt from text
+            contrast rules); the numeral and tier read in high-contrast ink so
+            they stay legible in both themes. */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl font-extrabold font-display" style={{ color }}>{score}</span>
-          <span className="text-[8px] font-bold uppercase tracking-widest" style={{ color: tierColor }}>{tier}</span>
+          <span className="text-2xl font-extrabold font-display viz-numeral">{score}</span>
+          <span className="text-[8px] font-bold uppercase tracking-widest viz-caption">{tier}</span>
         </div>
       </div>
       <p className="text-xs font-bold text-slate-400 text-center tracking-wide">{label}</p>

@@ -1,0 +1,157 @@
+/* ═══════════════════════════════════════════════════════════════════
+   THEME-TOKENS.CSS — accessibility & legibility layer.
+
+   Loaded AFTER globals.css and BEFORE theme-dark.css so the dark layer
+   can still win where it needs to.
+
+   Why this file exists
+   ────────────────────
+   An automated WCAG audit across the dashboard found that the muted text
+   utilities used everywhere for secondary copy were far below the AA
+   threshold of 4.5:1 for normal text:
+
+     .text-slate-400 (#94a3b8) on white .......... 2.56:1   FAIL
+     .text-slate-400 on slate-50 ................. 2.45:1   FAIL
+     .text-slate-300 (#cbd5e1) as body text ...... ~1.8:1   FAIL
+     .bg-accent (#6366f1) behind white button text 4.47:1   FAIL (just)
+
+   Rather than hand-edit thousands of class usages, this layer remaps the
+   *text* rendering of those utilities to accessible values. Background and
+   border utilities of the same name are deliberately NOT touched, so the
+   light, airy surface palette and hairline borders are preserved exactly —
+   only the ink gets darker.
+
+   Every value below is measured, not guessed. Ratios are stated per rule.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ─── Light mode: muted ink ───
+   #5b6675 → 5.83:1 on white, 5.57:1 on slate-50, 5.32:1 on slate-100.
+   Comfortably AA on every light surface in the app while still reading as
+   clearly "secondary" next to text-primary (#0f172a). */
+html:not(.dark) .text-slate-400 { color: #5b6675; }
+
+/* #67727f → 4.89:1 on white, 4.68:1 on slate-50. slate-300 is used both for
+   faint placeholder copy ("No apps yet") and for decorative chevrons; this
+   value clears AA on both surfaces without making the chevrons look heavy. */
+html:not(.dark) .text-slate-300 { color: #67727f; }
+
+/* slate-500 is already close; nudge it so it also passes on tinted panels
+   (it measured 4.34:1 on slate-100 — marginally under). */
+html:not(.dark) .text-slate-500 { color: #556070; }
+
+/* ─── Light mode: semantic status ink ───
+   Status colors at the -500/-600 level are used as *text* on their own
+   -50/-100 tinted chips ("Safety", "Rolling", "Past due", "Depth"). Measured
+   on those chips they land at 2.9–4.2:1. Remapping the text rendering to the
+   -700 step keeps each hue's identity while clearing AA on both white and
+   the tinted chip. Backgrounds/borders of the same hue are untouched. */
+html:not(.dark) .text-green-500,   html:not(.dark) .text-green-600   { color: #15803d; }
+html:not(.dark) .text-emerald-500, html:not(.dark) .text-emerald-600 { color: #047857; }
+html:not(.dark) .text-teal-500,    html:not(.dark) .text-teal-600    { color: #0f766e; }
+html:not(.dark) .text-amber-500,   html:not(.dark) .text-amber-600   { color: #b45309; }
+html:not(.dark) .text-orange-500,  html:not(.dark) .text-orange-600  { color: #c2410c; }
+html:not(.dark) .text-cyan-500,    html:not(.dark) .text-cyan-600    { color: #0e7490; }
+html:not(.dark) .text-sky-500,     html:not(.dark) .text-sky-600     { color: #0369a1; }
+html:not(.dark) .text-blue-500,    html:not(.dark) .text-blue-600    { color: #1d4ed8; }
+html:not(.dark) .text-indigo-500,  html:not(.dark) .text-indigo-600  { color: #4f46e5; }
+html:not(.dark) .text-violet-500,  html:not(.dark) .text-violet-600  { color: #6d28d9; }
+html:not(.dark) .text-purple-500,  html:not(.dark) .text-purple-600  { color: #7e22ce; }
+html:not(.dark) .text-fuchsia-500, html:not(.dark) .text-fuchsia-600 { color: #a21caf; }
+html:not(.dark) .text-pink-500,    html:not(.dark) .text-pink-600    { color: #be185d; }
+html:not(.dark) .text-rose-500,    html:not(.dark) .text-rose-600    { color: #be123c; }
+html:not(.dark) .text-red-500,     html:not(.dark) .text-red-600     { color: #b91c1c; }
+/* The -400 step appears on category chips; same treatment. */
+html:not(.dark) .text-emerald-400 { color: #047857; }
+html:not(.dark) .text-indigo-400  { color: #4f46e5; }
+html:not(.dark) .text-purple-400  { color: #7e22ce; }
+html:not(.dark) .text-amber-400   { color: #b45309; }
+html:not(.dark) .text-rose-400    { color: #be123c; }
+html:not(.dark) .text-sky-400     { color: #0369a1; }
+
+/* ─── Dark mode: muted ink ───
+   The generated dark layer mapped slate-200/300 to #707786, which is only
+   3.63:1 on the #1e2025 card surface. #8a90a0 gives 5.10:1 on card and
+   5.61:1 on the #16171b body.
+
+   NOTE ON SPECIFICITY: theme-dark.css loads after this file and its rules are
+   also !important at (0,2,0). The `[class]` attribute selector below adds one
+   point so these deliberately win, without resorting to duplicated classes. */
+html.dark[class] .text-slate-200,
+html.dark[class] .text-slate-300 { color: #8a90a0 !important; }
+
+/* slate-400 is dark mode's inactive-control ink (unselected tabs, captions).
+   At #8a90a0 it clears AA on the card and body surfaces but lands at 4.25:1
+   on the lighter #2b2e36 chip used for tab groups — #9aa1b0 clears all three. */
+html.dark[class] .text-slate-400 { color: #9aa1b0 !important; }
+
+/* ─── Accent ───
+   The brand indigo #6366f1 sits at 4.47:1 against white — a hair under AA,
+   which fails white-on-accent buttons in BOTH themes and accent-on-white
+   links in light. #5457dd is visually near-identical but measures 5.55:1
+   against white, clearing AA for both directions at once. Dark mode keeps its
+   own lighter #a5acfa for accent *text* (set in theme-dark.css). */
+:root { --ao-accent: #5457dd; }
+.bg-accent { background-color: #5457dd; }
+.hover\:bg-accent:hover { background-color: #4a4dd0; }
+html:not(.dark) .text-accent { color: #5457dd; }
+html:not(.dark) .border-accent { border-color: #5457dd; }
+
+/* indigo-500 is used interchangeably with the accent as a solid button
+   background; same 4.47:1 problem, same fix. */
+.bg-indigo-500 { background-color: #5457dd; }
+.hover\:bg-indigo-600:hover { background-color: #4a4dd0; }
+
+/* .btn-primary compiles its own `background-color` from @apply bg-accent, so
+   the `.bg-accent` rule above never reaches it — it needs its own override. */
+.btn-primary { background-color: #5457dd; }
+.btn-primary:hover { background-color: #4a4dd0; }
+
+/* ─── Data-viz numerals ───
+   Vivid chart colors (cyan-400, emerald-400) are fine for rings, bars, and
+   strokes — those are graphics, exempt from text contrast rules — but they
+   were also being applied to the numeral *inside* the ring, landing at
+   1.8–1.9:1. `.viz-numeral` renders those figures in high-contrast ink while
+   the graphic keeps its vivid color. */
+.viz-numeral { color: #0f172a; }
+html.dark .viz-numeral { color: #e8eaef; }
+
+/* `.viz-caption` is for the small tier/label text that sat on vivid colors. */
+html:not(.dark) .viz-caption { color: #556070; }
+html.dark .viz-caption { color: #9aa1b0; }
+
+/* ─── On-gradient text ───
+   White text over the mid-tone orange assistant gradient measured 2.8:1.
+   A subtle dark scrim under the text restores legibility without losing the
+   brand gradient. */
+.on-gradient-text { text-shadow: 0 1px 2px rgb(0 0 0 / 0.42); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   THEME TRANSITION — the light/dark cross-fade.
+
+   Only color-ish properties transition, and only while the
+   `.theme-transition` class is present (added for ~400ms by themeContext).
+   Scoping it this way means we never pay a permanent paint cost, and
+   layout/transform animations elsewhere are untouched.
+   ═══════════════════════════════════════════════════════════════════ */
+html.theme-transition,
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
+  transition: background-color 320ms cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 320ms cubic-bezier(0.4, 0, 0.2, 1),
+              color 320ms cubic-bezier(0.4, 0, 0.2, 1),
+              fill 320ms cubic-bezier(0.4, 0, 0.2, 1),
+              stroke 320ms cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 320ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transition-delay: 0ms !important;
+}
+
+/* Never animate the theme flip for users who ask for reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  html.theme-transition,
+  html.theme-transition *,
+  html.theme-transition *::before,
+  html.theme-transition *::after {
+    transition: none !important;
+  }
+}

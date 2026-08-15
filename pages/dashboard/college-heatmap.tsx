@@ -47,6 +47,27 @@ function computeMatch(gpa: number, sat: number, college: College): { overallFit:
 
 /* ──────────────────────── COLOR HELPERS ──────────────────────── */
 
+/* Pick white or dark ink for text sitting on an arbitrary swatch from the
+   temperature ramp. The mid-ramp ambers/oranges are far too light for white
+   text (they measured 3.6:1), so the numeral flips to near-black there. */
+const INK_DARK = '#0f172a';
+
+function relLuminance(r: number, g: number, b: number): number {
+  const f = (v: number) => { const s = v / 255; return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); };
+  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+}
+
+function readableOn(bg: string): string {
+  const m = bg.match(/\d+/g);
+  if (!m || m.length < 3) return '#ffffff';
+  const [r, g, b] = m.slice(0, 3).map(Number);
+  const L = relLuminance(r, g, b);
+  const LDark = relLuminance(15, 23, 42); // INK_DARK
+  const vsWhite = 1.05 / (L + 0.05);
+  const vsDark = (L + 0.05) / (LDark + 0.05);
+  return vsWhite >= vsDark ? '#ffffff' : INK_DARK;
+}
+
 function getTempColor(fit: number): string {
   const stops = [
     { at: 0, r: 59, g: 130, b: 246 },
@@ -1636,7 +1657,7 @@ export default function CollegeHeatmapPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {discoveries.map(tile => (
                 <div key={tile.college.id} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/30 transition-all cursor-pointer group" onClick={() => setSelectedTile(tile)}>
-                  <div className="shrink-0 w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: getTempColor(tile.overallFit) }}>{tile.overallFit}</div>
+                  <div className="shrink-0 w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm" style={{ backgroundColor: getTempColor(tile.overallFit), color: readableOn(getTempColor(tile.overallFit)) }}>{tile.overallFit}</div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-primary truncate">{tile.college.name}</p>
                     <p className="text-xs text-slate-400">{tile.college.acceptanceRate}% accept &middot; {tile.college.satRange[0]}-{tile.college.satRange[1]} SAT</p>
@@ -1657,7 +1678,7 @@ export default function CollegeHeatmapPage() {
             <div className="p-5 pb-0">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="shrink-0 w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-sm" style={{ backgroundColor: getTempColor(selectedTile.overallFit) }}>{selectedTile.overallFit}</div>
+                  <div className="shrink-0 w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg shadow-sm" style={{ backgroundColor: getTempColor(selectedTile.overallFit), color: readableOn(getTempColor(selectedTile.overallFit)) }}>{selectedTile.overallFit}</div>
                   <div>
                     <h2 className="text-lg font-bold font-display text-primary">{selectedTile.college.name}</h2>
                     <p className="text-xs text-slate-400">{selectedTile.college.location} &middot; {selectedTile.college.type} &middot; {selectedTile.college.size}</p>
@@ -1800,7 +1821,7 @@ function SimilarHotSchools({ currentCollege, tiles, onSelect, onAdd }: { current
       <div className="space-y-2">
         {similar.map(s => (
           <div key={s.college.id} className="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100 hover:border-accent/20 hover:bg-accent/5 transition-all cursor-pointer" onClick={() => onSelect(s)}>
-            <div className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-xs" style={{ backgroundColor: getTempColor(s.overallFit) }}>{s.overallFit}</div>
+            <div className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center font-bold text-xs" style={{ backgroundColor: getTempColor(s.overallFit), color: readableOn(getTempColor(s.overallFit)) }}>{s.overallFit}</div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-primary truncate">{s.college.name}</p>
               <p className="text-[10px] text-slate-400">{s.overlap} shared program{s.overlap > 1 ? 's' : ''} &middot; {s.college.acceptanceRate}% accept</p>
