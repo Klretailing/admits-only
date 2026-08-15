@@ -126,6 +126,77 @@ html.dark .viz-caption { color: #9aa1b0; }
 .on-gradient-text { text-shadow: 0 1px 2px rgb(0 0 0 / 0.42); }
 
 /* ═══════════════════════════════════════════════════════════════════
+   ELEVATION — physical, layered surfaces.
+
+   The trick that makes a card read as a real object rather than a painted
+   rectangle is a 1px top highlight (light catching the top edge) paired with
+   a layered shadow: a tight contact shadow plus a wide ambient one. Stripe,
+   Linear, and Vercel all use this. Both are theme-aware — in dark mode the
+   highlight is a faint white sheen and the shadows go much deeper.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.surface {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.9),      /* top highlight  */
+    0 0 0 1px rgb(15 23 42 / 0.04),            /* hairline ring  */
+    0 1px 2px rgb(15 23 42 / 0.05),            /* contact shadow */
+    0 8px 20px -6px rgb(15 23 42 / 0.08);      /* ambient        */
+}
+html.dark .surface {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.05),
+    0 0 0 1px rgb(0 0 0 / 0.5),
+    0 1px 2px rgb(0 0 0 / 0.4),
+    0 8px 20px -6px rgb(0 0 0 / 0.55);
+}
+
+/* Raised one step — for the primary object on a screen (editor pane, focused
+   detail card). */
+.surface-raised {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.9),
+    0 0 0 1px rgb(15 23 42 / 0.05),
+    0 2px 4px rgb(15 23 42 / 0.05),
+    0 16px 32px -10px rgb(15 23 42 / 0.13);
+}
+html.dark .surface-raised {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.06),
+    0 0 0 1px rgb(0 0 0 / 0.55),
+    0 2px 4px rgb(0 0 0 / 0.45),
+    0 16px 32px -10px rgb(0 0 0 / 0.65);
+}
+
+/* Interactive lift. Pairs with .surface on cards the user can click.
+   Transform is GPU-friendly and the shadow grows to sell the height change. */
+.surface-interactive {
+  transition: transform 180ms cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 180ms cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+.surface-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.95),
+    0 0 0 1px rgb(84 87 221 / 0.16),
+    0 4px 8px rgb(15 23 42 / 0.06),
+    0 18px 36px -10px rgb(15 23 42 / 0.16);
+}
+html.dark .surface-interactive:hover {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.08),
+    0 0 0 1px rgb(129 140 248 / 0.3),
+    0 4px 8px rgb(0 0 0 / 0.5),
+    0 18px 36px -10px rgb(0 0 0 / 0.7);
+}
+.surface-interactive:active { transform: translateY(0); }
+
+@media (prefers-reduced-motion: reduce) {
+  .surface-interactive { transition: none; }
+  .surface-interactive:hover { transform: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
    THEME TRANSITION — the light/dark cross-fade.
 
    Only color-ish properties transition, and only while the

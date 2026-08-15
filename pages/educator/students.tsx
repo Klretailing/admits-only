@@ -349,7 +349,7 @@ export default function EducatorStudents() {
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/30" onClick={() => setShowAddModal(false)} />
-          <div className="relative bg-white rounded-2xl shadow-sm w-full max-w-md max-h-[85vh] overflow-y-auto p-6">
+          <div className="relative bg-white rounded-2xl modal-card w-full max-w-md max-h-[85vh] overflow-y-auto p-6">
             <h2 className="text-lg font-bold font-display text-primary mb-4">Add Student</h2>
 
             {/* Connect with Student Code */}
@@ -450,7 +450,7 @@ export default function EducatorStudents() {
       {selectedStudent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/30" onClick={() => setSelectedStudent(null)} />
-          <div className="relative bg-white rounded-2xl shadow-sm w-full max-w-lg max-h-[85vh] overflow-y-auto p-6">
+          <div className="relative bg-white rounded-2xl modal-card w-full max-w-lg max-h-[85vh] overflow-y-auto p-6">
             <div className="flex items-start justify-between mb-5">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-lg">

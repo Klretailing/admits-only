@@ -517,7 +517,7 @@ export default function Applications() {
         {/* ═══ Statistics Header ═══ */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Total */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+          <div className="bg-white rounded-2xl border border-slate-100 surface p-4">
             <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Apps</p>
             <p className="text-2xl font-bold font-display text-primary mt-1">{totalApps}</p>
             {(reachCount > 0 || targetCount > 0 || safetyCount > 0) && (
@@ -530,7 +530,7 @@ export default function Applications() {
           </div>
 
           {/* Upcoming Deadlines */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+          <div className="bg-white rounded-2xl border border-slate-100 surface p-4">
             <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Next Deadlines</p>
             {upcomingDeadlines.length > 0 ? (
               <div className="mt-1.5 space-y-1">
@@ -552,7 +552,7 @@ export default function Applications() {
           </div>
 
           {/* Completion */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+          <div className="bg-white rounded-2xl border border-slate-100 surface p-4">
             <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Completion</p>
             <div className="flex items-center gap-3 mt-1">
               <ProgressRing pct={overallPct} size={44} stroke={4} />
@@ -564,7 +564,7 @@ export default function Applications() {
           </div>
 
           {/* Submitted / Accepted */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+          <div className="bg-white rounded-2xl border border-slate-100 surface p-4">
             <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Results</p>
             <div className="flex items-end gap-4 mt-1">
               <div>
@@ -752,7 +752,7 @@ export default function Applications() {
                         <button
                           key={app.id}
                           onClick={() => setDetailApp(app.id)}
-                          className="relative w-full text-left bg-white rounded-2xl border border-slate-100 shadow-sm p-4 hover:shadow-md transition-shadow group"
+                          className="relative w-full text-left bg-white rounded-2xl border border-slate-100 surface surface-interactive p-4 group"
                         >
                           {/* Dot on timeline */}
                           <div
@@ -790,7 +790,7 @@ export default function Applications() {
                     <button
                       key={app.id}
                       onClick={() => setDetailApp(app.id)}
-                      className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 text-left hover:shadow-md transition-shadow"
+                      className="bg-white rounded-2xl border border-slate-100 surface surface-interactive p-4 text-left"
                     >
                       <p className="text-sm font-bold text-primary">{app.name}</p>
                       <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${typeColors[app.type]} mt-1 inline-block`}>{app.type}</span>
@@ -804,7 +804,7 @@ export default function Applications() {
 
         {/* ═══ List View ═══ */}
         {view === 'list' && apps.length > 0 && (
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-2xl border border-slate-100 surface overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -901,7 +901,7 @@ function BoardCard({ app, onClick }: { app: CollegeApp; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="w-full text-left bg-white rounded-2xl border border-slate-100 shadow-sm p-4 hover:shadow-md hover:border-indigo-100 transition-all group"
+      className="w-full text-left bg-white rounded-2xl border border-slate-100 surface surface-interactive p-4 group"
     >
       {/* Name + Type */}
       <div className="flex items-start justify-between gap-2">

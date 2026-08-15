@@ -1556,7 +1556,7 @@ export default function CollegeHeatmapPage() {
                   const tierCfg = { reach: { label: 'Reach', color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200' }, match: { label: 'Match', color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200' }, safety: { label: 'Safety', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' } }[tile.tier];
                   const isExpanded = expandedId === tile.college.id;
                   return (
-                    <div key={tile.college.id} className="bg-white rounded-2xl border border-slate-100 hover:border-slate-200 dash-card-hover transition-all overflow-hidden">
+                    <div key={tile.college.id} className="bg-white rounded-2xl border border-slate-100 surface surface-interactive overflow-hidden">
                       <div className="flex items-center gap-4 p-4 sm:p-5 cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : tile.college.id)}>
                         <div className={`shrink-0 w-16 sm:w-20 py-1.5 rounded-xl text-center ${tierCfg.bg} ${tierCfg.border} border`}>
                           <div className={`text-xs font-bold ${tierCfg.color}`}>{tierCfg.label}</div>
