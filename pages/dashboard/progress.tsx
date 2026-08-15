@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo, useRef, Fragment } from 'rea
 import Head from 'next/head';
 import Link from 'next/link';
 import DashboardLayout from '../../components/DashboardLayout';
+import PageHeader from '../../components/PageHeader';
 import { SCHOOLS, findSchoolByName, generateSmartTimeline, generateWeeklyDigest, type SchoolData } from '../../lib/schoolData';
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -499,18 +500,19 @@ export default function Applications() {
 
       <div className="space-y-6">
         {/* ═══ Header ═══ */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h1 className="text-xl lg:text-2xl font-bold font-display text-primary tracking-tight">Application Tracker</h1>
-            <p className="mt-0.5 text-sm text-slate-400">Track every college application, deadline, and task in one place.</p>
-          </div>
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="px-5 py-2.5 text-sm font-semibold text-white bg-indigo-500 rounded-xl hover:bg-indigo-600 transition-colors flex-shrink-0 self-start sm:self-auto"
-          >
-            + Add School
-          </button>
-        </div>
+        <PageHeader
+          eyebrow="Applications"
+          title="Application Tracker"
+          subtitle="Track every college application, deadline, and task in one place."
+          actions={
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl hover:bg-accent/90 transition-all shadow-sm hover:shadow-md hover:-translate-y-px"
+            >
+              + Add School
+            </button>
+          }
+        />
 
         {/* ═══ Statistics Header ═══ */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -528,7 +530,7 @@ export default function Applications() {
           </div>
 
           {/* Upcoming Deadlines */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 col-span-2 lg:col-span-1">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
             <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Next Deadlines</p>
             {upcomingDeadlines.length > 0 ? (
               <div className="mt-1.5 space-y-1">
@@ -701,8 +703,10 @@ export default function Applications() {
             {BOARD_COLUMNS.map(col => {
               const colApps = apps.filter(a => a.status === col.status);
               const statusInfo = getStatusInfo(col.status);
+              // Empty columns swipe-order last on mobile so the first thing a
+              // phone user sees is real content, not an empty tray.
               return (
-                <div key={col.status} className="min-w-[280px] w-[280px] lg:min-w-0 lg:w-auto lg:flex-1 flex-shrink-0 snap-start">
+                <div key={col.status} className={`min-w-[280px] w-[280px] lg:min-w-0 lg:w-auto lg:flex-1 flex-shrink-0 snap-start ${colApps.length === 0 ? 'order-last lg:order-none' : ''}`}>
                   <div className="flex items-center gap-2 mb-3">
                     <span className={`w-2.5 h-2.5 rounded-full ${statusInfo.color.split(' ')[0]}`} />
                     <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">{col.label}</h3>

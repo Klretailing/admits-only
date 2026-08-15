@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import DashboardLayout from '../../components/DashboardLayout';
+import PageHeader from '../../components/PageHeader';
 import TodaysFocus from '../../components/TodaysFocus';
 import { useCountUp, useInView } from '../../hooks/useAnimations';
 
@@ -243,12 +244,11 @@ export default function Dashboard() {
           </div>
         )}
 
-        <div>
-          <h1 className="text-2xl font-bold font-display text-primary">
-            Welcome back, {session.user?.name?.split(' ')[0] || 'Student'}
-          </h1>
-          <p className="mt-1 text-slate-500">Here&apos;s your academic progress at a glance.</p>
-        </div>
+        <PageHeader
+          eyebrow="Overview"
+          title={`Welcome back, ${session.user?.name?.split(' ')[0] || 'Student'}`}
+          subtitle="Here's your academic progress at a glance."
+        />
 
         {/* Today's Focus — daily nudge */}
         <TodaysFocus checklist={readiness?.checklist} />
@@ -261,7 +261,7 @@ export default function Dashboard() {
                 .filter(n => !dismissedNudges.has(n.id))
                 .slice(0, 3)
                 .map(nudge => (
-                  <div key={nudge.id} className="flex items-center gap-3">
+                  <div key={nudge.id} className="flex items-start sm:items-center gap-3 flex-wrap sm:flex-nowrap">
                     <div className="flex-shrink-0">
                       {nudge.type === 'info' && (
                         <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -279,8 +279,8 @@ export default function Dashboard() {
                         </svg>
                       )}
                     </div>
-                    <p className="flex-1 text-sm text-slate-700">{nudge.message}</p>
-                    <Link href={nudge.href} className="text-xs font-semibold text-accent hover:underline flex-shrink-0">
+                    <p className="flex-1 min-w-[14rem] text-sm text-slate-700">{nudge.message}</p>
+                    <Link href={nudge.href} className="text-xs font-semibold text-accent hover:underline flex-shrink-0 ml-8 sm:ml-0">
                       {nudge.action}
                     </Link>
                     <button
