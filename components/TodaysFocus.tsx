@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 
-/* "Today's Focus" — a small daily nudge on the student dashboard.
-   Surfaces the 1–3 highest-leverage things to do today (nearest-deadline
-   application tasks first, then setup gaps), framed as a daily goal with a
-   streak. Checking an item is a per-day motivational marker (localStorage);
-   the → link takes the student to where the real work happens. */
+/* "Daily Progress" — the student dashboard's daily hub.
+   Combines two things students asked for:
+     1. A GAUGE of collective progress — how many of all their application
+        tasks are done across every school they track (the "judge").
+     2. A short list of the 1–3 highest-leverage small wins to knock out
+        TODAY (nearest deadline first), with a streak to build the habit.
+   Checking a daily item is a per-day motivational marker (localStorage); the
+   → link takes the student to where the real work happens. */
 
 interface ChecklistItem { id: string; label: string; complete: boolean; href: string }
 interface AppTask { id: string; label: string; done: boolean }
@@ -58,6 +61,24 @@ export default function TodaysFocus({ checklist }: { checklist?: ChecklistItem[]
     } catch { /* ignore */ }
   }, []);
 
+  // Collective task gauge across every tracked application. A submitted (or
+  // otherwise closed) app counts all its tasks as done.
+  const gauge = useMemo(() => {
+    let total = 0, done = 0, appCount = 0;
+    for (const app of apps) {
+      const tasks = app.tasks || [];
+      if (tasks.length === 0) continue;
+      appCount++;
+      const closed = app.status ? DONE_STATUSES.has(app.status) : false;
+      for (const t of tasks) {
+        total++;
+        if (closed || t.done) done++;
+      }
+    }
+    const pct = total ? Math.round((done / total) * 100) : 0;
+    return { total, done, pct, appCount, remaining: total - done };
+  }, [apps]);
+
   const items: FocusItem[] = useMemo(() => {
     const out: FocusItem[] = [];
     // 1. Urgent, incomplete application tasks (nearest deadline first).
@@ -90,7 +111,6 @@ export default function TodaysFocus({ checklist }: { checklist?: ChecklistItem[]
       if (next.has(key)) next.delete(key);
       else next.add(key);
       try { localStorage.setItem('ao_focus_done_' + todayStr(), JSON.stringify(Array.from(next))); } catch { /* ignore */ }
-      // First completion of the day lights/extends the streak.
       if (wasEmpty && next.size > 0) bumpStreak();
       return next;
     });
@@ -101,8 +121,8 @@ export default function TodaysFocus({ checklist }: { checklist?: ChecklistItem[]
       const s = JSON.parse(localStorage.getItem('ao_focus_streak') || 'null');
       let count = 1;
       if (s && typeof s.count === 'number') {
-        if (s.lastDate === todayStr()) count = s.count;          // already counted today
-        else if (s.lastDate === yesterdayStr()) count = s.count + 1; // consecutive day
+        if (s.lastDate === todayStr()) count = s.count;
+        else if (s.lastDate === yesterdayStr()) count = s.count + 1;
       }
       localStorage.setItem('ao_focus_streak', JSON.stringify({ count, lastDate: todayStr() }));
       setStreak(count);
@@ -112,12 +132,16 @@ export default function TodaysFocus({ checklist }: { checklist?: ChecklistItem[]
   const doneCount = items.filter((it) => doneToday.has(it.key)).length;
   const allDone = items.length > 0 && doneCount === items.length;
 
+  // Gauge ring geometry
+  const R = 26, C = 2 * Math.PI * R;
+  const ringColor = gauge.pct >= 80 ? '#10b981' : gauge.pct >= 40 ? '#6366f1' : '#f59e0b';
+
   return (
     <div className="rounded-2xl border border-accent/20 bg-gradient-to-br from-accent/[0.06] to-purple-500/[0.05] p-5">
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <span className="text-lg">🎯</span>
-          <h3 className="text-base font-bold font-display text-primary">Today&apos;s Focus</h3>
+          <h3 className="text-base font-bold font-display text-primary">Daily Progress</h3>
         </div>
         {streak > 0 && (
           <span className="inline-flex items-center gap-1 text-xs font-bold text-orange-600 bg-orange-50 border border-orange-100 rounded-full px-2.5 py-1" title="Days in a row you've made progress">
@@ -125,12 +149,39 @@ export default function TodaysFocus({ checklist }: { checklist?: ChecklistItem[]
           </span>
         )}
       </div>
-      <p className="text-xs text-slate-500 mb-4">
+
+      {/* Collective task gauge */}
+      {gauge.total > 0 && (
+        <div className="flex items-center gap-4 bg-white/70 rounded-xl border border-white p-3.5 mb-4">
+          <div className="relative flex-shrink-0" style={{ width: 64, height: 64 }}>
+            <svg width={64} height={64} viewBox="0 0 64 64">
+              <circle cx={32} cy={32} r={R} fill="none" stroke="#e2e8f0" strokeWidth={6} />
+              <circle
+                cx={32} cy={32} r={R} fill="none" stroke={ringColor} strokeWidth={6} strokeLinecap="round"
+                strokeDasharray={C} strokeDashoffset={C - (gauge.pct / 100) * C}
+                transform="rotate(-90 32 32)" style={{ transition: 'stroke-dashoffset 0.8s ease-out' }}
+              />
+            </svg>
+            <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-primary tabular-nums">{gauge.pct}%</span>
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-primary">
+              {gauge.done} of {gauge.total} tasks done
+            </p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              across {gauge.appCount} application{gauge.appCount !== 1 ? 's' : ''}
+              {gauge.remaining > 0 ? ` · ${gauge.remaining} to go` : ' · all clear! 🎉'}
+            </p>
+          </div>
+        </div>
+      )}
+
+      <p className="text-xs text-slate-500 mb-3 font-medium">
         {items.length === 0
           ? 'You’re all caught up — nice work.'
           : allDone
-          ? 'Daily goal complete — see you tomorrow. 🎉'
-          : 'Small steps every day add up. Knock out today’s goal:'}
+          ? 'Today’s wins complete — see you tomorrow. 🎉'
+          : 'Knock out a few small wins today:'}
       </p>
 
       {items.length === 0 ? (
@@ -179,7 +230,7 @@ export default function TodaysFocus({ checklist }: { checklist?: ChecklistItem[]
             <div className="flex-1 h-1.5 bg-slate-200/70 rounded-full overflow-hidden">
               <div className="h-full bg-accent rounded-full transition-all duration-500" style={{ width: `${items.length ? (doneCount / items.length) * 100 : 0}%` }} />
             </div>
-            <span className="text-[11px] font-semibold text-slate-500 flex-shrink-0">{doneCount}/{items.length} done today</span>
+            <span className="text-[11px] font-semibold text-slate-500 flex-shrink-0">{doneCount}/{items.length} today</span>
           </div>
         </>
       )}

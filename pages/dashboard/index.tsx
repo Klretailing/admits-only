@@ -236,7 +236,7 @@ export default function Dashboard() {
         <title>Dashboard | AdmitsOnly</title>
       </Head>
 
-      <div className="space-y-8">
+      <div className="space-y-6">
         {router.query.payment === 'success' && (
           <div className="p-4 bg-green-50 border border-green-100 rounded-2xl text-sm text-green-700 font-medium">
             Payment successful! Your subscription is now active.
@@ -319,8 +319,8 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Application Readiness Ring & Checklist */}
-        {readiness && (
+        {/* Application Readiness Ring & Checklist — hidden once fully ready to keep the dashboard clean */}
+        {readiness && readiness.readiness < 100 && (
           <div className="grid lg:grid-cols-[240px_1fr] gap-6">
             {/* Readiness Ring */}
             <div className="bg-white rounded-2xl border border-slate-100 p-6 flex flex-col items-center justify-center">

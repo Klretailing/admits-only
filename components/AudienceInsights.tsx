@@ -3,9 +3,12 @@ import { useEffect, useState } from 'react';
 /* Aggregate, privacy-safe audience & usage insights for the admin Command Center.
    Renders only counts/percentages from /api/admin/audience — no PII. */
 
+interface DailyPoint { date: string; users: number; sessions: number; pageviews: number }
+
 interface Audience {
   activeUsers: { dau: number; wau: number; mau: number };
   activeSessions: { today: number; week: number; month: number };
+  daily: DailyPoint[];
   returning: { total: number; returning: number; rate: number };
   byHour: { hour: number; count: number }[];
   byWeekday: { dow: number; count: number }[];
@@ -17,6 +20,7 @@ interface Audience {
   topPages: { path: string; views: number }[];
   signups: { last7: number; last30: number };
   totalEvents: number;
+  excludesDemo?: boolean;
 }
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -57,6 +61,73 @@ function Bars({ data, peakIndex, labelFor }: { data: number[]; peakIndex: number
   );
 }
 
+function fmtDate(s: string): string {
+  const parts = s.split('-');
+  return parts.length === 3 ? `${Number(parts[1])}/${Number(parts[2])}` : s;
+}
+
+function DailyActivity({ daily }: { daily: DailyPoint[] }) {
+  const [metric, setMetric] = useState<'users' | 'sessions' | 'pageviews'>('users');
+  const metrics = [
+    { key: 'users', label: 'Active users' },
+    { key: 'sessions', label: 'Sessions' },
+    { key: 'pageviews', label: 'Page views' },
+  ] as const;
+  const values = daily.map(d => d[metric]);
+  const max = Math.max(...values, 1);
+  const totalPeriod = values.reduce((a, b) => a + b, 0);
+  const last7 = values.slice(-7).reduce((a, b) => a + b, 0);
+  const prev7 = values.slice(-14, -7).reduce((a, b) => a + b, 0);
+  const trend = prev7 > 0 ? Math.round(((last7 - prev7) / prev7) * 100) : null;
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 p-5">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <div>
+          <h4 className="text-sm font-bold text-primary">Daily activity — last 30 days</h4>
+          <p className="text-[11px] text-slate-400">
+            {totalPeriod.toLocaleString()} total
+            {trend !== null && (
+              <span className={trend >= 0 ? 'text-emerald-500 font-semibold' : 'text-rose-500 font-semibold'}>
+                {' '}· {trend >= 0 ? '▲' : '▼'} {Math.abs(trend)}% vs prior week
+              </span>
+            )}
+          </p>
+        </div>
+        <div className="flex bg-slate-100 rounded-lg p-0.5 gap-0.5">
+          {metrics.map(m => (
+            <button
+              key={m.key}
+              onClick={() => setMetric(m.key)}
+              className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${metric === m.key ? 'bg-white text-accent shadow-sm' : 'text-slate-500 hover:text-primary'}`}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="flex items-end gap-[2px] h-32">
+        {daily.map((d) => (
+          <div key={d.date} className="flex-1 flex flex-col items-center justify-end h-full group relative">
+            <div
+              className="w-full rounded-t bg-accent/25 group-hover:bg-accent transition-all"
+              style={{ height: `${(d[metric] / max) * 100}%`, minHeight: d[metric] > 0 ? 2 : 0 }}
+            />
+            <div className="absolute bottom-full mb-1 hidden group-hover:block z-10 whitespace-nowrap bg-slate-800 text-white text-[10px] rounded px-2 py-1 shadow-lg pointer-events-none">
+              {fmtDate(d.date)} · {d.users}u · {d.sessions}s · {d.pageviews}pv
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="flex justify-between mt-1.5 text-[9px] text-slate-400">
+        <span>{fmtDate(daily[0]?.date || '')}</span>
+        <span>{fmtDate(daily[Math.floor(daily.length / 2)]?.date || '')}</span>
+        <span>Today</span>
+      </div>
+    </div>
+  );
+}
+
 export default function AudienceInsights() {
   const [data, setData] = useState<Audience | null>(null);
   const [loading, setLoading] = useState(true);
@@ -89,7 +160,7 @@ export default function AudienceInsights() {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-bold font-display text-primary">Audience &amp; Usage</h3>
-          <p className="text-xs text-slate-400">How your community uses the app — last 30 days.</p>
+          <p className="text-xs text-slate-400">How your community uses the app — last 30 days. Demo &amp; test accounts excluded.</p>
         </div>
         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500 text-[11px] font-semibold" title="Only aggregate counts — no personal data or content.">
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
@@ -113,6 +184,9 @@ export default function AudienceInsights() {
             <Stat label="Peak time" value={a.peakHour !== null ? hourLabel(a.peakHour) : '—'} sub={a.peakDay !== null ? DAYS[a.peakDay] + 's' : 'UTC'} />
             <Stat label="New signups" value={a.signups.last30} sub={`${a.signups.last7} this week`} />
           </div>
+
+          {/* Daily activity trend */}
+          {a.daily && a.daily.length > 0 && <DailyActivity daily={a.daily} />}
 
           {/* When: hour + weekday */}
           <div className="grid gap-4 lg:grid-cols-2">
