@@ -334,13 +334,21 @@ const tierColors = {
   elite: { fill: '#8b5cf6', solid: '#c4b5fd' },
 };
 
+const SCATTER_TIERS = [
+  { key: 'elite', label: 'Elite', range: '85+', fill: '#8b5cf6' },
+  { key: 'competitive', label: 'Competitive', range: '65–84', fill: '#10b981' },
+  { key: 'developing', label: 'Developing', range: '40–64', fill: '#f59e0b' },
+  { key: 'building', label: 'Building', range: '<40', fill: '#ef4444' },
+] as const;
+
 function Scatterplot({ userGpa, userSat }: { userGpa: number; userSat: number }) {
   const [selected, setSelected] = useState<number | null>(null);
   const [hovered, setHovered] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
-  const W = 540, H = 400;
-  const PAD = { top: 28, right: 34, bottom: 54, left: 58 };
+  // Wide, roomy canvas so all 52 points spread out and nothing overlaps.
+  const W = 720, H = 460;
+  const PAD = { top: 22, right: 26, bottom: 58, left: 62 };
   const plotW = W - PAD.left - PAD.right;
   const plotH = H - PAD.top - PAD.bottom;
   const xMin = 2.4, xMax = 4.2, yMin = 800, yMax = 1600;
@@ -352,7 +360,7 @@ function Scatterplot({ userGpa, userSat }: { userGpa: number; userSat: number })
 
   return (
     <div className="relative">
-      <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="w-full max-w-[560px] cursor-crosshair" onClick={(e) => {
+      <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="w-full cursor-crosshair" onClick={(e) => {
         if ((e.target as Element).tagName !== 'circle') setSelected(null);
       }}>
         <defs>
@@ -362,45 +370,39 @@ function Scatterplot({ userGpa, userSat }: { userGpa: number; userSat: number })
         </defs>
         <rect x="0" y="0" width={W} height={H} rx="16" fill="url(#chart-bg)" />
 
+        {/* Single, subtle "strong-profile" target zone in the top-right (high GPA
+            + high SAT). One non-overlapping tint replaces the four muddy boxes. */}
+        <rect x={toX(3.6)} y={PAD.top} width={PAD.left + plotW - toX(3.6)} height={toY(1400) - PAD.top} fill="#8b5cf6" opacity="0.06" rx="8" />
+        <text x={PAD.left + plotW - 8} y={PAD.top + 15} textAnchor="end" className="text-[9px] font-bold tracking-wide" fill="#8b5cf6" opacity="0.6">TOP-TIER RANGE</text>
+
         {/* Grid lines */}
         {[2.5, 3.0, 3.5, 4.0].map((g) => (<line key={`gx-${g}`} x1={toX(g)} y1={PAD.top} x2={toX(g)} y2={PAD.top + plotH} stroke="#e2e8f0" strokeWidth="0.5" strokeDasharray="4 8" />))}
         {[900, 1000, 1100, 1200, 1300, 1400, 1500].map((s) => (<line key={`gy-${s}`} x1={PAD.left} y1={toY(s)} x2={PAD.left + plotW} y2={toY(s)} stroke="#e2e8f0" strokeWidth="0.5" strokeDasharray="4 8" />))}
-
-        {/* Zone backgrounds — solid fills */}
-        <rect x={toX(xMin)} y={toY(1100)} width={toX(3.2) - toX(xMin)} height={toY(yMin) - toY(1100)} fill="#ef4444" opacity="0.08" rx="6" />
-        <text x={toX(xMin) + 6} y={toY(1100) + 14} className="text-[9px] font-bold" fill="#ef4444" opacity="0.7">Building</text>
-
-        <rect x={toX(3.0)} y={toY(1300)} width={toX(3.8) - toX(3.0)} height={toY(1100) - toY(1300)} fill="#f59e0b" opacity="0.08" rx="6" />
-        <text x={toX(3.0) + 6} y={toY(1300) + 14} className="text-[9px] font-bold" fill="#f59e0b" opacity="0.7">Developing</text>
-
-        <rect x={toX(3.4)} y={toY(1500)} width={toX(4.1) - toX(3.4)} height={toY(1300) - toY(1500)} fill="#10b981" opacity="0.08" rx="6" />
-        <text x={toX(3.4) + 6} y={toY(1500) + 14} className="text-[9px] font-bold" fill="#10b981" opacity="0.7">Competitive</text>
-
-        <rect x={toX(3.7)} y={toY(yMax)} width={toX(xMax) - toX(3.7)} height={toY(1500) - toY(yMax)} fill="#8b5cf6" opacity="0.08" rx="6" />
-        <text x={toX(3.7) + 6} y={toY(yMax) + 14} className="text-[9px] font-bold" fill="#8b5cf6" opacity="0.7">Elite</text>
 
         {/* Axes */}
         <line x1={PAD.left} y1={PAD.top + plotH} x2={PAD.left + plotW} y2={PAD.top + plotH} stroke="#cbd5e1" strokeWidth="1" />
         <line x1={PAD.left} y1={PAD.top} x2={PAD.left} y2={PAD.top + plotH} stroke="#cbd5e1" strokeWidth="1" />
 
         {/* Axis labels */}
-        {[2.5, 3.0, 3.5, 4.0].map((g) => (<text key={`xl-${g}`} x={toX(g)} y={PAD.top + plotH + 20} textAnchor="middle" className="text-[10px] font-medium" fill="#64748b">{g.toFixed(1)}</text>))}
-        <text x={PAD.left + plotW / 2} y={H - 6} textAnchor="middle" className="text-[11px] font-bold" fill="#7c3aed">GPA</text>
-        {[800, 1000, 1200, 1400, 1600].map((s) => (<text key={`yl-${s}`} x={PAD.left - 10} y={toY(s) + 4} textAnchor="end" className="text-[10px] font-medium" fill="#64748b">{s}</text>))}
-        <text x={14} y={PAD.top + plotH / 2} textAnchor="middle" className="text-[11px] font-bold" fill="#7c3aed" transform={`rotate(-90, 14, ${PAD.top + plotH / 2})`}>SAT Score</text>
+        {[2.5, 3.0, 3.5, 4.0].map((g) => (<text key={`xl-${g}`} x={toX(g)} y={PAD.top + plotH + 22} textAnchor="middle" className="text-[11px] font-medium" fill="#64748b">{g.toFixed(1)}</text>))}
+        <text x={PAD.left + plotW / 2} y={H - 8} textAnchor="middle" className="text-[12px] font-bold" fill="#7c3aed">GPA (weighted)</text>
+        {[800, 1000, 1200, 1400, 1600].map((s) => (<text key={`yl-${s}`} x={PAD.left - 10} y={toY(s) + 4} textAnchor="end" className="text-[11px] font-medium" fill="#64748b">{s}</text>))}
+        <text x={16} y={PAD.top + plotH / 2} textAnchor="middle" className="text-[12px] font-bold" fill="#7c3aed" transform={`rotate(-90, 16, ${PAD.top + plotH / 2})`}>SAT Score</text>
 
-        {/* Comparative dots — colored by tier */}
+        {/* Comparative dots — colored by tier. A white halo keeps overlapping
+            dots visually separable. */}
         {comparativeData.map((d, i) => {
           const tier = getTier(d.score);
           const color = tierColors[tier];
           const isActive = active === i;
           return (
             <g key={i}>
-              {isActive && <circle cx={toX(d.gpa)} cy={toY(d.sat)} r="14" fill={color.fill} opacity="0.2" />}
+              {isActive && <circle cx={toX(d.gpa)} cy={toY(d.sat)} r="15" fill={color.fill} opacity="0.2" />}
+              <circle cx={toX(d.gpa)} cy={toY(d.sat)} r={isActive ? 6.5 : 5.5} fill="white" opacity="0.85" />
               <circle
-                cx={toX(d.gpa)} cy={toY(d.sat)} r={isActive ? 6 : 4.5}
-                fill={color.fill} opacity={isActive ? 1 : 0.7}
-                stroke={isActive ? color.solid : 'none'} strokeWidth={isActive ? 1.5 : 0}
+                cx={toX(d.gpa)} cy={toY(d.sat)} r={isActive ? 6 : 5}
+                fill={color.fill} opacity={isActive ? 1 : 0.8}
+                stroke={isActive ? color.solid : 'white'} strokeWidth={isActive ? 1.5 : 0.75}
                 className="transition-all duration-150 cursor-pointer"
                 onMouseEnter={() => setHovered(i)}
                 onMouseLeave={() => setHovered(null)}
@@ -420,19 +422,10 @@ function Scatterplot({ userGpa, userSat }: { userGpa: number; userSat: number })
             <circle cx={toX(userGpa)} cy={toY(userSat)} r="9" fill="url(#user-dot-grad)" />
             <circle cx={toX(userGpa)} cy={toY(userSat)} r="9" fill="none" stroke="white" strokeWidth="2" opacity="0.9" />
             <circle cx={toX(userGpa) - 2} cy={toY(userSat) - 2} r="2.5" fill="white" opacity="0.4" />
-            <rect x={toX(userGpa) + 14} y={toY(userSat) - 11} width="32" height="22" rx="6" fill="#7c3aed" opacity="0.95" />
+            <rect x={toX(userGpa) + 13} y={toY(userSat) - 11} width="34" height="22" rx="6" fill="#7c3aed" opacity="0.95" />
             <text x={toX(userGpa) + 30} y={toY(userSat) + 4} textAnchor="middle" className="text-[10px] font-extrabold" fill="white">You</text>
           </g>
         )}
-
-        {/* Legend */}
-        <g transform={`translate(${PAD.left + plotW - 140}, ${PAD.top + 6})`}>
-          <rect x="0" y="0" width="138" height="82" rx="10" fill="rgba(255,255,255,0.9)" stroke="#e2e8f0" strokeWidth="0.5" />
-          <circle cx="14" cy="14" r="5" fill="#8b5cf6" /><text x="26" y="18" className="text-[9px] font-semibold" fill="#64748b">Elite (85+)</text>
-          <circle cx="14" cy="30" r="5" fill="#10b981" /><text x="26" y="34" className="text-[9px] font-semibold" fill="#64748b">Competitive (65-84)</text>
-          <circle cx="14" cy="46" r="5" fill="#f59e0b" /><text x="26" y="50" className="text-[9px] font-semibold" fill="#64748b">Developing (40-64)</text>
-          <circle cx="14" cy="62" r="5" fill="#ef4444" /><text x="26" y="66" className="text-[9px] font-semibold" fill="#64748b">Building (&lt;40)</text>
-        </g>
 
         {/* Tooltip for active dot */}
         {active !== null && (() => {
@@ -447,7 +440,7 @@ function Scatterplot({ userGpa, userSat }: { userGpa: number; userSat: number })
           const by = flipY ? ty + 16 : ty - 56;
           return (
             <g>
-              <rect x={bx} y={by} width="110" height="50" rx="8" fill="rgba(255,255,255,0.95)" stroke={color.fill} strokeWidth="1" />
+              <rect x={bx} y={by} width="112" height="50" rx="8" fill="rgba(255,255,255,0.97)" stroke={color.fill} strokeWidth="1" />
               <text x={bx + 8} y={by + 16} className="text-[10px] font-bold" fill={color.fill}>Score: {d.score}</text>
               <text x={bx + 8} y={by + 30} className="text-[9px] font-medium" fill="#64748b">GPA {d.gpa.toFixed(1)} · SAT {d.sat}</text>
               <text x={bx + 8} y={by + 43} className="text-[9px] font-semibold" fill={color.fill} style={{ textTransform: 'capitalize' }}>{tier}</text>
@@ -456,17 +449,27 @@ function Scatterplot({ userGpa, userSat }: { userGpa: number; userSat: number })
         })()}
       </svg>
 
-      {/* Bottom stats summary */}
-      <div className="flex items-center gap-4 mt-3 text-[11px]">
-        <span className="text-slate-400">{comparativeData.length} students tracked</span>
-        <span className="text-slate-500">·</span>
-        <span className="text-slate-400">Click any dot for details</span>
+      {/* Legend — moved OUT of the plot so it never covers data points */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3">
+        {SCATTER_TIERS.map((t) => (
+          <span key={t.key} className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
+            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: t.fill }} />
+            {t.label} <span className="text-slate-400">({t.range})</span>
+          </span>
+        ))}
         {hasUser && (
-          <>
-            <span className="text-slate-500">·</span>
-            <span className="text-violet-400 font-semibold">Your position is highlighted</span>
-          </>
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-violet-600">
+            <span className="w-2.5 h-2.5 rounded-full ring-2 ring-white" style={{ backgroundColor: '#7c3aed' }} />
+            You
+          </span>
         )}
+      </div>
+
+      {/* Bottom stats summary */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-[11px]">
+        <span className="text-slate-400">{comparativeData.length} students tracked</span>
+        <span className="text-slate-300">·</span>
+        <span className="text-slate-400">Hover or tap any dot for details</span>
       </div>
     </div>
   );
