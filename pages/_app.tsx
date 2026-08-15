@@ -1,4 +1,5 @@
 import '../styles/globals.css'
+import '../styles/theme-dark.css'
 import type { AppProps } from 'next/app'
 import { SessionProvider, useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'

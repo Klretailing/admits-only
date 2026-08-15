@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
 type Theme = 'light' | 'dark';
 
@@ -16,23 +16,29 @@ const ThemeContext = createContext<ThemeContextValue>({
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('light');
+  const transitionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // On mount, read stored preference or system preference
+  // On mount, sync React state with whatever the pre-hydration script in
+  // _document.tsx already applied to <html> (so there is no flash and no
+  // mismatch between the DOM class and this state).
   useEffect(() => {
-    const stored = localStorage.getItem('admitsonly_theme') as Theme | null;
-    if (stored === 'dark' || stored === 'light') {
-      setThemeState(stored);
-      document.documentElement.classList.toggle('dark', stored === 'dark');
-    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      setThemeState('dark');
-      document.documentElement.classList.add('dark');
-    }
+    const isDark = document.documentElement.classList.contains('dark');
+    setThemeState(isDark ? 'dark' : 'light');
   }, []);
 
   const setTheme = (t: Theme) => {
+    const root = document.documentElement;
+
+    // Cross-fade: briefly enable color transitions on everything, flip the
+    // class, then remove the transition hook. Feels like Claude's toggle —
+    // a soft fade instead of a hard cut — without permanently taxing paints.
+    root.classList.add('theme-transition');
+    if (transitionTimer.current) clearTimeout(transitionTimer.current);
+    transitionTimer.current = setTimeout(() => root.classList.remove('theme-transition'), 400);
+
     setThemeState(t);
-    localStorage.setItem('admitsonly_theme', t);
-    document.documentElement.classList.toggle('dark', t === 'dark');
+    try { localStorage.setItem('admitsonly_theme', t); } catch { /* private mode */ }
+    root.classList.toggle('dark', t === 'dark');
   };
 
   const toggleTheme = () => setTheme(theme === 'light' ? 'dark' : 'light');

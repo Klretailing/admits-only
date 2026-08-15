@@ -995,12 +995,12 @@ function DetailPanel({ app, onClose, onUpdate, onToggleTask, onAddTask, onDelete
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/20 z-40 transition-opacity" onClick={onClose} />
+      <div className="modal-backdrop z-40 transition-opacity" onClick={onClose} />
 
       {/* Panel */}
       <div
         ref={panelRef}
-        className="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-white z-50 shadow-xl overflow-y-auto transition-transform"
+        className="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-white z-50 slideover-panel overflow-y-auto transition-transform"
         style={{ animation: 'slideInRight 0.25s ease-out' }}
       >
         {/* Header */}

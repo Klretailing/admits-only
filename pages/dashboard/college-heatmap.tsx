@@ -233,24 +233,36 @@ function RadarView({
     function screenRadius(r: number): number {
       const rect = container!.getBoundingClientRect();
       const baseScale = Math.min(rect.width, rect.height) / 750;
-      return r * baseScale * cameraRef.current.zoom;
+      // Clamp: a transiently negative/zero zoom must never produce a negative
+      // radius — canvas arc() THROWS on negative radii, and one bad frame
+      // would otherwise kill the animation loop.
+      return Math.max(0, r * baseScale * cameraRef.current.zoom);
     }
 
     function render(timestamp: number) {
+      // Schedule the next frame FIRST so a single bad frame (e.g. a canvas
+      // exception) skips rather than freezing the radar forever.
+      raf = requestAnimationFrame(render);
       if (!canvas || !ctx || !container) return;
       const rect = container.getBoundingClientRect();
       const w = rect.width;
       const h = rect.height;
       const cam = cameraRef.current;
-      const elapsed = (timestamp - startTime) / 1000;
+      // Clamp: the first rAF timestamp can precede startTime (it is the frame's
+      // vsync time), and a negative elapsed propagates into negative arc radii
+      // via the pulse-ring phase — which throws and froze the radar.
+      const elapsed = Math.max(0, (timestamp - startTime) / 1000);
 
       cam.zoom += (cam.targetZoom - cam.zoom) * 0.12;
+      cam.zoom = Math.max(0.05, cam.zoom);
 
       const entrance = Math.min(1, elapsed / 1.0);
       const eased = 1 - Math.pow(1 - entrance, 3);
 
-      // Background — light theme
-      ctx.fillStyle = '#ffffff';
+      // Background — theme-aware (checked per frame so the radar follows the
+      // light/dark toggle instantly, mid-animation)
+      const isDark = document.documentElement.classList.contains('dark');
+      ctx.fillStyle = isDark ? '#16171b' : '#ffffff';
       ctx.fillRect(0, 0, w, h);
 
       const [ccx, ccy] = toScreen(0, 0);
@@ -287,11 +299,17 @@ function RadarView({
       ctx.stroke();
 
       // Zone bands — filled circles outer to inner
-      const zones = [
-        { r: 345, fill: 'rgba(244,63,94,0.05)', stroke: 'rgba(244,63,94,0.2)', label: 'Reach', labelColor: '#e11d48' },
-        { r: 255, fill: 'rgba(245,158,11,0.06)', stroke: 'rgba(245,158,11,0.2)', label: 'Match', labelColor: '#d97706' },
-        { r: 155, fill: 'rgba(16,185,129,0.07)', stroke: 'rgba(16,185,129,0.2)', label: 'Safety', labelColor: '#059669' },
-      ];
+      const zones = isDark
+        ? [
+            { r: 345, fill: 'rgba(244,63,94,0.07)', stroke: 'rgba(251,113,133,0.25)', label: 'Reach', labelColor: '#fb7185' },
+            { r: 255, fill: 'rgba(245,158,11,0.08)', stroke: 'rgba(251,191,36,0.25)', label: 'Match', labelColor: '#fbbf24' },
+            { r: 155, fill: 'rgba(16,185,129,0.09)', stroke: 'rgba(52,211,153,0.25)', label: 'Safety', labelColor: '#34d399' },
+          ]
+        : [
+            { r: 345, fill: 'rgba(244,63,94,0.05)', stroke: 'rgba(244,63,94,0.2)', label: 'Reach', labelColor: '#e11d48' },
+            { r: 255, fill: 'rgba(245,158,11,0.06)', stroke: 'rgba(245,158,11,0.2)', label: 'Match', labelColor: '#d97706' },
+            { r: 155, fill: 'rgba(16,185,129,0.07)', stroke: 'rgba(16,185,129,0.2)', label: 'Safety', labelColor: '#059669' },
+          ];
 
       for (const z of zones) {
         const sr = screenRadius(z.r);
@@ -313,7 +331,7 @@ function RadarView({
 
         if (cam.zoom > 0.3) {
           const fontSize = Math.max(9, Math.min(12, 11 * cam.zoom));
-          ctx.font = `600 ${fontSize}px "DM Sans", system-ui, sans-serif`;
+          ctx.font = `600 ${fontSize}px "Inter", system-ui, sans-serif`;
           ctx.textAlign = 'center';
           ctx.globalAlpha = 0.4;
           ctx.fillStyle = z.labelColor;
@@ -423,9 +441,9 @@ function RadarView({
         // Labels when zoomed
         if (cam.zoom > 1.2 && finalRadius > 4) {
           const labelAlpha = Math.min(0.75, (cam.zoom - 1.2) * 1.5);
-          ctx.font = `500 ${Math.max(8, Math.min(11, 9 * cam.zoom))}px "DM Sans", system-ui, sans-serif`;
+          ctx.font = `500 ${Math.max(8, Math.min(11, 9 * cam.zoom))}px "Inter", system-ui, sans-serif`;
           ctx.textAlign = 'center';
-          ctx.fillStyle = `rgba(30,41,59,${labelAlpha})`;
+          ctx.fillStyle = isDark ? `rgba(216,220,228,${labelAlpha})` : `rgba(30,41,59,${labelAlpha})`;
           ctx.fillText(node.tile.college.name, sx, sy + finalRadius + 11);
         }
       }
@@ -461,12 +479,10 @@ function RadarView({
       ctx.arc(ccx - youR * 0.2, ccy - youR * 0.3, youR * 0.3, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.font = `bold ${Math.max(9, Math.min(11, 10 * cam.zoom))}px "DM Sans", system-ui, sans-serif`;
+      ctx.font = `bold ${Math.max(9, Math.min(11, 10 * cam.zoom))}px "Inter", system-ui, sans-serif`;
       ctx.textAlign = 'center';
       ctx.fillStyle = 'rgba(99,102,241,0.7)';
       ctx.fillText('YOU', ccx, ccy + youR + 13);
-
-      raf = requestAnimationFrame(render);
     }
 
     raf = requestAnimationFrame(render);
@@ -1636,8 +1652,8 @@ export default function CollegeHeatmapPage() {
       {/* Detail Modal */}
       {selectedTile && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setSelectedTile(null)} />
-          <div className="relative bg-white rounded-2xl shadow-sm border border-slate-100 max-w-lg w-full max-h-[85vh] overflow-y-auto animate-fade-up">
+          <div className="modal-backdrop absolute" onClick={() => setSelectedTile(null)} />
+          <div className="modal-card relative max-w-lg w-full max-h-[85vh] overflow-y-auto">
             <div className="p-5 pb-0">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
