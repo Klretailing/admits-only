@@ -605,7 +605,7 @@ export default function EducatorEarnings() {
       {showAddEarning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/30" onClick={() => setShowAddEarning(false)} />
-          <div className="relative bg-white rounded-2xl shadow-sm w-full max-w-md p-6">
+          <div className="relative bg-white rounded-2xl modal-card w-full max-w-md p-6">
             <h2 className="text-lg font-bold font-display text-primary mb-4">Log Earnings</h2>
             <p className="text-sm text-slate-500 mb-4">Add earnings from outside classes or other sources.</p>
             {earningError && (

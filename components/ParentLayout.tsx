@@ -240,7 +240,7 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
       )}
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-h-screen pb-16 lg:pb-0">
+      <div className="flex-1 min-w-0 flex flex-col min-h-screen pb-16 lg:pb-0">
         {/* Top bar */}
         <header className="h-14 lg:h-16 bg-white border-b border-slate-100 flex items-center justify-between px-4 lg:px-6 flex-shrink-0 relative">
           {/* Subtle accent line at top */}

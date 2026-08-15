@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo, useRef, Fragment } from 'rea
 import Head from 'next/head';
 import Link from 'next/link';
 import DashboardLayout from '../../components/DashboardLayout';
+import PageHeader from '../../components/PageHeader';
 import { SCHOOLS, findSchoolByName, generateSmartTimeline, generateWeeklyDigest, type SchoolData } from '../../lib/schoolData';
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -499,23 +500,24 @@ export default function Applications() {
 
       <div className="space-y-6">
         {/* ═══ Header ═══ */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h1 className="text-xl lg:text-2xl font-bold font-display text-primary tracking-tight">Application Tracker</h1>
-            <p className="mt-0.5 text-sm text-slate-400">Track every college application, deadline, and task in one place.</p>
-          </div>
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="px-5 py-2.5 text-sm font-semibold text-white bg-indigo-500 rounded-xl hover:bg-indigo-600 transition-colors flex-shrink-0 self-start sm:self-auto"
-          >
-            + Add School
-          </button>
-        </div>
+        <PageHeader
+          eyebrow="Applications"
+          title="Application Tracker"
+          subtitle="Track every college application, deadline, and task in one place."
+          actions={
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl hover:bg-accent/90 transition-all shadow-sm hover:shadow-md hover:-translate-y-px"
+            >
+              + Add School
+            </button>
+          }
+        />
 
         {/* ═══ Statistics Header ═══ */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Total */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+          <div className="bg-white rounded-2xl border border-slate-100 surface p-4">
             <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Apps</p>
             <p className="text-2xl font-bold font-display text-primary mt-1">{totalApps}</p>
             {(reachCount > 0 || targetCount > 0 || safetyCount > 0) && (
@@ -528,7 +530,7 @@ export default function Applications() {
           </div>
 
           {/* Upcoming Deadlines */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 col-span-2 lg:col-span-1">
+          <div className="bg-white rounded-2xl border border-slate-100 surface p-4">
             <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Next Deadlines</p>
             {upcomingDeadlines.length > 0 ? (
               <div className="mt-1.5 space-y-1">
@@ -550,7 +552,7 @@ export default function Applications() {
           </div>
 
           {/* Completion */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+          <div className="bg-white rounded-2xl border border-slate-100 surface p-4">
             <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Completion</p>
             <div className="flex items-center gap-3 mt-1">
               <ProgressRing pct={overallPct} size={44} stroke={4} />
@@ -562,7 +564,7 @@ export default function Applications() {
           </div>
 
           {/* Submitted / Accepted */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+          <div className="bg-white rounded-2xl border border-slate-100 surface p-4">
             <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Results</p>
             <div className="flex items-end gap-4 mt-1">
               <div>
@@ -701,8 +703,10 @@ export default function Applications() {
             {BOARD_COLUMNS.map(col => {
               const colApps = apps.filter(a => a.status === col.status);
               const statusInfo = getStatusInfo(col.status);
+              // Empty columns swipe-order last on mobile so the first thing a
+              // phone user sees is real content, not an empty tray.
               return (
-                <div key={col.status} className="min-w-[280px] w-[280px] lg:min-w-0 lg:w-auto lg:flex-1 flex-shrink-0 snap-start">
+                <div key={col.status} className={`min-w-[280px] w-[280px] lg:min-w-0 lg:w-auto lg:flex-1 flex-shrink-0 snap-start ${colApps.length === 0 ? 'order-last lg:order-none' : ''}`}>
                   <div className="flex items-center gap-2 mb-3">
                     <span className={`w-2.5 h-2.5 rounded-full ${statusInfo.color.split(' ')[0]}`} />
                     <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">{col.label}</h3>
@@ -748,7 +752,7 @@ export default function Applications() {
                         <button
                           key={app.id}
                           onClick={() => setDetailApp(app.id)}
-                          className="relative w-full text-left bg-white rounded-2xl border border-slate-100 shadow-sm p-4 hover:shadow-md transition-shadow group"
+                          className="relative w-full text-left bg-white rounded-2xl border border-slate-100 surface surface-interactive p-4 group"
                         >
                           {/* Dot on timeline */}
                           <div
@@ -786,7 +790,7 @@ export default function Applications() {
                     <button
                       key={app.id}
                       onClick={() => setDetailApp(app.id)}
-                      className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 text-left hover:shadow-md transition-shadow"
+                      className="bg-white rounded-2xl border border-slate-100 surface surface-interactive p-4 text-left"
                     >
                       <p className="text-sm font-bold text-primary">{app.name}</p>
                       <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${typeColors[app.type]} mt-1 inline-block`}>{app.type}</span>
@@ -800,7 +804,7 @@ export default function Applications() {
 
         {/* ═══ List View ═══ */}
         {view === 'list' && apps.length > 0 && (
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-2xl border border-slate-100 surface overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -897,7 +901,7 @@ function BoardCard({ app, onClick }: { app: CollegeApp; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="w-full text-left bg-white rounded-2xl border border-slate-100 shadow-sm p-4 hover:shadow-md hover:border-indigo-100 transition-all group"
+      className="w-full text-left bg-white rounded-2xl border border-slate-100 surface surface-interactive p-4 group"
     >
       {/* Name + Type */}
       <div className="flex items-start justify-between gap-2">

@@ -1,6 +1,8 @@
 import '../styles/globals.css'
+import '../styles/theme-tokens.css'
 import '../styles/theme-dark.css'
 import type { AppProps } from 'next/app'
+import Head from 'next/head'
 import { SessionProvider, useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import { useEffect, Component as ReactComponent, type ErrorInfo, type ReactNode } from 'react'
@@ -76,11 +78,22 @@ export default function MyApp({ Component, pageProps: { session, ...pageProps } 
   const router = useRouter();
   const usesCustomLayout = customLayoutPrefixes.some((p) => router.pathname.startsWith(p));
 
+  // Lock the mobile viewport at 1:1 scale. Without initial-scale, any
+  // overflowing element makes phones zoom the whole page out to fit — the
+  // "everything tiny and misaligned" failure mode. (Viewport meta belongs in
+  // _app per Next.js docs, not _document.)
+  const viewportMeta = (
+    <Head>
+      <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    </Head>
+  );
+
   if (!usesCustomLayout) {
     return (
       <ErrorBoundary>
         <ThemeProvider>
           <SessionProvider session={session}>
+            {viewportMeta}
             <AnalyticsInit />
             <Layout>
               <Component {...pageProps} />
@@ -95,6 +108,7 @@ export default function MyApp({ Component, pageProps: { session, ...pageProps } 
     <ErrorBoundary>
       <ThemeProvider>
         <SessionProvider session={session}>
+          {viewportMeta}
           <AnalyticsInit />
           <Component {...pageProps} />
         </SessionProvider>

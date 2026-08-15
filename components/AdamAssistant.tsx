@@ -88,8 +88,8 @@ export function AdamNavButton({
       onClick={onClick}
       className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
         active
-          ? 'bg-orange-500/10 text-orange-600'
-          : 'text-orange-600 hover:bg-orange-500/10'
+          ? 'bg-orange-500/10 text-orange-700'
+          : 'text-orange-700 hover:bg-orange-500/10'
       }`}
     >
       <span className="relative flex items-center justify-center w-7 h-7 flex-shrink-0">
@@ -112,7 +112,7 @@ export function AdamFloatingButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="lg:hidden fixed bottom-20 right-4 z-40 w-14 h-14 rounded-full bg-orange-500 text-white flex items-center justify-center shadow-[0_0_20px_rgba(249,115,22,0.6)] active:scale-95 transition-transform"
+      className="lg:hidden fixed bottom-20 right-4 z-40 w-14 h-14 rounded-full bg-orange-600 text-white flex items-center justify-center shadow-[0_0_20px_rgba(249,115,22,0.6)] active:scale-95 transition-transform"
       title="Ask Adam"
       aria-label="Ask Adam"
     >
@@ -272,8 +272,9 @@ export function AdamPanel({
         role="dialog"
         aria-label="Adam, your admissions guide"
       >
-        {/* Header — solid orange (no gradient) */}
-        <div className="flex items-center justify-between px-4 py-3.5 bg-orange-500 text-white flex-shrink-0">
+        {/* Header — deep orange gradient: keeps Adam's identity while giving
+            white text a 5.2:1+ contrast ratio (orange-500 was only 2.8:1). */}
+        <div className="flex items-center justify-between px-4 py-3.5 bg-gradient-to-br from-orange-700 to-orange-800 text-white flex-shrink-0">
           <div className="flex items-center gap-3">
             <span className="relative flex items-center justify-center">
               <span className="absolute inset-0 rounded-full bg-white/30 blur-md animate-pulse" />
@@ -283,7 +284,7 @@ export function AdamPanel({
             </span>
             <div>
               <h3 className="text-base font-bold leading-tight">Adam</h3>
-              <p className="text-[11px] text-white/80 leading-tight">Your admissions guide</p>
+              <p className="text-[11px] text-white/90 leading-tight">Your admissions guide</p>
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -317,7 +318,7 @@ export function AdamPanel({
             <div className="flex flex-col items-center text-center py-10 px-4">
               <span className="relative flex items-center justify-center mb-4">
                 <span className="absolute inset-0 rounded-full bg-orange-500/25 blur-lg" />
-                <span className="relative w-14 h-14 rounded-full bg-orange-500 text-white flex items-center justify-center shadow-[0_0_18px_rgba(249,115,22,0.5)]">
+                <span className="relative w-14 h-14 rounded-full bg-orange-600 text-white flex items-center justify-center shadow-[0_0_18px_rgba(249,115,22,0.5)]">
                   <AdamMark className="w-7 h-7" />
                 </span>
               </span>
@@ -350,7 +351,7 @@ export function AdamPanel({
                 </div>
               </div>
               <div className="mt-4 space-y-2 pl-10">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-orange-500/80">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-orange-700">
                   Try asking
                 </p>
                 {SUGGESTED_PROMPTS.map((q) => (
