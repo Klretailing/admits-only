@@ -4317,8 +4317,8 @@ export default function Essays() {
       {/* Submit for Review Modal */}
       {showReviewModal && activeEssay && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/30" onClick={() => setShowReviewModal(false)} />
-          <div className="relative bg-white rounded-2xl shadow-sm w-full max-w-md p-6">
+          <div className="modal-backdrop absolute" onClick={() => setShowReviewModal(false)} />
+          <div className="modal-card relative w-full max-w-md p-6">
             <h2 className="text-lg font-bold font-display text-primary mb-1">Submit for Tutor Review</h2>
             <p className="text-sm text-slate-500 mb-4">Your tutor will review &ldquo;{activeEssay.title}&rdquo; and provide detailed feedback.</p>
             <div className="mb-4">
