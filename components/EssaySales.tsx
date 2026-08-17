@@ -56,7 +56,7 @@ export default function EssaySales() {
           <h3 className="text-lg font-bold font-display text-primary">Essay Library Sales</h3>
           <p className="text-xs text-slate-400">One-time PayPal purchases (UC Vault + Full Repository)</p>
         </div>
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#003087]/5 text-[#003087] text-[11px] font-semibold">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg brand-paypal text-[11px] font-semibold">
           <span className="italic font-bold">P</span> PayPal
         </span>
       </div>
