@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import Head from 'next/head';
 import DashboardLayout from '../../components/DashboardLayout';
+import PageHeader from '../../components/PageHeader';
 import { useTheme } from '../../lib/themeContext';
 import { computeHolisticScore, evaluateExtracurriculars, comparativeData, normalizeBucket as normalizeBucketShared } from '../../lib/scoring';
 import type { Extracurricular as ExtracurricularType } from '../../lib/scoring';
@@ -777,13 +778,12 @@ export default function StudentProfile() {
       <Head><title>My Profile | AdmitsOnly Dashboard</title></Head>
 
       <div className="space-y-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold font-display text-primary">My Profile</h1>
-            <p className="mt-1 text-slate-500">Track your activities, build your profile, and get personalized guidance.</p>
-          </div>
-          {saving && <span className="text-xs text-slate-400 animate-pulse">Saving...</span>}
-        </div>
+        <PageHeader
+          eyebrow="Profile"
+          title="My Profile"
+          subtitle="Track your activities, build your profile, and get personalized guidance."
+          actions={saving ? <span className="text-xs text-slate-400 animate-pulse">Saving…</span> : undefined}
+        />
 
         <div className="grid gap-8 lg:grid-cols-[1fr_1.2fr]">
           {/* ─── INPUT COLUMN ─── */}

@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
 import DashboardLayout from '../../components/DashboardLayout';
+import PageHeader from '../../components/PageHeader';
 
 interface Connection {
   id: string;
@@ -82,18 +83,15 @@ export default function StudentSettings() {
       <Head><title>Settings | AdmitsOnly Dashboard</title></Head>
 
       <div className="max-w-3xl mx-auto space-y-6">
-        <div className="flex items-center gap-4">
-          <div className="w-11 h-11 rounded-xl bg-accent flex items-center justify-center shadow-sm">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+        <PageHeader
+          eyebrow="Account"
+          title="Settings"
+          subtitle="Manage your connection code and account."
+          icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold font-display text-primary">Settings</h1>
-            <p className="mt-0.5 text-sm text-slate-500">Manage your connection code and account</p>
-          </div>
-        </div>
+            </svg>}
+        />
 
         {/* Your Connection Code */}
         <div className="bg-white rounded-2xl border border-slate-100 p-5">

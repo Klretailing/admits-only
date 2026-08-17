@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import DashboardLayout from '../../components/DashboardLayout';
+import PageHeader from '../../components/PageHeader';
 
 interface SessionData {
   id: string;
@@ -108,17 +109,14 @@ export default function Sessions() {
     <DashboardLayout>
       <Head><title>Sessions | AdmitsOnly Dashboard</title></Head>
       <div className="space-y-8">
-        <div className="flex items-center gap-4">
-          <div className="w-11 h-11 rounded-xl bg-accent flex items-center justify-center shadow-sm">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <PageHeader
+          eyebrow="Coaching"
+          title="Sessions"
+          subtitle="Manage your upcoming and past coaching sessions."
+          icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-            </svg>
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold font-display text-primary">Sessions</h1>
-            <p className="mt-0.5 text-sm text-slate-500">Manage your upcoming and past coaching sessions.</p>
-          </div>
-        </div>
+            </svg>}
+        />
 
         {loading ? (
           <div className="flex items-center justify-center py-20">

@@ -125,6 +125,32 @@ html.dark .viz-caption { color: #9aa1b0; }
    brand gradient. */
 .on-gradient-text { text-shadow: 0 1px 2px rgb(0 0 0 / 0.42); }
 
+/* ─── Solid buttons on mid-tone brand colors ───
+   White text on the -500/-600 step of the warm/green hues lands at 2.5-3.7:1
+   (emerald-500 2.54, teal-500 2.49, teal-600 3.74). These are used both as
+   solid button fills AND as small decorative dots/rings, so a blanket
+   background override would needlessly darken the decoration.
+
+   Targeting `.bg-X.text-white` hits exactly the failing combination — an
+   element that is BOTH the colored fill and the white-text surface — and
+   leaves every decorative use alone. Each lands at 5.0:1 or better. */
+.bg-emerald-500.text-white, .bg-emerald-600.text-white { background-color: #047857; }
+.bg-emerald-500.text-white:hover, .bg-emerald-600.text-white:hover,
+.hover\:bg-emerald-600.text-white:hover { background-color: #036b4d; }
+
+.bg-teal-500.text-white, .bg-teal-600.text-white { background-color: #0f766e; }
+.bg-teal-500.text-white:hover, .bg-teal-600.text-white:hover,
+.hover\:bg-teal-600.text-white:hover, .hover\:bg-teal-700.text-white:hover { background-color: #0c625c; }
+
+.bg-green-500.text-white, .bg-green-600.text-white { background-color: #15803d; }
+.bg-green-500.text-white:hover, .bg-green-600.text-white:hover { background-color: #126733; }
+
+.bg-orange-500.text-white, .bg-orange-600.text-white { background-color: #c2410c; }
+.bg-orange-500.text-white:hover, .bg-orange-600.text-white:hover { background-color: #a3370a; }
+
+.bg-amber-500.text-white, .bg-amber-600.text-white { background-color: #b45309; }
+.bg-amber-500.text-white:hover, .bg-amber-600.text-white:hover { background-color: #954507; }
+
 /* ═══════════════════════════════════════════════════════════════════
    ELEVATION — physical, layered surfaces.
 
@@ -226,3 +252,111 @@ html.theme-transition *::after {
     transition: none !important;
   }
 }
+
+/* ─── PayPal brand chip ───
+   The chip used PayPal navy (#003087) as an arbitrary Tailwind value, which
+   the generated dark layer cannot see — on a dark card it measured 1.38:1.
+   A semantic class lets both themes carry the brand while staying readable
+   (11.85:1 in light on the pale navy tint, 5.29:1 in dark on PayPal's own
+   lighter brand blue). */
+.brand-paypal { background-color: rgb(0 48 135 / 0.06); color: #003087; }
+html.dark .brand-paypal { background-color: rgb(0 156 222 / 0.12); color: #009cde; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   COMPONENT CLASSES IN DARK MODE
+
+   Classes built with @apply (.card, .section-title, …) compile their own
+   `color`/`background-color` declarations. The generated dark layer targets
+   *utility* class names (.text-primary, .bg-white), so it never reaches
+   them — which is why the marketing pages rendered dark navy headings on a
+   dark background and kept white cards in dark mode.
+
+   Each composed class therefore needs its own dark counterpart.
+   ═══════════════════════════════════════════════════════════════════ */
+
+html.dark .section-title { color: #e8eaef; }
+html.dark .section-subtitle { color: #aab1bf; }
+html.dark .stat-number { color: #e8eaef; }
+
+html.dark .card,
+html.dark .card-flat {
+  background-color: #1e2025;
+  border-color: #2f323a;
+  color: #d9dce4;
+}
+html.dark .card:hover { border-color: #3a3e48; }
+
+html.dark .glass-card {
+  background-color: rgb(30 32 37 / 0.72);
+  border-color: rgb(255 255 255 / 0.08);
+}
+
+html.dark .btn-secondary {
+  background-color: #1e2025;
+  color: #e8eaef;
+  border-color: #3a3e48;
+}
+html.dark .btn-secondary:hover { border-color: #454a56; }
+
+html.dark .badge-accent {
+  background-color: #282a44;
+  color: #a5acfa;
+  border-color: #34375e;
+}
+html.dark .badge-warm {
+  background-color: #3c3221;
+  color: #fcd34d;
+  border-color: #5f461d;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   DARK SECTIONS INSIDE LIGHT MODE
+
+   The hero and footer use a dark navy ground (.bg-primary / .bg-slate-900)
+   in BOTH themes. The muted-ink rules at the top of this file darken slate
+   text for light *surfaces* — inside these navy blocks that makes contrast
+   worse, not better (the footer measured 2.8:1 after that change).
+
+   These descendant rules restore light ink inside dark sections. They carry
+   one more class than the base rules, so they win without !important.
+   ═══════════════════════════════════════════════════════════════════ */
+html:not(.dark) .bg-primary .text-slate-300,
+html:not(.dark) .bg-slate-900 .text-slate-300,
+html:not(.dark) .bg-primary .text-slate-400,
+html:not(.dark) .bg-slate-900 .text-slate-400 { color: #b6bdcb; }
+
+html:not(.dark) .bg-primary .text-slate-500,
+html:not(.dark) .bg-slate-900 .text-slate-500 { color: #a7aebe; }
+
+/* Section titles/subtitles that sit on the navy ground in light mode. */
+html:not(.dark) .bg-primary .section-title,
+html:not(.dark) .bg-slate-900 .section-title { color: #f1f5f9; }
+html:not(.dark) .bg-primary .section-subtitle,
+html:not(.dark) .bg-slate-900 .section-subtitle { color: #cbd5e1; }
+
+/* ─── Accent badges (.badge-accent / .section-label) ───
+   Another @apply casualty: these compile `color` from `text-accent`, so the
+   `.text-accent` remap above never reaches them and they kept the original
+   #6366f1 (4.47:1). Setting the color on the composed class directly gives
+   4.83:1 on the light tint and 6.57:1 on the dark one. */
+html:not(.dark) .badge-accent,
+html:not(.dark) .section-label { color: #4338ca; }
+html.dark .badge-accent,
+html.dark .section-label { color: #b9c0ff; }
+
+/* ...but these badges also appear on the navy hero, where a DARKER accent is
+   exactly wrong (it measured 2.26:1 there). Inside dark sections they need
+   the light treatment in both themes. */
+html:not(.dark) .bg-primary .badge-accent,
+html:not(.dark) .bg-primary .section-label,
+html:not(.dark) .bg-slate-900 .badge-accent,
+html:not(.dark) .bg-slate-900 .section-label,
+html.dark .bg-primary .badge-accent,
+html.dark .bg-primary .section-label,
+html.dark .bg-slate-900 .badge-accent,
+html.dark .bg-slate-900 .section-label { color: #c7ccff; }
+
+/* Hero/footer subtitles use white at 80% over navy, which lands at 4.47:1 —
+   a hair under AA. 90% clears it comfortably at 14.6:1 while still reading
+   as secondary against the pure-white headline above it. */
+.text-white\/80 { color: rgb(255 255 255 / 0.9); }
