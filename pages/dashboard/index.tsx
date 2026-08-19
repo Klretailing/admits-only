@@ -5,7 +5,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import DashboardLayout from '../../components/DashboardLayout';
 import PageHeader from '../../components/PageHeader';
-import TodaysFocus from '../../components/TodaysFocus';
+import ProgressSummary from '../../components/ProgressSummary';
 import { useCountUp, useInView } from '../../hooks/useAnimations';
 
 /* ─── Upcoming Deadlines Widget ─── */
@@ -250,8 +250,9 @@ export default function Dashboard() {
           subtitle="Here's your academic progress at a glance."
         />
 
-        {/* Today's Focus — daily nudge */}
-        <TodaysFocus checklist={readiness?.checklist} />
+        {/* One honest progress bar + next action. Replaces the earlier
+            ring/mini-bar/emoji cluster — see components/ProgressSummary. */}
+        <ProgressSummary checklist={readiness?.checklist} />
 
         {/* Smart Nudges Banner */}
         {readiness?.nudges && readiness.nudges.filter(n => !dismissedNudges.has(n.id)).length > 0 && (
@@ -321,43 +322,10 @@ export default function Dashboard() {
 
         {/* Application Readiness Ring & Checklist — hidden once fully ready to keep the dashboard clean */}
         {readiness && readiness.readiness < 100 && (
-          <div className="grid lg:grid-cols-[240px_1fr] gap-6">
-            {/* Readiness Ring */}
-            <div className="bg-white rounded-2xl border border-slate-100 p-6 flex flex-col items-center justify-center">
-              <div className="relative w-[120px] h-[120px]">
-                <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
-                  <circle
-                    cx="60"
-                    cy="60"
-                    r="52"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="8"
-                    className="text-slate-100"
-                  />
-                  <circle
-                    cx="60"
-                    cy="60"
-                    r="52"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="8"
-                    strokeLinecap="round"
-                    className="text-accent"
-                    strokeDasharray={`${2 * Math.PI * 52}`}
-                    strokeDashoffset={`${2 * Math.PI * 52 * (1 - readiness.readiness / 100)}`}
-                    style={{ transition: 'stroke-dashoffset 1s ease-out' }}
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-2xl font-bold font-display text-primary">{readiness.readiness}%</span>
-                </div>
-              </div>
-              <p className="mt-3 text-sm font-medium text-slate-500">Application Ready</p>
-            </div>
-
-            {/* Checklist */}
-            <div className="bg-white rounded-2xl border border-slate-100 p-6">
+          <div>
+            {/* The headline meter is ProgressSummary above; this stays a
+                plain actionable checklist rather than a second dial. */}
+            <div className="bg-white rounded-2xl border border-slate-100 surface p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold font-display text-primary">Getting Started</h3>
                 <span className="text-sm font-medium text-slate-400">
