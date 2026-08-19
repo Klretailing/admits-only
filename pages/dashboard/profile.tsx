@@ -809,7 +809,10 @@ export default function StudentProfile() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-primary mb-1.5">SAT Scores</label>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <label className="block text-sm font-medium text-primary">SAT Scores</label>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 bg-slate-100 rounded px-1.5 py-0.5">Optional</span>
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <input type="number" min="200" max="800" value={profile.satMath} onChange={(e) => setProfile({ ...profile, satMath: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent" placeholder="Math (200-800)" />
@@ -823,10 +826,19 @@ export default function StudentProfile() {
                   {totalSAT > 0 && <p className="text-xs text-accent font-semibold mt-2">Total: {totalSAT} / 1600</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-primary mb-1.5">ACT Composite</label>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <label className="block text-sm font-medium text-primary">ACT Composite</label>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 bg-slate-100 rounded px-1.5 py-0.5">Optional</span>
+                  </div>
                   <input type="number" min="1" max="36" value={profile.actScore} onChange={(e) => setProfile({ ...profile, actScore: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent" placeholder="1-36" />
                   {parseInt(profile.actScore) > 0 && totalSAT > 0 && (
                     <p className="text-[11px] text-slate-400 mt-1">Best score used for matching (SAT {totalSAT} vs ACT {profile.actScore})</p>
+                  )}
+                  {totalSAT === 0 && !(parseInt(profile.actScore) > 0) && (
+                    <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
+                      Applying test-optional? Leave both blank. Your score will be weighted on GPA,
+                      course rigor, and activities instead — you are not penalised for skipping tests.
+                    </p>
                   )}
                 </div>
               </div>

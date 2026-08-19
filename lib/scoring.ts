@@ -175,10 +175,27 @@ export function computeHolisticScore(profile: ProfileInput): ScoringResult {
   const rigorBonus = (gpaW > 0 && normalizedGpa > 0 && gpaW > normalizedGpa) ? Math.min((gpaW - normalizedGpa) * 8, 5) : 0;
 
   const gpaScore = Math.min((normalizedGpa / 4.0) * 100, 100);
-  const testScore = bestTestSAT > 0 ? Math.min(((bestTestSAT - 400) / 1200) * 100, 100) : 0;
+  const hasTestScore = bestTestSAT > 0;
+  const testScore = hasTestScore ? Math.min(((bestTestSAT - 400) / 1200) * 100, 100) : 0;
   const ecEval = evaluateExtracurriculars(profile.extracurriculars);
 
-  const holistic = Math.min(Math.round(gpaScore * 0.33 + testScore * 0.28 + ecEval.score * 0.34 + rigorBonus), 100);
+  /* Test-optional handling.
+     Testing is genuinely optional at most schools now, and many students
+     apply without a score. Previously the 0.28 test weight was applied to a
+     testScore of 0, so leaving the field blank scored identically to sitting
+     the SAT and getting a 400 — a ~28 point penalty for exercising a choice
+     the colleges themselves offer. Instead, redistribute the test weight
+     across GPA and activities in their existing proportion, so a profile
+     without scores is judged on what it does contain. */
+  const W_GPA = 0.33, W_TEST = 0.28, W_EC = 0.34;
+  const wGpa = hasTestScore ? W_GPA : W_GPA + W_TEST * (W_GPA / (W_GPA + W_EC));
+  const wEc = hasTestScore ? W_EC : W_EC + W_TEST * (W_EC / (W_GPA + W_EC));
+  const wTest = hasTestScore ? W_TEST : 0;
+
+  const holistic = Math.min(
+    Math.round(gpaScore * wGpa + testScore * wTest + ecEval.score * wEc + rigorBonus),
+    100,
+  );
   const betterThan = comparativeData.filter((d) => holistic > d.score).length;
   const percentile = Math.round((betterThan / comparativeData.length) * 100);
 
