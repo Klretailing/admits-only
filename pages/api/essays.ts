@@ -4,6 +4,7 @@ import { authOptions } from '../../lib/auth';
 import { prisma, ensureSchema } from '../../lib/db';
 import { checkGrammar } from '../../lib/grammarCheck';
 import { analyzeEssayInsights, type EssayInsights } from '../../lib/essayInsights';
+import { recordObservation } from '../../lib/essayLearning';
 
 /* ══════════════════════════════════════════════════════════════════════
    ADMISSIONS-GRADE ESSAY SCORING ENGINE
@@ -788,6 +789,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ...scores,
       },
     });
+
+    // Also capture on create — an essay imported or pasted in at creation
+    // time would otherwise go unmeasured until its first edit.
+    void recordObservation(essay.id, (content || '').trim(), (prompt || '').trim());
+
     return res.status(201).json({ essay });
   }
 
@@ -813,6 +819,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ...scores,
       },
     });
+
+    // Feed the learning loop with derived signals only (no text is stored).
+    // Fire-and-forget: this must never slow down or break a student's save.
+    void recordObservation(essay.id, essayContent, essayPrompt);
+
     return res.json({ essay });
   }
 

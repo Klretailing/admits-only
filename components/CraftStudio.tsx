@@ -27,6 +27,14 @@ function SuggestionCard({ s }: { s: CraftSuggestion }) {
         <span className="flex-1 min-w-0">
           <span className="flex items-center gap-1.5 flex-wrap">
             <span className={`text-[8.5px] font-bold uppercase tracking-wider rounded px-1.5 py-0.5 ${sev.chip}`}>{craftCategoryLabel(s.category)}</span>
+            {s.learned && (
+              <span
+                className="text-[8.5px] font-bold uppercase tracking-wider rounded px-1.5 py-0.5 text-indigo-700 bg-indigo-50"
+                title="Derived from patterns in essays our tutors reviewed"
+              >
+                From reviewed essays
+              </span>
+            )}
             <span className="text-[11px] font-semibold text-primary leading-snug">{s.title}</span>
           </span>
         </span>

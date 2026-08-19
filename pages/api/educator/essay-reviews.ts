@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../lib/auth';
 import { prisma, ensureSchema } from '../../../lib/db';
+import { applyTutorLabel } from '../../../lib/essayLearning';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getServerSession(req, res, authOptions);
@@ -157,6 +158,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               "updatedAt" = CURRENT_TIMESTAMP
           WHERE "id" = ${reviewId}
         `;
+
+        // A completed tutor review is the learning loop's only source of
+        // ground truth — the engine never labels its own output. Fire-and-
+        // forget so labelling can't fail a tutor's submission.
+        try {
+          const parsedScores = typeof scoresJson === 'string' ? JSON.parse(scoresJson) : scoresJson;
+          void applyTutorLabel(review.essayId, parsedScores || {});
+        } catch { /* best-effort */ }
       } else if (action === 'return') {
         // Return for revision — only the assigned tutor can return
         if (review.tutorId !== tutorId) {

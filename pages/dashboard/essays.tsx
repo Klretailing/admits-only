@@ -7,7 +7,7 @@ import { SCHOOLS, PROMPT_TYPES as SUPP_PROMPT_TYPES, getPromptTypeInfo, findScho
 import { analyzeSentences, computeStats, type AnalyzedSentence, type AnalysisStats } from '../../lib/sentenceAnalysis';
 import { checkGrammar, applyFix, type GrammarIssue } from '../../lib/grammarCheck';
 import { analyzeEssayInsights, type EssayInsights } from '../../lib/essayInsights';
-import { analyzeCraft } from '../../lib/essayCraft';
+import { analyzeCraft, type LearnedRule } from '../../lib/essayCraft';
 import CraftStudio from '../../components/CraftStudio';
 import { tracker } from '../../lib/analytics';
 import { analyzeActivities } from '../../lib/motifEngine';
@@ -2581,10 +2581,21 @@ export default function Essays() {
   }, [editContent, activeEssay, ecs]);
 
   // Deep craft analysis (rhythm, readability, tone, sequence, line edits, angle)
+  // Rules learned from tutor-reviewed essays that an admin has promoted.
+  // Fetched once; the engine folds them into its live coaching.
+  const [learnedRules, setLearnedRules] = useState<LearnedRule[]>([]);
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    fetch('/api/essay-rules')
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (d && Array.isArray(d.rules)) setLearnedRules(d.rules); })
+      .catch(() => {});
+  }, [status]);
+
   const craftReport = useMemo(() => {
     if (!activeEssay) return null;
-    return analyzeCraft(editContent, activeEssay.prompt || '');
-  }, [editContent, activeEssay]);
+    return analyzeCraft(editContent, activeEssay.prompt || '', learnedRules);
+  }, [editContent, activeEssay, learnedRules]);
 
   // Prompt classification
   const promptAnalysis = useMemo(() => {

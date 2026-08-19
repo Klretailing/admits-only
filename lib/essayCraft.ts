@@ -19,10 +19,22 @@
    keystroke (debounced by the caller).
    ══════════════════════════════════════════════════════════════════════ */
 
+import { extractFeatures, derivePatterns } from './essayFeatures';
+
 export type CraftCategory =
   | 'sequence' | 'rhythm' | 'readability' | 'tone' | 'rewrite' | 'coherence' | 'angle' | 'narrative';
 
 export type CraftSeverity = 'praise' | 'tip' | 'caution';
+
+/** A rule derived from tutor-reviewed essays and promoted by an admin.
+    Supplied by the caller (fetched from /api/essay-rules) so this module
+    stays pure and testable. */
+export interface LearnedRule {
+  id: string;
+  kind: 'caution' | 'style';
+  target: string;      // a pattern key from lib/essayFeatures
+  message: string;
+}
 
 export interface CraftSuggestion {
   id: string;
@@ -32,6 +44,9 @@ export interface CraftSuggestion {
   detail: string;
   excerpt?: string;                      // the student's own text being referenced
   example?: { before: string; after: string };
+  /** True when this came from a promoted, tutor-data-derived rule rather
+      than a hand-written heuristic. Shown to the student as such. */
+  learned?: boolean;
 }
 
 export interface CraftMetric {
@@ -338,7 +353,7 @@ const PASSIVE_STATE_EXCEPT = /\b(?:was|were|is|are)\s+(?:tired|excited|scared|wo
    MAIN
    ══════════════════════════════════════════════════════════════════════ */
 
-export function analyzeCraft(rawText: string, prompt?: string): CraftReport {
+export function analyzeCraft(rawText: string, prompt?: string, learned?: LearnedRule[]): CraftReport {
   const text = (rawText || '').trim();
   const words = wordsIn(text);
   const wordCount = words.length;
@@ -841,6 +856,34 @@ export function analyzeCraft(rawText: string, prompt?: string): CraftReport {
       hint: narrativeScore >= 65 ? 'Scene, reflection & causality' : narrativeScore >= 45 ? 'Solid — deepen the craft' : 'Recount → story',
     },
   ];
+
+  /* ─── Learned rules ───
+     Rules derived from tutor-reviewed essays and promoted by an admin. They
+     ADD observations; they never alter the metric scores above, so a bad
+     rule can never silently distort the engine's numbers. Anything already
+     covered by a hand-written heuristic is skipped so students don't get the
+     same note twice. */
+  if (learned && learned.length) {
+    const feats = extractFeatures(text, prompt);
+    if (feats) {
+      const present = new Set(derivePatterns(feats, text));
+      let added = 0;
+      for (const rule of learned) {
+        if (added >= 2) break;                       // never let learned rules dominate
+        if (!present.has(rule.target)) continue;
+        if (suggestions.some(s => s.detail === rule.message)) continue;
+        suggestions.push({
+          id: `learned-${rule.id}`,
+          category: rule.kind === 'caution' ? 'coherence' : 'narrative',
+          severity: rule.kind === 'caution' ? 'caution' : 'praise',
+          title: rule.kind === 'caution' ? 'Worth a second look' : 'A move strong essays share',
+          detail: rule.message,
+          learned: true,
+        });
+        added++;
+      }
+    }
+  }
 
   // Order suggestions: cautions first, then tips, praise last.
   const sevRank: Record<CraftSeverity, number> = { caution: 0, tip: 1, praise: 2 };
