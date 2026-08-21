@@ -5,6 +5,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import DashboardLayout from '../../components/DashboardLayout';
 import { colleges, type College } from '../../lib/colleges';
+import { MAJORS, getMajor, majorsByCategory, programMatch, type Major, type ProgramTier } from '../../lib/majors';
 import { actToSat, satToAct } from '../../lib/scoring';
 import { tracker } from '../../lib/analytics';
 
@@ -12,11 +13,15 @@ import { tracker } from '../../lib/analytics';
 
 interface HeatmapTile {
   college: College;
-  overallFit: number;
+  overallFit: number;        // blended: admissions fit × program strength
+  admitFit: number;          // admissions fit alone (grades vs. profile)
   gpaFit: number;
   satFit: number;
   tier: 'safety' | 'match' | 'reach';
   isSaved: boolean;
+  programTier: ProgramTier;  // 'unknown' when no major is picked or no data
+  programLabel: string;
+  programScore: number | null;
 }
 
 interface RadarNode {
@@ -29,7 +34,13 @@ interface RadarNode {
 
 /* ──────────────────────── SCORING ──────────────────────── */
 
-function computeMatch(gpa: number, sat: number, college: College): { overallFit: number; gpaFit: number; satFit: number; tier: 'safety' | 'match' | 'reach' } {
+function computeMatch(
+  gpa: number,
+  sat: number,
+  college: College,
+  major: Major | null,
+  hasTestScore: boolean,
+) {
   const gpaDiff = gpa - college.avgGPA;
   const gpaFit = Math.max(-1, Math.min(1, gpaDiff / 0.4));
   const [sat25, sat75] = college.satRange;
@@ -37,12 +48,30 @@ function computeMatch(gpa: number, sat: number, college: College): { overallFit:
   const satSpread = (sat75 - sat25) / 2;
   const satDiff = sat - satMid;
   const satFit = Math.max(-1, Math.min(1, satDiff / Math.max(satSpread, 40)));
-  const composite = gpaFit * 0.4 + satFit * 0.6;
+
+  // Without a test score, GPA carries the whole academic signal rather than
+  // a missing SAT being read as a bad one.
+  const composite = hasTestScore ? gpaFit * 0.4 + satFit * 0.6 : gpaFit;
+
   const selectivityPenalty = college.acceptanceRate < 10 ? -0.2 : college.acceptanceRate < 20 ? -0.1 : 0;
   const adjusted = composite + selectivityPenalty;
   const tier = adjusted >= 0.25 ? 'safety' : adjusted >= -0.25 ? 'match' : 'reach';
-  const overallFit = Math.round(Math.max(0, Math.min(100, 50 + composite * 40 + (100 - college.acceptanceRate) * 0.1)));
-  return { overallFit, gpaFit, satFit, tier };
+  const admitFit = Math.round(Math.max(0, Math.min(100, 50 + composite * 40 + (100 - college.acceptanceRate) * 0.1)));
+
+  // Program strength shifts the blended score, but never dominates it: a
+  // standout program lifts by at most ~12 points and an unknown one is left
+  // untouched rather than penalised, since "no data" is not "bad".
+  const pm = programMatch(college.id, college.strengths || [], major);
+  let overallFit = admitFit;
+  if (major && pm.score != null) {
+    const lift = (pm.score - 64) * 0.25;   // offered 0 · strong +4.5 · standout +9
+    overallFit = Math.round(Math.max(0, Math.min(100, admitFit + lift)));
+  }
+
+  return {
+    overallFit, admitFit, gpaFit, satFit, tier,
+    programTier: pm.tier, programLabel: pm.label, programScore: pm.score,
+  };
 }
 
 /* ──────────────────────── COLOR HELPERS ──────────────────────── */
@@ -134,12 +163,14 @@ function generateAdvice(tile: HeatmapTile, gpa: number, sat: number): string[] {
 
 /* ──────────────────────── SORT OPTIONS ──────────────────────── */
 
-type SortKey = 'fit-desc' | 'fit-asc' | 'name' | 'acceptance';
+type SortKey = 'fit-desc' | 'fit-asc' | 'name' | 'acceptance' | 'program';
 const sortOptions: { key: SortKey; label: string }[] = [
   { key: 'fit-desc', label: 'Hottest First' },
   { key: 'fit-asc', label: 'Coldest First' },
   { key: 'name', label: 'A → Z' },
   { key: 'acceptance', label: 'Most Selective' },
+  // Only offered once a major is chosen — see the sort control below.
+  { key: 'program', label: 'Program Strength' },
 ];
 
 /* ──────────────────────── RADAR LAYOUT ──────────────────────── */
@@ -1069,6 +1100,10 @@ export default function CollegeHeatmapPage() {
   const [sortKey, setSortKey] = useState<SortKey>('fit-desc');
   const [filterTier, setFilterTier] = useState<'' | 'safety' | 'match' | 'reach'>('');
   const [showSavedOnly, setShowSavedOnly] = useState(false);
+  const [majorId, setMajorId] = useState<string>('');
+  // Default ON: picking a major should visibly change the map, which is the
+  // whole point. Students can widen back out with the toggle.
+  const [strongOnly, setStrongOnly] = useState(true);
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [listSearch, setListSearch] = useState('');
   const [listTypeFilter, setListTypeFilter] = useState<'Private' | 'Public' | ''>('');
@@ -1116,31 +1151,52 @@ export default function CollegeHeatmapPage() {
     return Math.max(sat, actEquiv);
   }, [sat, act]);
 
+  const selectedMajor = useMemo(() => getMajor(majorId), [majorId]);
+  const hasTestScore = bestSAT > 0;
+
   const tiles = useMemo<HeatmapTile[]>(() => {
     return colleges.map(college => {
-      const match = computeMatch(gpa, bestSAT, college);
+      const match = computeMatch(gpa, bestSAT, college, selectedMajor, hasTestScore);
       return { college, ...match, isSaved: savedSchools.has(college.name.toLowerCase()) };
     });
-  }, [gpa, bestSAT, savedSchools]);
+  }, [gpa, bestSAT, savedSchools, selectedMajor, hasTestScore]);
 
   const visibleTiles = useMemo(() => {
     let result = [...tiles];
     if (filterTier) result = result.filter(t => t.tier === filterTier);
     if (showSavedOnly) result = result.filter(t => t.isSaved);
+    // A chosen major genuinely reshapes the map: by default only schools with
+    // a real program signal survive. Saved schools are always kept so a
+    // student never loses sight of their own list.
+    if (selectedMajor && strongOnly) {
+      result = result.filter(t => t.programTier !== 'unknown' || t.isSaved);
+    }
     switch (sortKey) {
       case 'fit-desc': result.sort((a, b) => b.overallFit - a.overallFit); break;
       case 'fit-asc': result.sort((a, b) => a.overallFit - b.overallFit); break;
       case 'name': result.sort((a, b) => a.college.name.localeCompare(b.college.name)); break;
       case 'acceptance': result.sort((a, b) => a.college.acceptanceRate - b.college.acceptanceRate); break;
+      case 'program':
+        // Strongest program first, then admissions fit as the tie-breaker.
+        result.sort((a, b) => (b.programScore ?? -1) - (a.programScore ?? -1) || b.admitFit - a.admitFit);
+        break;
     }
     return result;
-  }, [tiles, filterTier, showSavedOnly, sortKey]);
+  }, [tiles, filterTier, showSavedOnly, sortKey, selectedMajor, strongOnly]);
+
+  /* The pool a student is actually choosing from: all colleges normally, or
+     just those with a program signal once a major narrows the map. Tier and
+     header counts read from this so they never contradict the grid. */
+  const pool = useMemo(() => {
+    if (!selectedMajor || !strongOnly) return tiles;
+    return tiles.filter(t => t.programTier !== 'unknown' || t.isSaved);
+  }, [tiles, selectedMajor, strongOnly]);
 
   const tierCounts = useMemo(() => {
     const counts = { safety: 0, match: 0, reach: 0 };
-    tiles.forEach(t => counts[t.tier]++);
+    pool.forEach(t => counts[t.tier]++);
     return counts;
-  }, [tiles]);
+  }, [pool]);
 
   const discoveries = useMemo(() => {
     return tiles
@@ -1241,7 +1297,7 @@ export default function CollegeHeatmapPage() {
             <div>
               <h1 className="text-2xl font-bold font-display text-primary">Admissions Heatmap</h1>
               <p className="text-sm text-slate-500 mt-0.5">
-                {tiles.length} colleges &middot; {tierCounts.safety} hot &middot; {tierCounts.match} warm &middot; {tierCounts.reach} cold
+                {pool.length} colleges &middot; {tierCounts.safety} hot &middot; {tierCounts.match} warm &middot; {tierCounts.reach} cold
               </p>
             </div>
           </div>
@@ -1310,6 +1366,57 @@ export default function CollegeHeatmapPage() {
         {/* TRENDS VIEW */}
         {viewMode === 'trends' && <TrendsView />}
 
+        {/* ─── Intended major ───
+            Re-scores and re-filters the map by real program strength, so this
+            stops being "schools that match my grades" and becomes "schools
+            that match my grades AND teach what I want well". Shown in every
+            view because it changes the data, not just the chart. */}
+        {viewMode !== 'trends' && (
+        <div className="bg-white rounded-2xl border border-slate-100 surface p-5">
+          <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+            <div className="flex-1 min-w-0">
+              <label htmlFor="major-select" className="block text-xs font-semibold text-slate-600 mb-2">
+                Intended major
+              </label>
+              <select
+                id="major-select"
+                value={majorId}
+                onChange={e => {
+                  setMajorId(e.target.value);
+                  tracker.feature('college-heatmap', 'major_selected', { major: e.target.value || 'none' });
+                }}
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
+              >
+                <option value="">Any major — rank on admissions fit only</option>
+                {majorsByCategory().map(group => (
+                  <optgroup key={group.category} label={group.label}>
+                    {group.majors.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+            {majorId && (
+              <label className="flex items-center gap-2 text-xs font-medium text-slate-600 cursor-pointer select-none sm:pb-2.5 flex-shrink-0">
+                <input
+                  type="checkbox"
+                  checked={strongOnly}
+                  onChange={e => setStrongOnly(e.target.checked)}
+                  className="w-4 h-4 rounded accent-accent"
+                />
+                Only schools strong in this major
+              </label>
+            )}
+          </div>
+          {majorId && (
+            <p className="mt-2 text-[11px] text-slate-500">
+              Showing {visibleTiles.length} of {colleges.length} schools.
+              Program strength lifts a school&apos;s score; schools we have no program data for
+              are never penalised for it.
+            </p>
+          )}
+        </div>
+        )}
+
         {/* What-If Simulator (hidden in trends and list views) */}
         {viewMode !== 'trends' && viewMode !== 'list' && <div className="bg-white rounded-2xl border border-slate-100 p-5">
           <div className="flex items-center gap-2 mb-4">
@@ -1373,6 +1480,7 @@ export default function CollegeHeatmapPage() {
               {act > 0 && <p className="text-[10px] text-slate-400 mt-1">SAT equivalent: {actToSat(act)}</p>}
             </div>
           </div>
+
         </div>}
 
         {/* Filters */}
@@ -1397,7 +1505,7 @@ export default function CollegeHeatmapPage() {
                 filterTier === tier ? 'bg-accent text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
               }`}
             >
-              {tier === '' ? `All (${tiles.length})` : tier === 'safety' ? `Hot (${tierCounts.safety})` : tier === 'match' ? `Warm (${tierCounts.match})` : `Cold (${tierCounts.reach})`}
+              {tier === '' ? `All (${pool.length})` : tier === 'safety' ? `Hot (${tierCounts.safety})` : tier === 'match' ? `Warm (${tierCounts.match})` : `Cold (${tierCounts.reach})`}
             </button>
           ))}
 
@@ -1418,7 +1526,7 @@ export default function CollegeHeatmapPage() {
               onChange={e => setSortKey(e.target.value as SortKey)}
               className="ml-auto px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium bg-white focus:outline-none focus:ring-2 focus:ring-accent/20"
             >
-              {sortOptions.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+              {sortOptions.filter(o => o.key !== 'program' || !!majorId).map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
             </select>
           )}
         </div>}
@@ -1562,7 +1670,18 @@ export default function CollegeHeatmapPage() {
                           <div className={`text-xs font-bold ${tierCfg.color}`}>{tierCfg.label}</div>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-sm sm:text-base font-bold text-primary truncate">{tile.college.name}</h3>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="text-sm sm:text-base font-bold text-primary truncate">{tile.college.name}</h3>
+                            {selectedMajor && tile.programTier !== 'unknown' && (
+                              <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${
+                                tile.programTier === 'standout' ? 'text-emerald-700 bg-emerald-50'
+                                : tile.programTier === 'strong' ? 'text-accent bg-accent/10'
+                                : 'text-slate-600 bg-slate-100'
+                              }`}>
+                                {tile.programLabel}
+                              </span>
+                            )}
+                          </div>
                           <p className="text-xs text-slate-400 mt-0.5">{tile.college.location} &middot; {tile.college.type} &middot; {tile.college.size}</p>
                         </div>
                         <div className="hidden sm:flex items-center gap-4 shrink-0">
