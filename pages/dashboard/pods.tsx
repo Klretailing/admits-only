@@ -11,6 +11,11 @@ interface PodSummary {
   joinedAt: string;
 }
 
+interface CommunityChannel {
+  id: string; name: string; description: string; slug: string;
+  memberCount: number; messageCount: number;
+}
+
 interface PodMessage {
   id: string; podId: string; userId: string; content: string; type: string;
   essayId: string | null; parentId?: string | null; createdAt: string;
@@ -397,6 +402,7 @@ export default function StudyPods() {
   }, [status, router]);
 
   const [pods, setPods] = useState<PodSummary[]>([]);
+  const [channels, setChannels] = useState<CommunityChannel[]>([]);
   const [selectedPod, setSelectedPod] = useState<PodSummary | null>(null);
   const [messages, setMessages] = useState<PodMessage[]>([]);
   const [members, setMembers] = useState<PodMember[]>([]);
@@ -482,6 +488,7 @@ export default function StudyPods() {
       if (!res.ok) throw new Error('Failed to load pods');
       const data = await res.json();
       setPods(data.pods || []);
+      setChannels(data.channels || []);
     } catch {
       setError('Could not load your pods.');
     } finally {
@@ -522,6 +529,11 @@ export default function StudyPods() {
       setBootstrapping(false);
     }
   }, []);
+
+  const activeChannel = useMemo(
+    () => channels.find(c => c.id === selectedPod?.id) || null,
+    [channels, selectedPod],
+  );
 
   const handleSelectPod = useCallback(
     (pod: PodSummary) => {
@@ -1234,18 +1246,56 @@ export default function StudyPods() {
                 <div className="flex items-center justify-center py-12">
                   <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
                 </div>
-              ) : pods.length === 0 ? (
+              ) : pods.length === 0 && channels.length === 0 ? (
                 <div className="text-center py-12 px-4">
                   <svg className="w-10 h-10 mx-auto text-slate-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                   <p className="text-sm text-slate-400">No pods yet. Create or join one.</p>
                 </div>
-              ) : (
-                pods.map((pod) => (
-                  <PodListItem key={pod.id} pod={pod} selected={selectedPod?.id === pod.id} onSelect={handleSelectPod} />
-                ))
+              ) : null}
+
+              {/* ─── Community ───
+                  Fixed, school-wide channels pinned above a student's own
+                  pods. Everyone can read and post without joining. */}
+              {channels.length > 0 && (
+                <div className="mb-3">
+                  <p className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">Community</p>
+                  {channels.map((ch) => {
+                    const asPod: PodSummary = {
+                      id: ch.id, name: ch.name, description: ch.description,
+                      inviteCode: '', memberCount: ch.memberCount, myRole: 'member',
+                      lastMessage: null, joinedAt: '',
+                    };
+                    const active = selectedPod?.id === ch.id;
+                    return (
+                      <button
+                        key={ch.id}
+                        onClick={() => handleSelectPod(asPod)}
+                        className={`w-full text-left px-2 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                          active ? 'bg-accent/10 text-accent' : 'text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        <span className={`text-base leading-none ${active ? 'text-accent' : 'text-slate-400'}`}>#</span>
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-sm font-semibold truncate">{ch.name}</span>
+                          <span className="block text-[11px] text-slate-400 truncate">
+                            {ch.messageCount === 0
+                              ? 'No posts yet'
+                              : `${ch.messageCount} post${ch.messageCount === 1 ? '' : 's'} · ${ch.memberCount} student${ch.memberCount === 1 ? '' : 's'}`}
+                          </span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                  <div className="mt-2 mb-1 border-t border-slate-100" />
+                  <p className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">Your Pods</p>
+                </div>
               )}
+
+              {!loading && pods.length > 0 && pods.map((pod) => (
+                <PodListItem key={pod.id} pod={pod} selected={selectedPod?.id === pod.id} onSelect={handleSelectPod} />
+              ))}
             </div>
 
             <div className="p-3 border-t border-slate-100 flex-shrink-0">
@@ -1411,6 +1461,19 @@ export default function StudyPods() {
                 {/* Tab content */}
                 {activeTab === 'chat' && (
                   <>
+                    {/* A community channel states its purpose up front, so a
+                        student arriving at an empty room knows what it is for
+                        rather than guessing. */}
+                    {activeChannel && (
+                      <div className="px-4 py-3 bg-accent/[0.04] border-b border-slate-100">
+                        <p className="text-sm font-semibold text-primary">
+                          <span className="text-slate-400">#</span>{activeChannel.name}
+                        </p>
+                        <p className="mt-0.5 text-xs text-slate-500 leading-relaxed max-w-3xl">
+                          {activeChannel.description}
+                        </p>
+                      </div>
+                    )}
                     <div
                       className="flex-1 overflow-y-auto py-2"
                       style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}

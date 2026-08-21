@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../lib/auth';
 import { prisma, ensureSchema } from '../../lib/db';
+import { ensureCommunityChannels, listCommunityChannels, isCommunityChannel } from '../../lib/community';
 import crypto from 'crypto';
 
 function generateInviteCode(): string {
@@ -31,6 +32,7 @@ function groupReactions(rows: { messageId: string; emoji: string; userId: string
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   await ensureSchema();
+  await ensureCommunityChannels();
 
   const session = await getServerSession(req, res, authOptions);
   if (!session?.user?.email) return res.status(401).json({ error: 'Unauthorized' });
@@ -46,13 +48,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Get messages for a specific pod
     if (action === 'messages' && podId) {
-      const membership = await (prisma as any).podMember.findUnique({
-        where: { podId_userId: { podId: podId as string, userId: user.id } },
-      });
-      if (!membership) return res.status(403).json({ error: 'Not a member of this pod' });
+      // Community channels are readable by any signed-in student without
+      // joining — that openness is the point. Private pods still gate.
+      const isCommunity = await isCommunityChannel(podId as string);
+      if (!isCommunity) {
+        const membership = await (prisma as any).podMember.findUnique({
+          where: { podId_userId: { podId: podId as string, userId: user.id } },
+        });
+        if (!membership) return res.status(403).json({ error: 'Not a member of this pod' });
+      }
 
       const messages = await (prisma as any).podMessage.findMany({
-        where: { podId: podId as string },
+        where: { podId: podId as string, hidden: false },
         include: { user: { select: { id: true, name: true } } },
         orderBy: { createdAt: 'asc' },
         take: 100,
@@ -195,7 +202,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       joinedAt: m.joinedAt,
     }));
 
-    return res.json({ pods });
+    // Community channels ride along on every list response so the sidebar can
+    // pin them above a student's own pods without a second round trip.
+    const channels = await listCommunityChannels();
+    return res.json({ pods, channels });
   }
 
   /* ─── POST: Create pod or send message ─── */
@@ -248,15 +258,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Send a message
+    // Report a message. Two independent reports auto-hide it pending review,
+    // so a small community is not dependent on an admin being awake.
+    if (action === 'report') {
+      const { messageId, reason } = req.body;
+      if (!messageId) return res.status(400).json({ error: 'messageId is required' });
+      try {
+        await prisma.$executeRaw`
+          INSERT INTO "pod_message_reports" ("id", "messageId", "userId", "reason")
+          VALUES (${`rpt_${messageId}_${user.id}`}, ${messageId}, ${user.id}, ${String(reason || '').slice(0, 300)})
+          ON CONFLICT ("messageId","userId") DO NOTHING`;
+        const rows: any[] = await prisma.$queryRaw`
+          SELECT COUNT(*)::int AS n FROM "pod_message_reports" WHERE "messageId" = ${messageId}`;
+        const n = Number(rows[0]?.n || 0);
+        await prisma.$executeRaw`
+          UPDATE "pod_messages" SET "reportCount" = ${n}, "hidden" = ${n >= 2} WHERE "id" = ${messageId}`;
+        return res.json({ ok: true, reportCount: n, hidden: n >= 2 });
+      } catch (e) {
+        return res.status(500).json({ error: 'Could not record the report' });
+      }
+    }
+
     if (action === 'message') {
       const { podId, content, type, essayId } = req.body;
       if (!podId || !content?.trim()) return res.status(400).json({ error: 'Pod ID and content are required' });
 
-      // Verify membership
-      const membership = await (prisma as any).podMember.findUnique({
-        where: { podId_userId: { podId, userId: user.id } },
-      });
-      if (!membership) return res.status(403).json({ error: 'Not a member of this pod' });
+      // Community channels accept posts from any student; private pods
+      // still require membership.
+      const isCommunity = await isCommunityChannel(podId);
+      if (!isCommunity) {
+        const membership = await (prisma as any).podMember.findUnique({
+          where: { podId_userId: { podId, userId: user.id } },
+        });
+        if (!membership) return res.status(403).json({ error: 'Not a member of this pod' });
+      }
 
       const message = await (prisma as any).podMessage.create({
         data: {

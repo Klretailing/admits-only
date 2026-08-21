@@ -728,6 +728,28 @@ export async function ensureSchema() {
     // Idempotency: a captured PayPal order can only ever grant one entitlement.
     await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "essay_purchases_order_key" ON "essay_purchases"("providerOrderId");`);
 
+    /* ─── Community channels ───
+       Fixed, school-wide channels live in study_pods with kind='community'.
+       Reusing the pod tables means messages, reactions, and rendering all
+       work already; these columns are what separate a channel from a pod. */
+    await prisma.$executeRawUnsafe(`ALTER TABLE "study_pods" ADD COLUMN IF NOT EXISTS "kind" TEXT NOT NULL DEFAULT 'pod'`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "study_pods" ADD COLUMN IF NOT EXISTS "slug" TEXT`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "study_pods" ADD COLUMN IF NOT EXISTS "sortOrder" INTEGER NOT NULL DEFAULT 0`);
+    await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "study_pods_slug_key" ON "study_pods"("slug") WHERE "slug" IS NOT NULL`);
+
+    // Reporting: any student can flag a message; admins review the queue.
+    await prisma.$executeRawUnsafe(`ALTER TABLE "pod_messages" ADD COLUMN IF NOT EXISTS "reportCount" INTEGER NOT NULL DEFAULT 0`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "pod_messages" ADD COLUMN IF NOT EXISTS "hidden" BOOLEAN NOT NULL DEFAULT false`);
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "pod_message_reports" (
+        "id"        TEXT PRIMARY KEY,
+        "messageId" TEXT NOT NULL,
+        "userId"    TEXT NOT NULL,
+        "reason"    TEXT NOT NULL DEFAULT '',
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )`);
+    await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "pod_message_reports_key" ON "pod_message_reports"("messageId","userId")`);
+
     globalForPrisma.schemaReady = true;
   } catch (e) {
     // Tables likely already exist — mark as ready
