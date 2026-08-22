@@ -5,6 +5,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import DashboardLayout from '../../components/DashboardLayout';
 import PageHeader from '../../components/PageHeader';
+import ShareDecisions from '../../components/ShareDecisions';
 import { SCHOOLS, findSchoolByName, generateSmartTimeline, generateWeeklyDigest, type SchoolData } from '../../lib/schoolData';
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -505,12 +506,15 @@ export default function Applications() {
           title="Application Tracker"
           subtitle="Track every college application, deadline, and task in one place."
           actions={
+            <>
+            <ShareDecisions apps={apps} />
             <button
               onClick={() => setShowAddForm(true)}
               className="px-5 py-2.5 text-sm font-semibold text-white bg-accent rounded-xl hover:bg-accent/90 transition-all shadow-sm hover:shadow-md hover:-translate-y-px"
             >
               + Add School
             </button>
+            </>
           }
         />
 

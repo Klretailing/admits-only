@@ -138,6 +138,9 @@ model StudyPod {
   name        String
   description String   @default("")
   inviteCode  String   @unique
+  kind        String   @default("pod")   // pod | community
+  slug        String?  @unique
+  sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -167,14 +170,16 @@ model PodMember {
 }
 
 model PodMessage {
-  id        String   @id @default(cuid())
-  podId     String
-  userId    String
-  content   String
-  type      String   @default("discussion") // discussion | essay_share | feedback | poll
-  essayId   String?
-  parentId  String?
-  createdAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  podId       String
+  userId      String
+  content     String
+  type        String   @default("discussion") // discussion | essay_share | feedback | poll
+  essayId     String?
+  parentId    String?
+  reportCount Int      @default(0)
+  hidden      Boolean  @default(false)
+  createdAt   DateTime @default(now())
 
   pod       StudyPod             @relation(fields: [podId], references: [id], onDelete: Cascade)
   user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
