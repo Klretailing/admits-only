@@ -4,11 +4,14 @@ import { useEffect, useState } from 'react';
    Renders only counts/percentages from /api/admin/audience — no PII. */
 
 interface DailyPoint { date: string; users: number; sessions: number; pageviews: number }
+interface CohortWeek { week: string; size: number; cells: Record<string, number> }
+interface Cohorts { weeks: CohortWeek[]; maxOffset: number }
 
 interface Audience {
   activeUsers: { dau: number; wau: number; mau: number };
   activeSessions: { today: number; week: number; month: number };
   daily: DailyPoint[];
+  cohorts?: Cohorts;
   returning: { total: number; returning: number; rate: number };
   byHour: { hour: number; count: number }[];
   byWeekday: { dow: number; count: number }[];
@@ -128,6 +131,91 @@ function DailyActivity({ daily }: { daily: DailyPoint[] }) {
   );
 }
 
+function CohortRetention({ cohorts }: { cohorts: Cohorts }) {
+  const weeks = cohorts.weeks.filter(w => w.size > 0);
+  if (weeks.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl border border-slate-100 surface p-5">
+        <h4 className="text-sm font-bold text-primary">Retention by signup week</h4>
+        <p className="mt-1 text-xs text-slate-500 max-w-xl">
+          Nothing to show yet — this fills in once students have been signed up for more than a week.
+        </p>
+      </div>
+    );
+  }
+  const offsets = Array.from({ length: cohorts.maxOffset + 1 }, (_, i) => i);
+
+  // Average W1 across cohorts old enough to have a week 1.
+  const eligible = weeks.filter(w => Object.keys(w.cells).some(k => Number(k) >= 1));
+  const w1 = eligible.length
+    ? Math.round(
+        (eligible.reduce((acc, w) => acc + (w.cells['1'] || 0) / w.size, 0) / eligible.length) * 100,
+      )
+    : null;
+
+  const shade = (pct: number) => {
+    if (pct <= 0) return { bg: 'transparent', fg: 'var(--ink-3, #94a3b8)' };
+    const a = Math.min(0.08 + (pct / 100) * 0.62, 0.7);
+    return { bg: `rgb(84 87 221 / ${a})`, fg: pct > 45 ? '#ffffff' : 'inherit' };
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 surface p-5">
+      <div className="flex items-baseline justify-between gap-4 flex-wrap mb-1">
+        <h4 className="text-sm font-bold text-primary">Retention by signup week</h4>
+        {w1 !== null && (
+          <span className="text-xs text-slate-500">
+            Week 1 return rate: <span className="font-bold text-primary tabular-nums">{w1}%</span> avg
+          </span>
+        )}
+      </div>
+      <p className="text-[11px] text-slate-500 mb-4 max-w-2xl leading-relaxed">
+        Of the students who joined in each week, how many came back later. A curve that flattens means a
+        habit formed; one that runs to zero means it did not — no matter how daily actives look.
+      </p>
+      <div className="overflow-x-auto">
+        <table className="text-xs border-separate" style={{ borderSpacing: 2 }}>
+          <thead>
+            <tr>
+              <th className="text-left font-semibold text-slate-500 pr-3 pb-1">Joined</th>
+              <th className="text-right font-semibold text-slate-500 px-2 pb-1">Students</th>
+              {offsets.map(o => (
+                <th key={o} className="font-semibold text-slate-500 px-2 pb-1 text-center whitespace-nowrap">
+                  {o === 0 ? 'Wk 0' : `+${o}`}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {weeks.map(w => (
+              <tr key={w.week}>
+                <td className="pr-3 text-slate-600 whitespace-nowrap">{w.week}</td>
+                <td className="px-2 text-right font-semibold text-primary tabular-nums">{w.size}</td>
+                {offsets.map(o => {
+                  const users = w.cells[String(o)] || 0;
+                  const pct = w.size ? Math.round((users / w.size) * 100) : 0;
+                  const has = Object.prototype.hasOwnProperty.call(w.cells, String(o)) || o === 0;
+                  const st = shade(pct);
+                  return (
+                    <td
+                      key={o}
+                      className="px-2 py-1 text-center rounded tabular-nums"
+                      style={{ backgroundColor: st.bg, color: st.fg }}
+                      title={`${users} of ${w.size} returned`}
+                    >
+                      {has || pct > 0 ? `${pct}%` : '—'}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export default function AudienceInsights() {
   const [data, setData] = useState<Audience | null>(null);
   const [loading, setLoading] = useState(true);
@@ -187,6 +275,9 @@ export default function AudienceInsights() {
 
           {/* Daily activity trend */}
           {a.daily && a.daily.length > 0 && <DailyActivity daily={a.daily} />}
+
+          {/* Retention — the metric that says whether any of this sticks */}
+          {a.cohorts && <CohortRetention cohorts={a.cohorts} />}
 
           {/* When: hour + weekday */}
           <div className="grid gap-4 lg:grid-cols-2">
