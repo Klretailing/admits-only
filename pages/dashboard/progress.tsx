@@ -6,6 +6,8 @@ import Link from 'next/link';
 import DashboardLayout from '../../components/DashboardLayout';
 import PageHeader from '../../components/PageHeader';
 import ShareDecisions from '../../components/ShareDecisions';
+import DeadlineChips from '../../components/DeadlineChips';
+import { deadlinesForName } from '../../lib/deadlines';
 import { SCHOOLS, findSchoolByName, generateSmartTimeline, generateWeeklyDigest, type SchoolData } from '../../lib/schoolData';
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -632,15 +634,13 @@ export default function Applications() {
                       <button
                         key={school.id}
                         onClick={() => selectSchool(school)}
-                        className="w-full text-left px-4 py-2.5 text-sm hover:bg-indigo-50 transition-colors flex items-center justify-between gap-2"
+                        className="w-full text-left px-4 py-2.5 text-sm hover:bg-indigo-50 transition-colors"
                       >
                         <div className="min-w-0">
                           <p className="font-medium text-primary truncate">{school.name}</p>
-                          <p className="text-[11px] text-slate-400">{school.location} &middot; {school.acceptanceRate} acceptance</p>
+                          <p className="text-[11px] text-slate-400 truncate">{school.location} &middot; {school.acceptanceRate} acceptance</p>
+                          <DeadlineChips deadlines={deadlinesForName(school.name)} collegeName={school.name} className="mt-1.5" />
                         </div>
-                        {school.deadlines?.rd && (
-                          <span className="text-[10px] text-slate-400 flex-shrink-0">RD: {school.deadlines.rd}</span>
-                        )}
                       </button>
                     ))}
                   </div>
@@ -909,7 +909,7 @@ function BoardCard({ app, onClick }: { app: CollegeApp; onClick: () => void }) {
     >
       {/* Name + Type */}
       <div className="flex items-start justify-between gap-2">
-        <h4 className="text-sm font-bold text-primary group-hover:text-indigo-600 transition-colors leading-snug">{app.name}</h4>
+        <h4 className="min-w-0 text-sm font-bold text-primary group-hover:text-indigo-600 transition-colors leading-snug break-words">{app.name}</h4>
         <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border flex-shrink-0 ${typeColors[app.type]}`}>{app.type}</span>
       </div>
 
@@ -927,6 +927,10 @@ function BoardCard({ app, onClick }: { app: CollegeApp; onClick: () => void }) {
           )}
         </p>
       )}
+
+      {/* The school's own rounds, so a student can see at a glance whether the
+          date they set matches the round they meant to apply in. */}
+      <DeadlineChips deadlines={deadlinesForName(app.name)} collegeName={app.name} className="mt-2" />
 
       {/* Progress ring + priority */}
       <div className="flex items-center justify-between mt-3">
@@ -973,6 +977,7 @@ function DetailPanel({ app, onClose, onUpdate, onToggleTask, onAddTask, onDelete
   const pct = getTaskCompletion(app.tasks);
   const statusInfo = STATUS_OPTIONS.find(o => o.value === app.status) || STATUS_OPTIONS[0];
   const schoolData = findSchoolByName(app.name);
+  const panelDeadlines = deadlinesForName(app.name);
 
   // Close on Escape
   useEffect(() => {
@@ -1045,6 +1050,14 @@ function DetailPanel({ app, onClose, onUpdate, onToggleTask, onAddTask, onDelete
                 </span>
               )}
             </div>
+            {panelDeadlines && (
+              <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3 dark:border-slate-700/60 dark:bg-slate-800/40">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+                  {app.name} rounds
+                </p>
+                <DeadlineChips deadlines={panelDeadlines} collegeName={app.name} variant="full" />
+              </div>
+            )}
           </div>
 
           {/* Status pills */}
@@ -1206,7 +1219,7 @@ function DetailPanel({ app, onClose, onUpdate, onToggleTask, onAddTask, onDelete
             ) : (
               <button
                 onClick={onDelete}
-                className="flex items-center gap-2 text-sm text-red-400 hover:text-red-500 font-medium transition-colors"
+                className="flex items-center gap-2 text-sm text-red-600 hover:text-red-700 font-medium transition-colors dark:text-red-400 dark:hover:text-red-300"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
