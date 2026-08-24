@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
 import DashboardLayout from '../../components/DashboardLayout';
 import PageHeader from '../../components/PageHeader';
+import EmailPreferences from '../../components/EmailPreferences';
 
 interface Connection {
   id: string;
@@ -92,6 +93,8 @@ export default function StudentSettings() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>}
         />
+
+        <EmailPreferences />
 
         {/* Your Connection Code */}
         <div className="bg-white rounded-2xl border border-slate-100 p-5">

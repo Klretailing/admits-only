@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../lib/auth';
 import { prisma, ensureSchema } from '../../../lib/db';
 import { applyTutorLabel } from '../../../lib/essayLearning';
+import { sendEssayFeedbackEmail } from '../../../lib/email';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getServerSession(req, res, authOptions);
@@ -166,6 +167,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           const parsedScores = typeof scoresJson === 'string' ? JSON.parse(scoresJson) : scoresJson;
           void applyTutorLabel(review.essayId, parsedScores || {});
         } catch { /* best-effort */ }
+
+        /* Tell the student their feedback landed. Before this, a tutor could
+           finish a review and the student would never know unless they
+           happened to log in. Fire-and-forget so a mail hiccup can never fail
+           the tutor's submission. */
+        void (async () => {
+          try {
+            const rows: any[] = await prisma.$queryRaw`
+              SELECT u."id", u."name", u."email", e."title"
+                FROM "essays" e JOIN "users" u ON u."id" = e."userId"
+               WHERE e."id" = ${review.essayId}`;
+            const r = rows[0];
+            if (r?.email) {
+              await sendEssayFeedbackEmail({
+                userId: r.id, to: r.email, name: r.name,
+                essayTitle: r.title || 'your essay', reviewId,
+              });
+            }
+          } catch { /* best-effort */ }
+        })();
       } else if (action === 'return') {
         // Return for revision — only the assigned tutor can return
         if (review.tutorId !== tutorId) {

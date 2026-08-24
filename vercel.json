@@ -1,0 +1,6 @@
+{
+  "crons": [
+    { "path": "/api/cron/emails?job=deadlines", "schedule": "0 16 * * *" },
+    { "path": "/api/cron/emails?job=digest", "schedule": "0 16 * * 0" }
+  ]
+}
