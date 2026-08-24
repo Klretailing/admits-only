@@ -8,6 +8,8 @@ import { colleges, type College } from '../../lib/colleges';
 import { MAJORS, getMajor, majorsByCategory, programMatch, type Major, type ProgramTier } from '../../lib/majors';
 import { actToSat, satToAct } from '../../lib/scoring';
 import { tracker } from '../../lib/analytics';
+import DeadlineChips from '../../components/DeadlineChips';
+import { deadlinesFor } from '../../lib/deadlines';
 
 /* ──────────────────────── TYPES ──────────────────────── */
 
@@ -1682,7 +1684,11 @@ export default function CollegeHeatmapPage() {
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-slate-400 mt-0.5">{tile.college.location} &middot; {tile.college.type} &middot; {tile.college.size}</p>
+                          <p className="text-xs text-slate-400 mt-0.5 truncate">{tile.college.location} &middot; {tile.college.type} &middot; {tile.college.size}</p>
+                          {/* Desktop: chips sit under the name, where there is room.
+                              Narrow screens get the full-width strip below instead —
+                              in this column they would stack one per line. */}
+                          <DeadlineChips deadlines={deadlinesFor(tile.college.id)} collegeName={tile.college.name} className="mt-2 hidden sm:flex" />
                         </div>
                         <div className="hidden sm:flex items-center gap-4 shrink-0">
                           <div className="text-center"><div className="text-xs text-slate-400">Accept</div><div className="text-sm font-bold text-primary">{tile.college.acceptanceRate}%</div></div>
@@ -1700,9 +1706,25 @@ export default function CollegeHeatmapPage() {
                           </svg>
                         </div>
                       </div>
+                      <DeadlineChips
+                        deadlines={deadlinesFor(tile.college.id)}
+                        collegeName={tile.college.name}
+                        className="sm:hidden px-4 pb-4 -mt-1"
+                      />
                       {isExpanded && (
                         <div className="border-t border-slate-100 px-4 sm:px-5 py-4 bg-slate-50/50">
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            {deadlinesFor(tile.college.id) && (
+                              <div className="sm:col-span-3 min-w-0">
+                                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Deadlines</h4>
+                                <DeadlineChips
+                                  deadlines={deadlinesFor(tile.college.id)}
+                                  collegeName={tile.college.name}
+                                  variant="full"
+                                  className="sm:max-w-md"
+                                />
+                              </div>
+                            )}
                             <div>
                               <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Your Fit</h4>
                               <div className="space-y-2">
@@ -1844,6 +1866,17 @@ export default function CollegeHeatmapPage() {
               <FitBar label="GPA" value={selectedTile.gpaFit} yours={gpa.toFixed(2)} theirs={selectedTile.college.avgGPA.toFixed(2)} />
               <FitBar label={act > 0 ? 'Best Test' : 'SAT'} value={selectedTile.satFit} yours={String(bestSAT)} theirs={`${selectedTile.college.satRange[0]}-${selectedTile.college.satRange[1]}`} />
             </div>
+
+            {deadlinesFor(selectedTile.college.id) && (
+              <div className="px-5 mt-4">
+                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Deadlines</h3>
+                <DeadlineChips
+                  deadlines={deadlinesFor(selectedTile.college.id)}
+                  collegeName={selectedTile.college.name}
+                  variant="full"
+                />
+              </div>
+            )}
 
             <div className="px-5 mt-4">
               <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Known For</h3>
