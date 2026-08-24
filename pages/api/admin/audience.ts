@@ -190,6 +190,63 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return { last7: w, last30: m };
   }, { last7: 0, last30: 0 });
 
+  /* ─── Cohort retention ───
+     The metric that actually answers "is this sticky". DAU and a blended
+     "returning rate" both flatter a product with steady signups: new users
+     keep the numbers up while earlier ones quietly leave. Splitting by signup
+     week shows whether anyone stays.
+
+     Read it as: of the students who joined in week X, what share came back in
+     week X+1, X+2, and so on. A curve that flattens means a real habit formed
+     somewhere; a curve to zero means it has not — regardless of DAU. */
+  const cohorts = await q(async () => {
+    const sizes: any[] = await prisma.$queryRaw`
+      SELECT DATE_TRUNC('week', "createdAt") AS week, COUNT(*)::int AS n
+        FROM "users"
+       WHERE NOT (${DEMO_EMAIL}) AND "createdAt" >= NOW() - INTERVAL '12 weeks'
+       GROUP BY 1 ORDER BY 1`;
+    if (sizes.length === 0) return { weeks: [], maxOffset: 0 };
+
+    /* The week offset is measured from each student's OWN signup moment, not
+       from the calendar week boundary. Truncating both sides pushed a student
+       who joined on a Thursday and returned eight days later into "+2",
+       leaving the week-1 figure reading 0% while the table plainly showed
+       people coming back. Rolling weeks make "+1" mean what a reader assumes:
+       returned 7-13 days after joining. */
+    const rows: any[] = await prisma.$queryRaw`
+      WITH c AS (
+        SELECT id, "createdAt" AS joined_at, DATE_TRUNC('week', "createdAt") AS cohort_week
+          FROM "users"
+         WHERE NOT (${DEMO_EMAIL}) AND "createdAt" >= NOW() - INTERVAL '12 weeks'
+      )
+      SELECT c.cohort_week AS week,
+             FLOOR(EXTRACT(EPOCH FROM (e."createdAt" - c.joined_at)) / 604800)::int AS offset,
+             COUNT(DISTINCT c.id)::int AS users
+        FROM c
+        JOIN "analytics_events" e ON e."userId" = c.id
+       WHERE e."createdAt" >= c.joined_at
+       GROUP BY 1, 2 ORDER BY 1, 2`;
+
+    const byWeek = new Map<string, { size: number; cells: Record<number, number> }>();
+    for (const r of sizes) {
+      byWeek.set(new Date(r.week).toISOString().slice(0, 10), { size: n(r.n), cells: {} });
+    }
+    let maxOffset = 0;
+    for (const r of rows) {
+      const key = new Date(r.week).toISOString().slice(0, 10);
+      const off = n(r.offset);
+      if (off < 0) continue;
+      const entry = byWeek.get(key);
+      if (!entry) continue;
+      entry.cells[off] = n(r.users);
+      if (off > maxOffset) maxOffset = off;
+    }
+    return {
+      weeks: Array.from(byWeek.entries()).map(([week, v]) => ({ week, size: v.size, cells: v.cells })),
+      maxOffset: Math.min(maxOffset, 8),
+    };
+  }, { weeks: [], maxOffset: 0 });
+
   // Derived highlights
   const peakHour = byHour.reduce((a, b) => (b.count > a.count ? b : a), byHour[0]);
   const peakDay = byWeekday.reduce((a, b) => (b.count > a.count ? b : a), byWeekday[0]);
@@ -214,6 +271,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     topFeatures,
     topPages,
     signups,
+    cohorts,
     totalEvents,
     excludesDemo: true,
   });
