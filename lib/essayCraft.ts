@@ -9,7 +9,7 @@
    Dimensions:
      1. SEQUENCE     — narrative order; suggests in-medias-res / reordering
      2. RHYTHM       — sentence-length variety, tempo, punchy short lines
-     3. READABILITY  — density / vocabulary load (too many big words)
+     3. READABILITY  — will a reader understand every word on one pass?
      4. TONE         — over-negativity and over-exaggeration guardrails
      5. REWRITE      — sentence-level fixes (show-don't-tell, passive, filler)
      6. COHERENCE    — topic drift, weak conclusion, wall-of-text
@@ -20,6 +20,7 @@
    ══════════════════════════════════════════════════════════════════════ */
 
 import { extractFeatures, derivePatterns } from './essayFeatures';
+import { analyzeVocabulary, type VocabReport } from './essayVocabulary';
 
 export type CraftCategory =
   | 'sequence' | 'rhythm' | 'readability' | 'tone' | 'rewrite' | 'coherence' | 'angle' | 'narrative';
@@ -64,6 +65,8 @@ export interface CraftReport {
   theme: string | null;
   metrics: CraftMetric[];
   suggestions: CraftSuggestion[];
+  /** Word-level accessibility detail behind the Readability dial. */
+  vocab?: VocabReport;
 }
 
 /* ─── Shared helpers ─────────────────────────────────────────────────── */
@@ -125,6 +128,20 @@ function id(cat: CraftCategory, n: number): string {
   return `${cat}-${n}`;
 }
 
+/** Show a swap inside the student's own sentence. Returns undefined rather
+    than guessing when the word cannot be located, so the panel never renders
+    a "fix" that does not match what they wrote. */
+function swapExample(sentence: string, word: string, simpler?: string):
+  { before: string; after: string } | undefined {
+  if (!sentence || !simpler) return undefined;
+  const re = new RegExp(`\\b${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+  if (!re.test(sentence)) return undefined;
+  const after = sentence.replace(re, (m) =>
+    /^[A-Z]/.test(m) ? simpler.charAt(0).toUpperCase() + simpler.slice(1) : simpler,
+  );
+  return { before: clip(sentence, 120), after: clip(after, 120) };
+}
+
 // Common 5+ letter function words to exclude from "distinctive image" matching
 // in the bookend/circularity check (which only looks at words length ≥ 5).
 const STOP_WORDS_LITE = new Set([
@@ -138,25 +155,8 @@ const STOP_WORDS_LITE = new Set([
 
 /* ─── Curated word lists ─────────────────────────────────────────────── */
 
-// "Thesaurus reach" words → simpler, more confident alternatives.
-const OVERWROUGHT: Record<string, string> = {
-  utilize: 'use', utilized: 'used', utilizing: 'using',
-  endeavor: 'try', endeavored: 'tried', endeavour: 'try',
-  commence: 'begin', commenced: 'began', commencing: 'beginning',
-  ascertain: 'find out', facilitate: 'help', facilitated: 'helped',
-  elucidate: 'explain', cognizant: 'aware', myriad: 'many',
-  plethora: 'plenty', ubiquitous: 'everywhere', paramount: 'key',
-  utilization: 'use', endeavors: 'efforts', endeavours: 'efforts',
-  aforementioned: 'earlier', subsequently: 'later', henceforth: 'from now on',
-  nevertheless: 'still', notwithstanding: 'despite', therein: 'in it',
-  multifaceted: 'many-sided', delve: 'dig', delved: 'dug',
-  culminate: 'end', culminated: 'ended', juxtapose: 'contrast',
-  exemplify: 'show', exemplified: 'showed', encapsulate: 'capture',
-  garner: 'earn', garnered: 'earned', myriads: 'many',
-  quintessential: 'perfect', epitome: 'height', ephemeral: 'fleeting',
-  perpetuate: 'keep alive', ameliorate: 'improve', propensity: 'tendency',
-  cognizance: 'awareness', erudite: 'learned', copious: 'plenty of',
-};
+// Thesaurus-reach words now live in lib/essayVocabulary.ts (PLAIN_SWAPS),
+// alongside the rest of the word-familiarity analysis.
 
 // Intensifiers & absolutes that read as exaggeration in bulk.
 const INTENSIFIERS = [
@@ -368,74 +368,71 @@ export function analyzeCraft(rawText: string, prompt?: string, learned?: Learned
   const sentenceLens = sentences.map((s) => wordsIn(s).length).filter((n) => n > 0);
   const suggestions: CraftSuggestion[] = [];
 
-  /* ─── Readability (Flesch–Kincaid) ─── */
+  /* ─── Readability = will an admissions officer understand every word? ───
+     Reading grade is still computed because it is reported on the panel, but
+     it no longer drives the score. Flesch–Kincaid treats long words as hard
+     words, which penalises "grandmother" and waves through "dour"; what
+     actually decides whether a reader stalls is familiarity. See
+     lib/essayVocabulary.ts, which also explains why individual words are only
+     ever named from curated lists. */
   const syllableTotal = words.reduce((sum, w) => sum + countSyllables(w), 0);
   const avgSentenceLen = sentenceLens.length ? wordCount / sentenceLens.length : wordCount;
   const syllPerWord = syllableTotal / Math.max(wordCount, 1);
   const readingGrade = Math.max(1, Math.round((0.39 * avgSentenceLen + 11.8 * syllPerWord - 15.59) * 10) / 10);
 
-  // Big-word density, excluding likely proper nouns (capitalized mid-sentence).
-  let bigWords = 0;
-  let contentWords = 0;
-  {
-    const sentenceStartWords = new Set<string>();
-    for (const s of sentences) {
-      const first = wordsIn(s)[0];
-      if (first) sentenceStartWords.add(first);
-    }
-    for (const w of words) {
-      const bare = w.replace(/[^A-Za-z]/g, '');
-      if (bare.length < 2) continue;
-      const isProper = /^[A-Z]/.test(bare) && !sentenceStartWords.has(w);
-      if (isProper) continue;
-      contentWords++;
-      if (countSyllables(bare) >= 3) bigWords++;
-    }
-  }
-  const bigWordDensity = bigWords / Math.max(contentWords, 1);
+  const vocab = analyzeVocabulary(text, prompt);
+  const readScore = vocab.ready ? vocab.score : 100;
+  const swaps = vocab.flags.filter((f) => f.kind === 'swap');
+  const stumbles = vocab.flags.filter((f) => f.kind === 'stumble');
 
-  // Readability metric: reward grades ~8–12, penalize dense prose.
-  let readScore = 100 - Math.max(0, readingGrade - 12) * 8 - Math.max(0, 7 - readingGrade) * 3;
-  readScore -= Math.max(0, bigWordDensity - 0.16) * 180;
-  readScore = Math.max(5, Math.min(100, Math.round(readScore)));
-
-  if (readingGrade > 14 || bigWordDensity > 0.22) {
-    // Point to the densest sentence.
-    let densest = ''; let densestRatio = 0;
-    for (const s of sentences) {
-      const sw = wordsIn(s);
-      if (sw.length < 6) continue;
-      const ratio = sw.reduce((a, w) => a + countSyllables(w), 0) / sw.length;
-      if (ratio > densestRatio) { densestRatio = ratio; densest = s; }
-    }
+  if (swaps.length) {
+    const listed = swaps.slice(0, 4).map((f) => `“${f.word}” → “${f.simpler}”`).join(', ');
     suggestions.push({
       id: id('readability', 1),
       category: 'readability',
-      severity: 'caution',
-      title: 'Dense — lighten the vocabulary load',
-      detail: `Your writing reads at about a grade ${readingGrade} level with a lot of long words. Admissions readers move fast, and clarity signals confidence more than sophistication does. Read it aloud; anywhere you stumble, simplify.`,
-      excerpt: densest ? clip(densest) : undefined,
+      // A couple of reaches is a tip; a habit of them is worth a caution.
+      severity: swaps.length >= 4 ? 'caution' : 'tip',
+      title: swaps.length >= 4 ? 'The vocabulary is working too hard' : 'Trade thesaurus words for plain ones',
+      detail: `${swaps.length === 1 ? 'One word reaches' : `${swaps.length} words reach`} for a fancier register than the sentence needs. Readers hear confidence in plain words and effort in ornate ones, so the simpler choice almost always sounds more grown-up: ${listed}${swaps.length > 4 ? ', and a few more' : ''}.`,
+      // Show the fix in the student's own sentence rather than as a bare word
+      // pair — it is the difference between a rule and a demonstration.
+      example: swapExample(swaps[0].sentence, swaps[0].word, swaps[0].simpler),
     });
   }
 
-  // Thesaurus-reach words → plain alternatives.
-  const foundOverwrought: string[] = [];
-  const seenOver = new Set<string>();
-  for (const w of words) {
-    const bare = w.toLowerCase().replace(/[^a-z]/g, '');
-    if (OVERWROUGHT[bare] && !seenOver.has(bare)) {
-      seenOver.add(bare);
-      foundOverwrought.push(`“${bare}” → “${OVERWROUGHT[bare]}”`);
-    }
-    if (foundOverwrought.length >= 4) break;
-  }
-  if (foundOverwrought.length >= 2) {
+  if (vocab.hardestSentence && vocab.hardestSentence.hits.length >= 3) {
     suggestions.push({
       id: id('readability', 2),
       category: 'readability',
+      severity: 'caution',
+      title: 'One sentence carries most of the load',
+      detail: `This sentence stacks ${vocab.hardestSentence.hits.length} demanding words together (${vocab.hardestSentence.hits.slice(0, 5).map((w) => `“${w}”`).join(', ')}). A reader with two minutes will slow down or skim past it. Break it up, or let the plainest version of the idea carry it.`,
+      excerpt: clip(vocab.hardestSentence.text),
+    });
+  } else if (stumbles.length >= 2) {
+    suggestions.push({
+      id: id('readability', 3),
+      category: 'readability',
       severity: 'tip',
-      title: 'Trade thesaurus words for plain ones',
-      detail: `A few words feel like they are reaching to sound impressive. Simpler choices read as more self-assured: ${foundOverwrought.join(', ')}.`,
+      title: 'A few words may slow a fast reader',
+      detail: `${stumbles.slice(0, 4).map((f) => `“${f.word}”`).join(', ')} ${stumbles.length === 1 ? 'is a word' : 'are words'} many readers meet rarely. That is not automatically wrong — if one of them is genuinely the most precise word you have, keep it. Just make sure each is earning its place rather than decorating the sentence.`,
+      excerpt: stumbles[0].sentence ? clip(stumbles[0].sentence) : undefined,
+    });
+  } else if (vocab.ready && vocab.longSentences >= 2) {
+    suggestions.push({
+      id: id('readability', 4),
+      category: 'readability',
+      severity: 'tip',
+      title: 'A couple of sentences run long',
+      detail: `${vocab.longSentences} sentences run past 38 words. The vocabulary itself is clear, but a reader moving quickly can lose the thread of a long sentence before reaching its point. Find the natural break and use a full stop.`,
+    });
+  } else if (vocab.ready && readScore >= 95 && wordCount >= 200) {
+    suggestions.push({
+      id: id('readability', 5),
+      category: 'readability',
+      severity: 'praise',
+      title: 'Every word lands on the first read',
+      detail: 'Nothing here needs a second pass or a dictionary. That is harder than it looks — most drafts reach for a bigger word somewhere — and it means a reader spends their two minutes on your story instead of on your sentences.',
     });
   }
 
@@ -843,7 +840,13 @@ export function analyzeCraft(rawText: string, prompt?: string, learned?: Learned
     {
       key: 'readability', label: 'Readability', value: readScore,
       status: readScore >= 65 ? 'good' : readScore >= 45 ? 'warn' : 'bad',
-      hint: readScore >= 65 ? `Clear (grade ${readingGrade})` : readScore >= 45 ? `Slightly dense (grade ${readingGrade})` : `Hard to read (grade ${readingGrade})`,
+      hint: vocab.flags.length === 0
+        ? `Every word lands (grade ${readingGrade})`
+        : readScore >= 65
+          ? `${vocab.flags.length} word${vocab.flags.length === 1 ? '' : 's'} to check`
+          : readScore >= 45
+            ? `${vocab.flags.length} words will slow a reader`
+            : `Over-written — ${vocab.flags.length} words to simplify`,
     },
     {
       key: 'tone', label: 'Tone', value: toneScore,
@@ -907,5 +910,6 @@ export function analyzeCraft(rawText: string, prompt?: string, learned?: Learned
     theme,
     metrics,
     suggestions: balanced.slice(0, 9),
+    vocab,
   };
 }

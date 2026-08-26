@@ -109,6 +109,46 @@ export default function CraftStudio({ report }: { report: CraftReport }) {
         {report.metrics.map((m) => `${m.label}: ${m.hint}`).join(' · ')}
       </p>
 
+      {/* Word check — the specific words a reader may trip on. Every word here
+          comes from a curated list, never from "absent from our dictionary",
+          so a student is only ever shown a word somebody meant to flag. */}
+      {report.vocab?.ready && report.vocab.flags.length > 0 && (
+        <div className="mb-3 rounded-lg border border-amber-100 bg-amber-50/60 px-2.5 py-2">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">Word check</span>
+            {/* Solid colours, not alpha tints — a translucent amber on the
+                amber panel measured 3.07:1, under the 4.5:1 floor. */}
+            <span className="text-[9px] text-amber-800 dark:text-amber-300">
+              {report.vocab.flags.length} to look at
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {report.vocab.flags.map((f) => (
+              <span
+                key={f.word}
+                title={f.simpler ? `Plainer: ${f.simpler}` : 'Uncommon — keep it only if it is the most precise word you have'}
+                className={`inline-flex items-baseline whitespace-nowrap rounded px-1.5 py-0.5 text-[9.5px] font-medium leading-tight border ${
+                  f.kind === 'swap'
+                    ? 'bg-white border-amber-200 text-amber-800'
+                    : 'bg-white border-slate-200 text-slate-600'
+                }`}
+              >
+                {f.word}
+                {f.simpler && (
+                  <>
+                    <span className="mx-1 text-amber-400">→</span>
+                    <span className="font-semibold">{f.simpler}</span>
+                  </>
+                )}
+              </span>
+            ))}
+          </div>
+          <p className="text-[8.5px] text-amber-800 dark:text-amber-300 mt-1.5 leading-relaxed">
+            Arrows show a plainer swap. Plain words aren&apos;t a downgrade — uncommon ones are fine when they&apos;re the most precise choice.
+          </p>
+        </div>
+      )}
+
       {/* Suggestions */}
       {report.suggestions.length > 0 ? (
         <div className="space-y-1.5">
