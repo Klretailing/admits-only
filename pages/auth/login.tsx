@@ -74,6 +74,12 @@ export default function Login() {
               </div>
             )}
 
+            {router.query.reset === 'true' && (
+              <div className="mb-5 p-3 bg-green-50 border border-green-100 rounded-xl text-sm text-green-700">
+                Your password has been changed. Sign in with your new one.
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label className="block mb-2 text-sm font-semibold text-primary">Email</label>
@@ -87,7 +93,16 @@ export default function Login() {
                 />
               </div>
               <div>
-                <label className="block mb-2 text-sm font-semibold text-primary">Password</label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-semibold text-primary">Password</label>
+                  {/* Carries the typed email across so they don't retype it. */}
+                  <Link
+                    href={email ? `/auth/forgot-password?email=${encodeURIComponent(email)}` : '/auth/forgot-password'}
+                    className="text-sm font-medium text-accent hover:underline"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
                 <input
                   type="password"
                   value={password}

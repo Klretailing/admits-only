@@ -1,11 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { prisma, ensureSchema } from '../../../lib/db';
-import { ensureEmailSchema, sendDeadlineEmail, sendWeeklyDigestEmail, escapeHtml, type SendResult } from '../../../lib/email';
+import { ensureEmailSchema, sendDeadlineEmail, sendWeeklyDigestEmail, sendIdleNudgeEmail, escapeHtml, type SendResult } from '../../../lib/email';
 
 /* ──────────────────────────────────────────────────────────────────────
    SCHEDULED EMAIL JOB   (Vercel cron → GET /api/cron/emails)
 
-   ?job=deadlines  runs daily; ?job=digest runs weekly.
+   ?job=daily      deadlines, then idle check-ins (the scheduled daily run)
+   ?job=deadlines  deadline reminders only
+   ?job=idle       unfinished-task check-ins only
+   ?job=digest     weekly catch-up
 
    Safe to run more than once: every send claims a dedupe key first, so a
    retried or double-scheduled run produces "duplicate", not a second email.
@@ -51,6 +54,46 @@ function milestoneFor(days: number): number | null {
   return null;
 }
 
+/* ─── idle check-ins ───
+   A student who has gone quiet with work still open gets a gentle note at
+   5 days away and again at 14. After 30 days we stop: someone gone a month
+   has made a decision, and a third email reads as nagging rather than help.
+
+   The dedupe key includes the date they were last active, so each quiet
+   stretch is its own: come back, go quiet again, and the 5-day note can
+   fire once more. Within one stretch, each milestone fires at most once. */
+const IDLE_MILESTONES = [5, 14];
+const IDLE_GIVE_UP_DAYS = 30;
+
+function idleMilestone(days: number): number | null {
+  if (days > IDLE_GIVE_UP_DAYS) return null;
+  let hit: number | null = null;
+  for (const m of IDLE_MILESTONES) if (days >= m) hit = m;
+  return hit;
+}
+
+/** Last sign of life. lastLoginAt alone would understate activity: sessions
+    last 30 days, so an active student may not log in for weeks. Any tracked
+    event counts; account creation is the floor for someone who never came back. */
+async function lastActiveMap(): Promise<Map<string, Date>> {
+  const rows: any[] = await prisma.$queryRaw`
+    SELECT u."id",
+           GREATEST(u."createdAt", COALESCE(u."lastLoginAt", u."createdAt"),
+                    COALESCE(MAX(ae."createdAt"), u."createdAt")) AS "lastActive"
+      FROM "users" u
+      LEFT JOIN "analytics_events" ae ON ae."userId" = u."id"
+     WHERE u."role" = 'student'
+     GROUP BY u."id"`;
+  return new Map(rows.map(r => [r.id, new Date(r.lastActive)]));
+}
+
+async function emailedRecently(userId: string, hours: number): Promise<boolean> {
+  const rows: any[] = await prisma.$queryRaw`
+    SELECT 1 FROM "email_log"
+     WHERE "userId" = ${userId} AND "sentAt" > NOW() - (${hours} * INTERVAL '1 hour') LIMIT 1`;
+  return rows.length > 0;
+}
+
 function isoWeekKey(d = new Date()): string {
   const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
   t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7));
@@ -80,6 +123,70 @@ function tally(results: SendResult[]): Record<string, number> {
   return out;
 }
 
+async function runDeadlines(students: { id: string; name: string | null; email: string }[], results: SendResult[]) {
+  for (const s of students) {
+    const apps = await appsFor(s.id);
+    const due = apps
+      .filter(a => a.name && a.deadline && !(a.status && CLOSED.has(a.status)))
+      .map(a => {
+        const days = daysUntil(a.deadline) ?? 9999;
+        return {
+          name: a.name as string,
+          days,
+          milestone: milestoneFor(days),
+          remaining: (a.tasks || []).filter(t => !t.done).length,
+        };
+      })
+      .filter(x => x.milestone !== null)
+      .sort((x, y) => x.days - y.days);
+
+    if (due.length === 0) continue;
+    // Keyed by milestone, not by exact days, so one school produces at
+    // most one email per milestone no matter which day the job runs.
+    const dedupeKey = due.map(x => `${x.name}@${x.milestone}`).join('|').slice(0, 180);
+    results.push(await sendDeadlineEmail({
+      userId: s.id, to: s.email, name: s.name, schools: due, dedupeKey,
+    }));
+  }
+}
+
+async function runIdle(students: { id: string; name: string | null; email: string }[], results: SendResult[]) {
+  const lastActive = await lastActiveMap();
+  const now = Date.now();
+
+  for (const s of students) {
+    const last = lastActive.get(s.id);
+    if (!last) continue;
+    const idleDays = Math.floor((now - last.getTime()) / 86400000);
+    const milestone = idleMilestone(idleDays);
+    if (milestone === null) continue;
+
+    const apps = (await appsFor(s.id)).filter(a => a.name && !(a.status && CLOSED.has(a.status)));
+    const withOpen = apps
+      .map(a => ({ app: a, open: (a.tasks || []).filter(t => !t.done) }))
+      .filter(x => x.open.length > 0);
+    const openTasks = withOpen.reduce((n, x) => n + x.open.length, 0);
+    // The whole point is "you have unfinished tasks". No tasks, no email.
+    if (openTasks === 0) continue;
+
+    // One email a day, total. If a deadline reminder or digest already went
+    // out recently, that one carries the message; this one waits.
+    if (await emailedRecently(s.id, 48)) { results.push('duplicate'); continue; }
+
+    // Suggest the next task for the school due soonest; undated schools last.
+    withOpen.sort((x, y) => (daysUntil(x.app.deadline) ?? 9999) - (daysUntil(y.app.deadline) ?? 9999));
+    const first = withOpen[0];
+    const lastDay = last.toISOString().slice(0, 10);
+
+    results.push(await sendIdleNudgeEmail({
+      userId: s.id, to: s.email, name: s.name,
+      openTasks, schools: withOpen.length,
+      next: { task: first.open[0].label, school: first.app.name as string },
+      dedupeKey: `${lastDay}@${milestone}`,
+    }));
+  }
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Vercel cron sends this header; a manual call needs the secret.
   const secret = process.env.CRON_SECRET;
@@ -98,31 +205,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const students = await realStudents();
 
-    if (job === 'deadlines') {
-      for (const s of students) {
-        const apps = await appsFor(s.id);
-        const due = apps
-          .filter(a => a.name && a.deadline && !(a.status && CLOSED.has(a.status)))
-          .map(a => {
-            const days = daysUntil(a.deadline) ?? 9999;
-            return {
-              name: a.name as string,
-              days,
-              milestone: milestoneFor(days),
-              remaining: (a.tasks || []).filter(t => !t.done).length,
-            };
-          })
-          .filter(x => x.milestone !== null)
-          .sort((x, y) => x.days - y.days);
-
-        if (due.length === 0) continue;
-        // Keyed by milestone, not by exact days, so one school produces at
-        // most one email per milestone no matter which day the job runs.
-        const dedupeKey = due.map(x => `${x.name}@${x.milestone}`).join('|').slice(0, 180);
-        results.push(await sendDeadlineEmail({
-          userId: s.id, to: s.email, name: s.name, schools: due, dedupeKey,
-        }));
-      }
+    if (job === 'deadlines' || job === 'daily') {
+      await runDeadlines(students, results);
+    }
+    if (job === 'idle' || job === 'daily') {
+      await runIdle(students, results);
+    }
+    if (job === 'deadlines' || job === 'idle' || job === 'daily') {
       return res.json({ ok: true, job, students: students.length, results: tally(results) });
     }
 
@@ -131,6 +220,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const since = new Date(Date.now() - 7 * 864e5);
 
       for (const s of students) {
+        // Runs 30 minutes after the daily job. If that job already mailed
+        // this student today, the digest waits for next week.
+        if (await emailedRecently(s.id, 20)) { results.push('duplicate'); continue; }
         const items: string[] = [];
 
         // Essay feedback returned this week
