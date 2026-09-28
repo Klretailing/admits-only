@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
+import { signIn } from 'next-auth/react';
 import Head from 'next/head';
 import Link from 'next/link';
 
@@ -48,6 +49,16 @@ export default function Register() {
         return;
       }
 
+      /* Sign them straight in. Making someone retype the credentials they
+         entered seconds ago, at the highest-intent moment in the funnel, cost
+         us a step for nothing. If auto sign-in fails for any reason, fall
+         back to the old path so they are never stuck. */
+      const signed = await signIn('credentials', { email: form.email, password: form.password, redirect: false });
+      if (signed && !signed.error) {
+        const role = data.user?.role || form.role;
+        router.push(role === 'parent' ? '/parent' : role === 'educator' ? '/educator' : '/dashboard');
+        return;
+      }
       router.push('/auth/login?registered=true');
     } catch {
       setError('Something went wrong. Please try again.');

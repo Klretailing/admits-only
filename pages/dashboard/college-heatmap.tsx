@@ -9,6 +9,7 @@ import { MAJORS, getMajor, majorsByCategory, programMatch, type Major, type Prog
 import { actToSat, satToAct } from '../../lib/scoring';
 import { tracker } from '../../lib/analytics';
 import DeadlineChips from '../../components/DeadlineChips';
+import PageHeader from '../../components/PageHeader';
 import { deadlinesFor } from '../../lib/deadlines';
 
 /* ──────────────────────── TYPES ──────────────────────── */
@@ -99,46 +100,23 @@ function readableOn(bg: string): string {
   return vsWhite >= vsDark ? '#ffffff' : INK_DARK;
 }
 
-function getTempColor(fit: number): string {
-  const stops = [
-    { at: 0, r: 59, g: 130, b: 246 },
-    { at: 25, r: 99, g: 102, b: 241 },
-    { at: 50, r: 245, g: 158, b: 11 },
-    { at: 75, r: 249, g: 115, b: 22 },
-    { at: 100, r: 239, g: 68, b: 68 },
-  ];
-  const clamped = Math.max(0, Math.min(100, fit));
-  let lo = stops[0], hi = stops[stops.length - 1];
-  for (let i = 0; i < stops.length - 1; i++) {
-    if (clamped >= stops[i].at && clamped <= stops[i + 1].at) { lo = stops[i]; hi = stops[i + 1]; break; }
-  }
-  const t = lo.at === hi.at ? 0 : (clamped - lo.at) / (hi.at - lo.at);
-  return `rgb(${Math.round(lo.r + (hi.r - lo.r) * t)},${Math.round(lo.g + (hi.g - lo.g) * t)},${Math.round(lo.b + (hi.b - lo.b) * t)})`;
-}
-
-function getTempRGB(fit: number): [number, number, number] {
-  const stops = [
-    { at: 0, r: 80, g: 160, b: 255 },
-    { at: 25, r: 130, g: 120, b: 255 },
-    { at: 50, r: 255, g: 200, b: 40 },
-    { at: 75, r: 255, g: 140, b: 40 },
-    { at: 100, r: 255, g: 80, b: 60 },
-  ];
-  const clamped = Math.max(0, Math.min(100, fit));
-  let lo = stops[0], hi = stops[stops.length - 1];
-  for (let i = 0; i < stops.length - 1; i++) {
-    if (clamped >= stops[i].at && clamped <= stops[i + 1].at) { lo = stops[i]; hi = stops[i + 1]; break; }
-  }
-  const t = lo.at === hi.at ? 0 : (clamped - lo.at) / (hi.at - lo.at);
-  return [Math.round(lo.r + (hi.r - lo.r) * t), Math.round(lo.g + (hi.g - lo.g) * t), Math.round(lo.b + (hi.b - lo.b) * t)];
-}
-
-function getTempLabel(fit: number): string {
-  if (fit >= 75) return 'Hot';
-  if (fit >= 50) return 'Warm';
-  if (fit >= 30) return 'Cool';
-  return 'Cold';
-}
+/* ─── one scale, one vocabulary ───
+   This page used to describe the same thing two ways. The rings, list and
+   counts said Reach / Match / Safety; the tiles, legend and chips said
+   Cold / Warm / Hot on a blue→red ramp — so red meant "strong fit" here and
+   "long shot" (rose Reach) one tab over. Worse, the tile labels came from a
+   different score than the rings, so a school in the Safety ring could read
+   "Warm". Colour and label now both derive from the tier, using the same
+   rose / amber / emerald the list view already used, so they cannot disagree.
+   `solid` backs white text (all ≥ 4.5:1); `rgb` is for text-free map dots. */
+const TIER_STYLE: Record<'reach' | 'match' | 'safety', { label: string; solid: string; rgb: [number, number, number] }> = {
+  reach:  { label: 'Reach',  solid: 'rgb(190,18,60)', rgb: [244, 63, 94] },
+  match:  { label: 'Match',  solid: 'rgb(180,83,9)',  rgb: [245, 158, 11] },
+  safety: { label: 'Safety', solid: 'rgb(4,120,87)',  rgb: [16, 185, 129] },
+};
+const tierColor = (t: HeatmapTile['tier']) => TIER_STYLE[t].solid;
+const tierRGB = (t: HeatmapTile['tier']) => TIER_STYLE[t].rgb;
+const tierLabel = (t: HeatmapTile['tier']) => TIER_STYLE[t].label;
 
 /* ──────────────────────── ADVICE ──────────────────────── */
 
@@ -167,8 +145,8 @@ function generateAdvice(tile: HeatmapTile, gpa: number, sat: number): string[] {
 
 type SortKey = 'fit-desc' | 'fit-asc' | 'name' | 'acceptance' | 'program';
 const sortOptions: { key: SortKey; label: string }[] = [
-  { key: 'fit-desc', label: 'Hottest First' },
-  { key: 'fit-asc', label: 'Coldest First' },
+  { key: 'fit-desc', label: 'Best Fit First' },
+  { key: 'fit-asc', label: 'Longest Shot First' },
   { key: 'name', label: 'A → Z' },
   { key: 'acceptance', label: 'Most Selective' },
   // Only offered once a major is chosen — see the sort control below.
@@ -450,7 +428,7 @@ function RadarView({
 
         if (sx < -30 || sx > w + 30 || sy < -30 || sy > h + 30) continue;
 
-        const [r, g, b] = getTempRGB(node.tile.overallFit);
+        const [r, g, b] = tierRGB(node.tile.tier);
         const radius = screenRadius(node.baseRadius) * eased;
         const fitNorm = node.tile.overallFit / 100;
 
@@ -740,7 +718,7 @@ function RadarView({
             <div className="flex items-center gap-2.5">
               <div
                 className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-xs shrink-0"
-                style={{ backgroundColor: getTempColor(hoveredTile.overallFit) }}
+                style={{ backgroundColor: tierColor(hoveredTile.tier) }}
               >
                 {hoveredTile.overallFit}
               </div>
@@ -748,7 +726,7 @@ function RadarView({
                 <p className="text-sm font-semibold text-slate-900">{hoveredTile.college.name}</p>
                 <p className="text-[10px] text-slate-400">
                   {hoveredTile.college.acceptanceRate}% accept &middot; {hoveredTile.college.satRange[0]}-{hoveredTile.college.satRange[1]} SAT
-                  &middot; <span style={{ color: getTempColor(hoveredTile.overallFit) }}>{getTempLabel(hoveredTile.overallFit)}</span>
+                  &middot; <span style={{ color: tierColor(hoveredTile.tier) }}>{tierLabel(hoveredTile.tier)}</span>
                 </p>
               </div>
             </div>
@@ -1095,7 +1073,7 @@ export default function CollegeHeatmapPage() {
   const [gpa, setGpa] = useState(3.5);
   const [sat, setSat] = useState(1200);
   const [act, setAct] = useState(0);
-  const [viewMode, setViewMode] = useState<'grid' | 'galaxy' | 'list' | 'trends'>('galaxy');
+  const [viewMode, setViewMode] = useState<'grid' | 'galaxy' | 'list' | 'trends'>('list');
   const sliderDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedTile, setSelectedTile] = useState<HeatmapTile | null>(null);
   const [savedSchools, setSavedSchools] = useState<Set<string>>(new Set());
@@ -1287,83 +1265,82 @@ export default function CollegeHeatmapPage() {
       <Head><title>Admissions Map | AdmitsOnly</title></Head>
 
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-          <div className="flex items-center gap-4 flex-1">
-            <div className="w-11 h-11 rounded-xl bg-indigo-500 flex items-center justify-center shadow-sm">
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold font-display text-primary">Admissions Heatmap</h1>
-              <p className="text-sm text-slate-500 mt-0.5">
-                {pool.length} colleges &middot; {tierCounts.safety} hot &middot; {tierCounts.match} warm &middot; {tierCounts.reach} cold
-              </p>
-            </div>
-          </div>
-
-          {/* View toggle */}
-          <div className="flex items-center bg-slate-100 rounded-xl p-1 gap-1">
-            <button
-              onClick={() => { setViewMode('galaxy'); tracker.feature('college-heatmap', 'view_toggle', { mode: 'radar' }); }}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
-                viewMode === 'galaxy'
-                  ? 'bg-indigo-500 text-white shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2">
-                <circle cx="8" cy="8" r="3" opacity="0.7" />
-                <circle cx="8" cy="8" r="5.5" opacity="0.4" />
-                <circle cx="8" cy="8" r="7.5" opacity="0.25" />
-                <line x1="8" y1="0.5" x2="8" y2="15.5" opacity="0.15" />
-                <line x1="0.5" y1="8" x2="15.5" y2="8" opacity="0.15" />
-              </svg>
-              Radar
-            </button>
-            <button
-              onClick={() => { setViewMode('grid'); tracker.feature('college-heatmap', 'view_toggle', { mode: 'grid' }); }}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
-                viewMode === 'grid'
-                  ? 'bg-white text-slate-800 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-              </svg>
-              Grid
-            </button>
-            <button
-              onClick={() => { setViewMode('list'); tracker.feature('college-heatmap', 'view_toggle', { mode: 'list' }); }}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
-                viewMode === 'list'
-                  ? 'bg-white text-slate-800 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-              </svg>
-              List
-            </button>
-            <button
-              onClick={() => { setViewMode('trends'); tracker.feature('college-heatmap', 'view_toggle', { mode: 'trends' }); }}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
-                viewMode === 'trends'
-                  ? 'bg-orange-500 text-white shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-              </svg>
-              Trends
-            </button>
-          </div>
-        </div>
+        <PageHeader
+          eyebrow="College list"
+          title="Admissions Map"
+          subtitle={<>{pool.length} colleges &middot; {tierCounts.reach} reach &middot; {tierCounts.match} match &middot; {tierCounts.safety} safety</>}
+          icon={
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          }
+          actions={
+            <>
+              {/* View toggle */}
+              <div className="flex items-center bg-slate-100 rounded-xl p-1 gap-1">
+                {/* List first: it is the default and the view that supports the
+                    actual job (compare, open, track). */}
+                <button
+                  onClick={() => { setViewMode('list'); tracker.feature('college-heatmap', 'view_toggle', { mode: 'list' }); }}
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+                    viewMode === 'list'
+                      ? 'bg-white text-slate-800 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                  </svg>
+                  List
+                </button>
+                <button
+                  onClick={() => { setViewMode('galaxy'); tracker.feature('college-heatmap', 'view_toggle', { mode: 'radar' }); }}
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+                    viewMode === 'galaxy'
+                      ? 'bg-white text-slate-800 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2">
+                    <circle cx="8" cy="8" r="3" opacity="0.7" />
+                    <circle cx="8" cy="8" r="5.5" opacity="0.4" />
+                    <circle cx="8" cy="8" r="7.5" opacity="0.25" />
+                    <line x1="8" y1="0.5" x2="8" y2="15.5" opacity="0.15" />
+                    <line x1="0.5" y1="8" x2="15.5" y2="8" opacity="0.15" />
+                  </svg>
+                  Radar
+                </button>
+                <button
+                  onClick={() => { setViewMode('grid'); tracker.feature('college-heatmap', 'view_toggle', { mode: 'grid' }); }}
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+                    viewMode === 'grid'
+                      ? 'bg-white text-slate-800 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                  </svg>
+                  Grid
+                </button>
+                <button
+                  onClick={() => { setViewMode('trends'); tracker.feature('college-heatmap', 'view_toggle', { mode: 'trends' }); }}
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+                    viewMode === 'trends'
+                      ? 'bg-orange-500 text-white shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                  </svg>
+                  Trends
+                </button>
+              </div>
+            </>
+          }
+        />
 
         {/* TRENDS VIEW */}
         {viewMode === 'trends' && <TrendsView />}
@@ -1487,19 +1464,16 @@ export default function CollegeHeatmapPage() {
 
         {/* Filters */}
         {viewMode !== 'trends' && viewMode !== 'list' && <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 mr-4">
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: getTempColor(0) }} />
-              <span className="text-[10px] text-slate-400">Cold</span>
-            </div>
-            <div className="w-16 h-2 rounded-full" style={{ background: 'linear-gradient(to right, rgb(59,130,246), rgb(99,102,241), rgb(245,158,11), rgb(249,115,22), rgb(239,68,68))' }} />
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: getTempColor(100) }} />
-              <span className="text-[10px] text-slate-400">Hot</span>
-            </div>
+          <div className="flex items-center gap-3 mr-4">
+            {(['reach', 'match', 'safety'] as const).map(t => (
+              <div key={t} className="flex items-center gap-1">
+                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: tierColor(t) }} />
+                <span className="text-[10px] text-slate-500">{tierLabel(t)}</span>
+              </div>
+            ))}
           </div>
 
-          {(['', 'safety', 'match', 'reach'] as const).map(tier => (
+          {(['', 'reach', 'match', 'safety'] as const).map(tier => (
             <button
               key={tier || 'all'}
               onClick={() => setFilterTier(tier)}
@@ -1507,7 +1481,7 @@ export default function CollegeHeatmapPage() {
                 filterTier === tier ? 'bg-accent text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
               }`}
             >
-              {tier === '' ? `All (${pool.length})` : tier === 'safety' ? `Hot (${tierCounts.safety})` : tier === 'match' ? `Warm (${tierCounts.match})` : `Cold (${tierCounts.reach})`}
+              {tier === '' ? `All (${pool.length})` : tier === 'safety' ? `Safety (${tierCounts.safety})` : tier === 'match' ? `Match (${tierCounts.match})` : `Reach (${tierCounts.reach})`}
             </button>
           ))}
 
@@ -1542,7 +1516,7 @@ export default function CollegeHeatmapPage() {
         {viewMode === 'grid' && (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5">
             {visibleTiles.map(tile => {
-              const color = getTempColor(tile.overallFit);
+              const color = tierColor(tile.tier);
               return (
                 <button
                   key={tile.college.id}
@@ -1553,12 +1527,12 @@ export default function CollegeHeatmapPage() {
                   <div className="p-3 min-h-[90px] flex flex-col justify-between">
                     <div>
                       <p className="text-[11px] font-bold text-white leading-tight truncate drop-shadow-sm">{tile.college.name}</p>
-                      <p className="text-[9px] text-white/70 mt-0.5 truncate">{tile.college.location}</p>
+                      <p className="text-[9px] text-white/90 mt-0.5 truncate">{tile.college.location}</p>
                     </div>
                     <div className="flex items-end justify-between mt-2">
                       <div>
                         <div className="text-lg font-bold text-white drop-shadow-sm tabular-nums">{tile.overallFit}</div>
-                        <div className="text-[9px] text-white/60 font-medium uppercase tracking-wide">{getTempLabel(tile.overallFit)}</div>
+                        <div className="text-[9px] text-white/90 font-medium uppercase tracking-wide">{tierLabel(tile.tier)}</div>
                       </div>
                       {tile.isSaved && (
                         <div className="w-5 h-5 rounded-full bg-white/25 flex items-center justify-center">
@@ -1791,14 +1765,14 @@ export default function CollegeHeatmapPage() {
                 </svg>
               </div>
               <div>
-                <h2 className="text-sm font-bold text-primary">Discover Hot Schools</h2>
+                <h2 className="text-sm font-bold text-primary">Discover Strong Fits</h2>
                 <p className="text-xs text-slate-400">High-match schools not on your list yet</p>
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {discoveries.map(tile => (
                 <div key={tile.college.id} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/30 transition-all cursor-pointer group" onClick={() => setSelectedTile(tile)}>
-                  <div className="shrink-0 w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm" style={{ backgroundColor: getTempColor(tile.overallFit), color: readableOn(getTempColor(tile.overallFit)) }}>{tile.overallFit}</div>
+                  <div className="shrink-0 w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm" style={{ backgroundColor: tierColor(tile.tier), color: readableOn(tierColor(tile.tier)) }}>{tile.overallFit}</div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-primary truncate">{tile.college.name}</p>
                     <p className="text-xs text-slate-400">{tile.college.acceptanceRate}% accept &middot; {tile.college.satRange[0]}-{tile.college.satRange[1]} SAT</p>
@@ -1819,7 +1793,7 @@ export default function CollegeHeatmapPage() {
             <div className="p-5 pb-0">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="shrink-0 w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg shadow-sm" style={{ backgroundColor: getTempColor(selectedTile.overallFit), color: readableOn(getTempColor(selectedTile.overallFit)) }}>{selectedTile.overallFit}</div>
+                  <div className="shrink-0 w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg shadow-sm" style={{ backgroundColor: tierColor(selectedTile.tier), color: readableOn(tierColor(selectedTile.tier)) }}>{selectedTile.overallFit}</div>
                   <div>
                     <h2 className="text-lg font-bold font-display text-primary">{selectedTile.college.name}</h2>
                     <p className="text-xs text-slate-400">{selectedTile.college.location} &middot; {selectedTile.college.type} &middot; {selectedTile.college.size}</p>
@@ -1831,12 +1805,12 @@ export default function CollegeHeatmapPage() {
               </div>
               <div className="mt-4 mb-2">
                 <div className="flex items-center justify-between text-xs mb-1">
-                  <span className="text-slate-400">Admissions Temperature</span>
-                  <span className="font-bold" style={{ color: getTempColor(selectedTile.overallFit) }}>{getTempLabel(selectedTile.overallFit)}</span>
+                  <span className="text-slate-400">Fit score</span>
+                  <span className="font-bold" style={{ color: tierColor(selectedTile.tier) }}>{tierLabel(selectedTile.tier)}</span>
                 </div>
-                <div className="h-3 rounded-full overflow-hidden" style={{ background: 'linear-gradient(to right, rgb(59,130,246), rgb(99,102,241), rgb(245,158,11), rgb(249,115,22), rgb(239,68,68))' }}>
+                <div className="h-3 rounded-full overflow-hidden" style={{ background: 'linear-gradient(to right, rgb(244,63,94), rgb(245,158,11), rgb(16,185,129))' }}>
                   <div className="relative h-full">
-                    <div className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white border-2 shadow-md transition-all" style={{ left: `calc(${selectedTile.overallFit}% - 8px)`, borderColor: getTempColor(selectedTile.overallFit) }} />
+                    <div className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white border-2 shadow-md transition-all" style={{ left: `calc(${selectedTile.overallFit}% - 8px)`, borderColor: tierColor(selectedTile.tier) }} />
                   </div>
                 </div>
               </div>
@@ -1895,7 +1869,7 @@ export default function CollegeHeatmapPage() {
                 {generateAdvice(selectedTile, gpa, bestSAT).map((tip, i) => (
                   <div key={i} className="flex gap-2 items-start">
                     <div className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5 ${
-                      selectedTile.tier === 'reach' ? 'bg-blue-50 text-blue-600' : selectedTile.tier === 'match' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'
+                      selectedTile.tier === 'reach' ? 'bg-rose-50 text-rose-600' : selectedTile.tier === 'match' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'
                     }`}>
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
                     </div>
@@ -1968,12 +1942,12 @@ function SimilarHotSchools({ currentCollege, tiles, onSelect, onAdd }: { current
 
   return (
     <div className="px-5 mt-4">
-      <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Similar Schools in the Hot Zone</h3>
+      <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Similar Schools You Fit Well</h3>
       <p className="text-xs text-slate-400 mb-3">Strong matches with similar programs to {currentCollege.name}</p>
       <div className="space-y-2">
         {similar.map(s => (
           <div key={s.college.id} className="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100 hover:border-accent/20 hover:bg-accent/5 transition-all cursor-pointer" onClick={() => onSelect(s)}>
-            <div className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center font-bold text-xs" style={{ backgroundColor: getTempColor(s.overallFit), color: readableOn(getTempColor(s.overallFit)) }}>{s.overallFit}</div>
+            <div className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center font-bold text-xs" style={{ backgroundColor: tierColor(s.tier), color: readableOn(tierColor(s.tier)) }}>{s.overallFit}</div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-primary truncate">{s.college.name}</p>
               <p className="text-[10px] text-slate-400">{s.overlap} shared program{s.overlap > 1 ? 's' : ''} &middot; {s.college.acceptanceRate}% accept</p>

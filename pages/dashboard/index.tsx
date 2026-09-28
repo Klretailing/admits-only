@@ -127,7 +127,9 @@ function AnimatedStatCard({ label, value, change, positive, href, accentColor, d
 }) {
   const numericValue = parseFloat(value);
   const isNumeric = !isNaN(numericValue) && value !== '—';
-  const { count, ref: countRef } = useCountUp(isNumeric ? numericValue : 0, 1200);
+  // Keep the precision the value arrived with ("3.98" stays 2 places).
+  const decimals = isNumeric && value.includes('.') ? value.split('.')[1].length : 0;
+  const { count, ref: countRef } = useCountUp(isNumeric ? numericValue : 0, 1200, true, decimals);
 
   return (
     <Link
@@ -157,7 +159,7 @@ function AnimatedStatCard({ label, value, change, positive, href, accentColor, d
       </div>
       <div ref={countRef} className="flex items-end gap-2">
         <span className="text-2xl font-bold font-display text-primary">
-          {isNumeric ? count : value}
+          {isNumeric ? count.toFixed(decimals) : value}
         </span>
         <span className={`text-xs font-semibold mb-0.5 ${positive ? 'text-green-600' : 'text-slate-400'}`}>
           {change}
@@ -190,6 +192,7 @@ export default function Dashboard() {
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [profile, setProfile] = useState<DashboardProfile | null>(null);
+  const [firstDay, setFirstDay] = useState(false);
   const [readiness, setReadiness] = useState<{ readiness: number; checklist: any[]; nudges: any[] } | null>(null);
   const [dismissedNudges, setDismissedNudges] = useState<Set<string>>(new Set());
 
@@ -205,6 +208,7 @@ export default function Dashboard() {
       .then(data => {
         setStats(data.stats);
         setProfile(data.profile);
+        setFirstDay(!!data.firstDay);
       })
       .catch(() => {});
   }, [status]);
@@ -246,8 +250,10 @@ export default function Dashboard() {
 
         <PageHeader
           eyebrow="Overview"
-          title={`Welcome back, ${session.user?.name?.split(' ')[0] || 'Student'}`}
-          subtitle="Here's your academic progress at a glance."
+          title={`${firstDay ? 'Welcome' : 'Welcome back'}, ${session.user?.name?.split(' ')[0] || 'Student'}`}
+          subtitle={firstDay
+            ? "Let's get your applications set up. It takes about five minutes."
+            : "Here's your academic progress at a glance."}
         />
 
         {/* One honest progress bar + next action. Replaces the earlier
@@ -299,13 +305,42 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Stat cards — real data from DB with animated counters */}
+        {/* Stat cards — real data from DB with animated counters.
+            Before a profile exists, three of the four would read "—". A row
+            of empty dashes on someone's first visit shows them nothing, so
+            those three collapse into one card that says what they unlock. */}
+        {stats && !hasProfile ? (
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <Link
+              href="/dashboard/profile"
+              className="sm:col-span-3 flex items-center gap-4 bg-white rounded-2xl border border-slate-100 surface surface-interactive p-5"
+            >
+              <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-primary">Add your GPA to see where you stand</p>
+                <p className="text-xs text-slate-500 mt-0.5">Unlocks your holistic score and college matches. Test scores are optional.</p>
+              </div>
+              <span className="text-sm font-semibold text-accent flex-shrink-0 hidden sm:inline">Add stats →</span>
+            </Link>
+            <AnimatedStatCard
+              label="Essays"
+              value={stats.essayCount || '0'}
+              change={stats.essayStatus || 'none yet'}
+              positive={parseInt(stats.essayCount || '0') > 0}
+              href="/dashboard/essays"
+              accentColor="#6366f1"
+              delay={0}
+            />
+          </div>
+        ) : (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'SAT Score', value: stats?.satScore || '—', change: hasProfile ? 'from profile' : 'add in profile', positive: hasProfile, accentColor: '#d97706' },
-            { label: 'Essays', value: stats?.essayCount || '0', change: stats?.essayStatus || 'none yet', positive: (parseInt(stats?.essayCount || '0') > 0), accentColor: '#6366f1' },
-            { label: 'Holistic Score', value: stats?.holisticScore || '—', change: hasProfile ? '/100' : 'evaluate profile', positive: hasProfile, accentColor: '#059669' },
-            { label: 'GPA', value: stats?.gpa || '—', change: hasProfile ? 'from profile' : 'add in profile', positive: hasProfile, accentColor: '#2563eb' },
+            { label: 'SAT Score', value: stats?.satScore || '—', change: stats?.satScore && stats.satScore !== '—' ? 'from profile' : 'optional', positive: !!stats?.satScore && stats.satScore !== '—', accentColor: '#d97706', href: '/dashboard/profile' },
+            { label: 'Essays', value: stats?.essayCount || '0', change: stats?.essayStatus || 'none yet', positive: (parseInt(stats?.essayCount || '0') > 0), accentColor: '#6366f1', href: '/dashboard/essays' },
+            { label: 'Holistic Score', value: stats?.holisticScore || '—', change: hasProfile ? '/100' : 'evaluate profile', positive: !!hasProfile, accentColor: '#059669', href: '/dashboard/profile' },
+            { label: 'GPA', value: stats?.gpa || '—', change: hasProfile ? 'unweighted' : 'add in profile', positive: !!hasProfile, accentColor: '#2563eb', href: '/dashboard/profile' },
           ].map((stat, i) => (
             <AnimatedStatCard
               key={stat.label}
@@ -313,12 +348,13 @@ export default function Dashboard() {
               value={stat.value}
               change={stat.change}
               positive={stat.positive}
-              href="/dashboard/profile"
+              href={stat.href}
               accentColor={stat.accentColor}
               delay={i * 100}
             />
           ))}
         </div>
+        )}
 
         {/* Application Readiness Ring & Checklist — hidden once fully ready to keep the dashboard clean */}
         {readiness && readiness.readiness < 100 && (
@@ -362,7 +398,8 @@ export default function Dashboard() {
         )}
 
         {/* Progress / CTA */}
-        <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
+        {/* Two columns only when the profile breakdown is there to fill one. */}
+        <div className={`grid gap-6 ${hasProfile ? 'lg:grid-cols-[1.2fr_1fr]' : ''}`}>
           {hasProfile ? (
             <div className="bg-white rounded-2xl border border-slate-100 p-6 dash-card-hover">
               <div className="flex items-center justify-between mb-6">
@@ -407,25 +444,10 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
-          ) : (
-            <div className="bg-white rounded-2xl border border-slate-100 p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold font-display text-primary">Get Started</h3>
-              </div>
-              <div className="text-center py-6">
-                <div className="w-14 h-14 mx-auto rounded-2xl bg-accent/10 flex items-center justify-center mb-4">
-                  <svg className="w-7 h-7 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                </div>
-                <p className="text-sm text-slate-600 font-medium mb-1">Build your student profile</p>
-                <p className="text-xs text-slate-400 mb-4">Add your GPA, SAT scores, and extracurriculars to see your holistic evaluation.</p>
-                <Link href="/dashboard/profile" className="btn-primary text-sm inline-block">
-                  Go to Profile
-                </Link>
-              </div>
-            </div>
-          )}
+          ) : null /* No profile yet: the "Add your GPA" card at the top already
+                      says this. A second "Build your student profile" card here
+                      made four profile prompts on one screen, and still asked
+                      for SAT scores, which are optional. */}
 
           {/* Quick Actions */}
           <div className="bg-white rounded-2xl border border-slate-100 p-6 dash-card-hover">

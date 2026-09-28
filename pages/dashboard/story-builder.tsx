@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import DashboardLayout from '../../components/DashboardLayout';
+import PageHeader from '../../components/PageHeader';
 import {
   TRAITS,
   ARCHETYPES,
@@ -100,20 +101,17 @@ export default function StoryBuilder() {
       <Head><title>Story Builder | AdmitsOnly Dashboard</title></Head>
 
       <div className="max-w-5xl mx-auto space-y-6 pb-10">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => router.push('/dashboard/essays')} className="p-1.5 -ml-1.5 rounded-lg text-slate-400 hover:text-primary hover:bg-slate-50 transition-colors" title="Back to Essays">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-              </button>
-              <h1 className="text-xl lg:text-2xl font-bold font-display text-primary tracking-tight">Story Builder</h1>
-            </div>
-            <p className="mt-1 text-sm text-slate-500 max-w-xl">
-              Stuck on what to write about? Tell us a bit about you and a few things you’ve lived through — we’ll suggest the story angles that fit you best and hand you a beat-by-beat outline.
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          eyebrow="Essays"
+          title="Story Builder"
+          subtitle="Stuck on what to write about? Tell us a bit about you and a few things you’ve lived through — we’ll suggest the story angles that fit you best and hand you a beat-by-beat outline."
+          actions={
+            <button onClick={() => router.push('/dashboard/essays')} className="inline-flex items-center gap-1 text-sm font-semibold text-slate-500 hover:text-primary transition-colors">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+              Back to Essays
+            </button>
+          }
+        />
 
         {/* ── STEP 1: Inputs ── */}
         <div className="bg-white rounded-2xl border border-slate-100 p-5 lg:p-6 space-y-6">

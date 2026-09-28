@@ -162,16 +162,21 @@ export default function ProgressSummary({ checklist }: { checklist?: ChecklistIt
             <p className="mt-1 text-sm font-medium text-primary truncate group-hover:text-accent transition-colors">
               {nextUp.label}
             </p>
-            <p className="text-xs text-slate-500 truncate">
-              {nextUp.sub}
+            {/* The school name truncates; the timing never does. On a phone the
+                ellipsis used to eat "· past due" first — the one part that
+                mattered most. */}
+            <p className="flex items-baseline min-w-0 text-xs text-slate-500">
+              <span className="truncate min-w-0">{nextUp.sub}</span>
               {nextUp.days !== null && nextUp.days >= 0 && (
-                <span className={nextUp.days <= 7 ? ' text-amber-700 font-medium' : ''}>
-                  {' · '}{nextUp.days === 0 ? 'due today' : `${nextUp.days} day${nextUp.days === 1 ? '' : 's'} left`}
+                <span className={`flex-shrink-0 whitespace-nowrap ${nextUp.days <= 7 ? 'text-amber-700 font-medium' : ''}`}>
+                  {'\u00a0· '}{nextUp.days === 0 ? 'due today' : `${nextUp.days} day${nextUp.days === 1 ? '' : 's'} left`}
                 </span>
               )}
               {/* Overdue is stated plainly, once, without alarm styling —
                   a wall of red "overdue" reads as failure, not motivation. */}
-              {nextUp.days !== null && nextUp.days < 0 && <span className="text-slate-400">{' · past due'}</span>}
+              {nextUp.days !== null && nextUp.days < 0 && (
+                <span className="flex-shrink-0 whitespace-nowrap text-slate-500">&nbsp;· past due</span>
+              )}
             </p>
           </Link>
         ) : (

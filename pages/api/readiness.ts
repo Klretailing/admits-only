@@ -77,7 +77,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     {
       id: 'complete-profile',
       label: 'Complete your profile',
-      complete: !!(profile && profile.gpa && (profile.satMath || (profile as any).actScore)),
+      // GPA only: SAT/ACT are optional, so requiring a score meant a
+      // test-optional student could never tick this off.
+      complete: !!(profile && profile.gpa),
       href: '/dashboard/profile',
       weight: 25,
     },
@@ -127,8 +129,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
   const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
 
+  /* The first three rules restate Getting Started checklist items, which the
+     dashboard already shows (as the checklist and as "Next up") whenever
+     setup is incomplete. Repeating them here put the same instruction on
+     screen three times. They now only fire once the checklist is gone. */
+  const checklistVisible = readiness < 100;
+
   // Rule: No profile
-  if (!profile) {
+  if (!profile && !checklistVisible) {
     nudges.push({
       id: 'setup-profile',
       message: 'Set up your profile to unlock college matching and your holistic score',
@@ -139,7 +147,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   // Rule: Profile exists but no essays
-  if (nudges.length < 3 && profile && essays.length === 0) {
+  if (nudges.length < 3 && profile && essays.length === 0 && !checklistVisible) {
     nudges.push({
       id: 'start-essay',
       message: 'Start your first essay — colleges weigh personal statements heavily',
@@ -150,7 +158,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   // Rule: Profile exists but no applications
-  if (nudges.length < 3 && profile && applications.length === 0) {
+  if (nudges.length < 3 && profile && applications.length === 0 && !checklistVisible) {
     nudges.push({
       id: 'add-schools',
       message: 'Add your target schools to track deadlines and stay organized',
@@ -179,8 +187,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  // Rule: Profile was recently updated — re-check matches
-  if (nudges.length < 3 && profile && (profile as any).updatedAt) {
+  // Rule: Profile was recently updated — re-check matches.
+  // "Recently" was missing: every profile has an updatedAt, so this showed
+  // permanently. Three days is long enough to act on, short enough to go away.
+  const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+  if (nudges.length < 3 && profile && (profile as any).updatedAt &&
+      now.getTime() - new Date((profile as any).updatedAt).getTime() < THREE_DAYS_MS) {
     nudges.push({
       id: 'recheck-matches',
       message: 'Your profile was updated — re-check your college matches for the latest fit scores',
@@ -212,16 +224,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  // Rule: High readiness
-  if (nudges.length < 3 && readiness >= 80) {
-    nudges.push({
-      id: 'great-progress',
-      message: "Great progress! You're well-prepared for application season",
-      action: 'View dashboard',
-      href: '/dashboard',
-      type: 'success',
-    });
-  }
+  /* (A "Great progress!" nudge used to live here. It occupied an alert slot
+     and linked to the dashboard from the dashboard. The progress bar at the
+     top already says it, so it was removed.) */
 
   // Rule: High-scoring essay
   if (nudges.length < 3) {

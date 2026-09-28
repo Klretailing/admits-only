@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { useEffect, useState, useCallback, useRef, type ReactNode } from 'react';
 import Head from 'next/head';
 import DashboardLayout from '../../components/DashboardLayout';
+import PageHeader from '../../components/PageHeader';
 import { useStaggerReveal } from '../../hooks/useAnimations';
 import {
   MAJORS, QUIZ_QUESTIONS, categoryConfig, milestoneColor,
@@ -61,26 +62,17 @@ function MajorPicker({
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-11 h-11 rounded-xl bg-accent flex items-center justify-center shadow-sm">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-            </svg>
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold font-display text-primary">Career Roadmap</h1>
-            <p className="text-sm text-slate-500 mt-0.5">Explore career paths from any major</p>
-          </div>
-        </div>
-        <button
-          onClick={onStartQuiz}
-          className="bg-accent text-white px-6 py-3 rounded-xl font-semibold hover:bg-accent/90 transition-all hover:-translate-y-0.5"
-        >
-          Help Me Explore
-        </button>
-      </div>
+      <PageHeader
+        eyebrow="Careers"
+        title="Career Roadmap"
+        subtitle="Explore career paths from any major"
+        icon={
+          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+          </svg>
+        }
+        actions={<button onClick={onStartQuiz} className="btn-primary">Help Me Explore</button>}
+      />
 
       {/* Major grid */}
       <div ref={ref} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">

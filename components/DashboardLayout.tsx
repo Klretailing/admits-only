@@ -6,6 +6,9 @@ import { AdamPanel, AdamNavButton, AdamFloatingButton } from './AdamAssistant';
 import { useTheme } from '../lib/themeContext';
 import { tracker } from '../lib/analytics';
 
+/** The pages that get a slot in the mobile tab bar; the rest live under More. */
+const MOBILE_TABS = ['/dashboard', '/dashboard/essays', '/dashboard/progress', '/dashboard/pods'];
+
 const sidebarLinks = [
   {
     href: '/dashboard',
@@ -293,7 +296,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       )}
 
       {/* Main content */}
-      <div className="flex-1 min-w-0 flex flex-col min-h-screen pb-16 lg:pb-0">
+      {/* pb-36 on mobile: clears the tab bar AND the floating Ask Adam button,
+          which otherwise sat on top of the last row of content ("+ Track"). */}
+      <div className="flex-1 min-w-0 flex flex-col min-h-screen pb-36 lg:pb-0">
         {/* Top bar */}
         <header className="h-14 lg:h-16 bg-white border-b border-slate-100 flex items-center justify-between px-4 lg:px-6 flex-shrink-0 relative">
           <div className="flex items-center gap-3">
@@ -360,10 +365,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </main>
       </div>
 
-      {/* Mobile bottom tab bar */}
+      {/* Mobile bottom tab bar.
+          Nine tabs at 43px each fell under the 44px minimum touch target and
+          forced labels down to "Apps"/"Map". Tab bars work at 3–5 items, so it
+          keeps the four places students return to most — Pods included,
+          since the community channels are the return-visit engine — and
+          "More" opens the full drawer, so nothing becomes unreachable. */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-slate-200 safe-area-pb">
         <div className="flex items-center justify-around h-14">
-          {sidebarLinks.map((link) => {
+          {sidebarLinks.filter((link) => MOBILE_TABS.includes(link.href)).map((link) => {
             const active = router.pathname === link.href;
             return (
               <Link
@@ -376,10 +386,24 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               >
                 {active && <div className="absolute top-0 left-1/4 right-1/4 h-[2px] bg-accent rounded-full" />}
                 <span className={active ? 'text-accent' : 'text-slate-400'}>{link.icon}</span>
-                <span className={`text-[10px] font-medium ${active ? 'font-semibold' : ''}`}>{link.mobileLabel}</span>
+                <span className={`text-[11px] font-medium ${active ? 'font-semibold' : ''}`}>{link.mobileLabel}</span>
               </Link>
             );
           })}
+          {(() => {
+            const moreActive = !MOBILE_TABS.includes(router.pathname);
+            return (
+              <button
+                onClick={() => { tracker.nav('mobile_tab', 'more'); setMobileMenuOpen(true); }}
+                className={`flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-all relative ${moreActive ? 'text-accent' : 'text-slate-400'}`}
+                aria-label="More pages"
+              >
+                {moreActive && <div className="absolute top-0 left-1/4 right-1/4 h-[2px] bg-accent rounded-full" />}
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 6h16M4 12h16M4 18h16" /></svg>
+                <span className={`text-[11px] font-medium ${moreActive ? 'font-semibold' : ''}`}>More</span>
+              </button>
+            );
+          })()}
         </div>
       </nav>
 
