@@ -28,20 +28,22 @@ const FROM = 'AdmitsOnly <hello@admitsonly.com>';
 const RESEND_URL = process.env.RESEND_BASE_URL || 'https://api.resend.com/emails';
 const APP_URL = process.env.NEXTAUTH_URL || 'https://admitsonly.com';
 
-export type EmailKind = 'essay_feedback' | 'deadline_reminder' | 'weekly_digest';
+export type EmailKind = 'essay_feedback' | 'deadline_reminder' | 'weekly_digest' | 'idle_nudge';
 
 export interface EmailPrefs {
   essayFeedback: boolean;
   deadlineReminders: boolean;
   weeklyDigest: boolean;
+  idleNudges: boolean;
 }
 
-const DEFAULT_PREFS: EmailPrefs = { essayFeedback: true, deadlineReminders: true, weeklyDigest: true };
+const DEFAULT_PREFS: EmailPrefs = { essayFeedback: true, deadlineReminders: true, weeklyDigest: true, idleNudges: true };
 
 const PREF_COLUMN: Record<EmailKind, keyof EmailPrefs> = {
   essay_feedback: 'essayFeedback',
   deadline_reminder: 'deadlineReminders',
   weekly_digest: 'weeklyDigest',
+  idle_nudge: 'idleNudges',
 };
 
 export function unsubToken(userId: string): string {
@@ -64,6 +66,8 @@ export async function ensureEmailSchema(): Promise<void> {
       "weeklyDigest"      BOOLEAN NOT NULL DEFAULT true,
       "updatedAt"         TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`);
+  await prisma.$executeRawUnsafe(
+    `ALTER TABLE "email_preferences" ADD COLUMN IF NOT EXISTS "idleNudges" BOOLEAN NOT NULL DEFAULT true`);
   await prisma.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS "email_log" (
       "id"        TEXT PRIMARY KEY,
@@ -79,13 +83,14 @@ export async function ensureEmailSchema(): Promise<void> {
 export async function getPrefs(userId: string): Promise<EmailPrefs> {
   try {
     const rows: any[] = await prisma.$queryRaw`
-      SELECT "essayFeedback", "deadlineReminders", "weeklyDigest"
+      SELECT "essayFeedback", "deadlineReminders", "weeklyDigest", "idleNudges"
         FROM "email_preferences" WHERE "userId" = ${userId}`;
     if (!rows[0]) return DEFAULT_PREFS;
     return {
       essayFeedback: rows[0].essayFeedback !== false,
       deadlineReminders: rows[0].deadlineReminders !== false,
       weeklyDigest: rows[0].weeklyDigest !== false,
+      idleNudges: rows[0].idleNudges !== false,
     };
   } catch {
     return DEFAULT_PREFS;
@@ -97,12 +102,13 @@ export async function setPrefs(userId: string, prefs: Partial<EmailPrefs>): Prom
   const cur = await getPrefs(userId);
   const next = { ...cur, ...prefs };
   await prisma.$executeRaw`
-    INSERT INTO "email_preferences" ("userId","essayFeedback","deadlineReminders","weeklyDigest","updatedAt")
-    VALUES (${userId}, ${next.essayFeedback}, ${next.deadlineReminders}, ${next.weeklyDigest}, CURRENT_TIMESTAMP)
+    INSERT INTO "email_preferences" ("userId","essayFeedback","deadlineReminders","weeklyDigest","idleNudges","updatedAt")
+    VALUES (${userId}, ${next.essayFeedback}, ${next.deadlineReminders}, ${next.weeklyDigest}, ${next.idleNudges}, CURRENT_TIMESTAMP)
     ON CONFLICT ("userId") DO UPDATE
       SET "essayFeedback" = EXCLUDED."essayFeedback",
           "deadlineReminders" = EXCLUDED."deadlineReminders",
           "weeklyDigest" = EXCLUDED."weeklyDigest",
+          "idleNudges" = EXCLUDED."idleNudges",
           "updatedAt" = CURRENT_TIMESTAMP`;
 }
 
@@ -117,7 +123,9 @@ function shell(opts: {
   ctaLabel?: string;
   ctaHref?: string;
   footerNote: string;
-  unsubHref: string;
+  /** Omitted for transactional mail (password resets), which is not
+      something a person can or should opt out of. */
+  unsubHref?: string;
 }): string {
   const { preheader, heading, body, ctaLabel, ctaHref, footerNote, unsubHref } = opts;
   return `<!doctype html>
@@ -145,8 +153,8 @@ function shell(opts: {
         </td></tr>
       </table>
       <p style="margin:16px 0 0;font:400 12px/1.6 -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#a29a90;max-width:520px;">
-        <a href="${unsubHref}" style="color:#a29a90;text-decoration:underline;">Turn off these emails</a>
-        &nbsp;·&nbsp; You are getting this because you have an AdmitsOnly account.
+        ${unsubHref ? `<a href="${unsubHref}" style="color:#a29a90;text-decoration:underline;">Turn off these emails</a>
+        &nbsp;·&nbsp; ` : ''}You are getting this because you have an AdmitsOnly account.
       </p>
     </td></tr>
   </table>
@@ -223,6 +231,51 @@ export async function sendEmail(a: SendArgs): Promise<SendResult> {
       DELETE FROM "email_log" WHERE "userId" = ${a.userId} AND "kind" = ${a.kind} AND "dedupeKey" = ${a.dedupeKey}`.catch(() => {});
     return 'failed';
   }
+}
+
+/* ─── transactional ───
+   Password resets bypass all three rules above, on purpose:
+     • no preference check — someone who turned off every email must still be
+       able to get back into their account;
+     • no dedupe — asking twice should send twice (the first may be in spam);
+     • no unsubscribe link — there is nothing to unsubscribe from.
+   Only mail the person explicitly requested goes through here. */
+export async function sendTransactional(a: {
+  to: string; subject: string; preheader: string; heading: string; body: string;
+  ctaLabel: string; ctaHref: string; footerNote: string;
+}): Promise<SendResult> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return 'not_configured';
+  const html = shell({
+    preheader: a.preheader, heading: a.heading, body: a.body,
+    ctaLabel: a.ctaLabel, ctaHref: a.ctaHref, footerNote: a.footerNote,
+  });
+  try {
+    const res = await fetch(RESEND_URL, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: FROM, to: [a.to], subject: a.subject, html }),
+    });
+    return res.ok ? 'sent' : 'failed';
+  } catch {
+    return 'failed';
+  }
+}
+
+export async function sendPasswordResetEmail(args: {
+  to: string; name?: string | null; resetUrl: string; minutesValid: number;
+}): Promise<SendResult> {
+  return sendTransactional({
+    to: args.to,
+    subject: 'Reset your AdmitsOnly password',
+    preheader: 'A link to choose a new password.',
+    heading: `Let's get you back in, ${firstName(args.name)}`,
+    body: `<p style="margin:0 0 14px;">Someone — hopefully you — asked to reset the password for this account. Use the button below to choose a new one.</p>
+           <p style="margin:0;">The link works once and expires in ${args.minutesValid} minutes.</p>`,
+    ctaLabel: 'Choose a new password',
+    ctaHref: args.resetUrl,
+    footerNote: 'If you did not ask for this, you can ignore this email. Your password stays the same until someone uses the link.',
+  });
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -306,6 +359,32 @@ export async function sendWeeklyDigestEmail(args: {
     ctaLabel: 'Pick up where you left off',
     ctaHref: `${APP_URL}/dashboard`,
     footerNote: 'We only send this when something actually happened — never just to fill an inbox.',
+  });
+}
+
+export async function sendIdleNudgeEmail(args: {
+  userId: string; to: string; name?: string | null;
+  openTasks: number; schools: number;
+  next?: { task: string; school: string } | null;
+  dedupeKey: string;
+}): Promise<SendResult> {
+  const nextLine = args.next
+    ? `<p style="margin:0 0 14px;">If you want an easy place to start: <strong>${escapeHtml(args.next.task)}</strong> for ${escapeHtml(args.next.school)}.</p>`
+    : '';
+  return sendEmail({
+    userId: args.userId,
+    to: args.to,
+    kind: 'idle_nudge',
+    dedupeKey: args.dedupeKey,
+    subject: `${args.openTasks} task${args.openTasks === 1 ? '' : 's'} waiting when you're ready`,
+    preheader: 'Your applications are right where you left them.',
+    heading: `Your list is waiting for you, ${firstName(args.name)}`,
+    body: `<p style="margin:0 0 14px;">It has been a little while, so here is where things stand: you have <strong>${args.openTasks} open task${args.openTasks === 1 ? '' : 's'}</strong> across ${args.schools} school${args.schools === 1 ? '' : 's'}.</p>
+           ${nextLine}
+           <p style="margin:0;">Ten minutes is enough to move one thing forward. Everything is saved exactly as you left it.</p>`,
+    ctaLabel: 'Open your tracker',
+    ctaHref: `${APP_URL}/dashboard/progress`,
+    footerNote: 'We send this at most twice in a quiet stretch, and never on a day you already heard from us.',
   });
 }
 

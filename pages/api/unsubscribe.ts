@@ -6,16 +6,18 @@ import { verifyUnsubToken, setPrefs, ensureEmailSchema, type EmailKind } from '.
    happen. The token is an HMAC of the user id, so the link cannot be guessed
    or used to unsubscribe anyone else. */
 
-const KIND_TO_PREF: Record<string, 'essayFeedback' | 'deadlineReminders' | 'weeklyDigest'> = {
+const KIND_TO_PREF: Record<string, 'essayFeedback' | 'deadlineReminders' | 'weeklyDigest' | 'idleNudges'> = {
   essay_feedback: 'essayFeedback',
   deadline_reminder: 'deadlineReminders',
   weekly_digest: 'weeklyDigest',
+  idle_nudge: 'idleNudges',
 };
 
 const LABEL: Record<string, string> = {
   essay_feedback: 'essay feedback emails',
   deadline_reminder: 'deadline reminders',
   weekly_digest: 'the weekly catch-up',
+  idle_nudge: 'check-ins about unfinished tasks',
 };
 
 function page(title: string, message: string): string {
@@ -49,7 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       await setPrefs(u, { [pref]: false } as any);
       return res.status(200).send(page('Done — those are off', `You will not get ${LABEL[k] || 'those emails'} any more. Everything else stays as it was, and you can turn them back on in Settings whenever you like.`));
     }
-    await setPrefs(u, { essayFeedback: false, deadlineReminders: false, weeklyDigest: false });
+    await setPrefs(u, { essayFeedback: false, deadlineReminders: false, weeklyDigest: false, idleNudges: false });
     return res.status(200).send(page('Done — all emails off', 'You will not get any more email from us. You can turn them back on in Settings whenever you like.'));
   } catch {
     return res.status(500).send(page('Something went wrong', 'Please try again in a moment, or change your email settings from the dashboard.'));

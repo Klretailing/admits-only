@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { useEffect, useState, useMemo, useRef } from 'react';
 import Head from 'next/head';
 import DashboardLayout from '../../components/DashboardLayout';
+import PageHeader from '../../components/PageHeader';
 
 /* ── Types (mirror /api/sample-essays) ── */
 interface EssayMeta {
@@ -292,22 +293,20 @@ export default function EssaySamples() {
       <Head><title>Essay Samples | AdmitsOnly</title></Head>
 
       <div className="space-y-6">
-        {/* Header */}
-        <div>
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-2xl font-bold font-display text-primary">Essay Samples</h1>
-            {access.all && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-xs font-bold">
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                Full access
-              </span>
-            )}
-          </div>
-          <p className="mt-1 text-slate-500 text-sm">
+        <PageHeader
+          eyebrow="Essays"
+          title="Essay Samples"
+          subtitle={<>
             Real, anonymized admissions essays — organized by the school and prompt each was written for.
             {total > 0 && <span className="text-slate-400"> {total} essays available.</span>}
-          </p>
-        </div>
+          </>}
+          actions={access.all ? (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+              Full access
+            </span>
+          ) : undefined}
+        />
 
         {/* Search */}
         <div className="relative">

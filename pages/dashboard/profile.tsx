@@ -153,10 +153,12 @@ function computeDiversityScore(ecs: Extracurricular[]) {
 
   let feedback = '';
   if (filledBuckets === totalBuckets) feedback = 'Exceptional breadth across all activity categories.';
-  else if (filledBuckets >= 5) feedback = 'Strong diversity. Consider exploring: ' + missing.slice(0, 2).join(', ') + '.';
-  else if (filledBuckets >= 3) feedback = 'Good foundation. Explore ' + missing.slice(0, 2).join(' or ') + ' to stand out.';
+  // Missing categories are shown once, in the coverage legend below, so the
+  // feedback no longer repeats their names.
+  else if (filledBuckets >= 5) feedback = 'Strong breadth across activity types.';
+  else if (filledBuckets >= 3) feedback = 'Good foundation. One or two new activity types would round it out.';
   else if (filledBuckets >= 1) feedback = 'Narrow focus so far. Admissions officers value well-rounded profiles.';
-  else feedback = 'Add activities to see your diversity score.';
+  else feedback = 'Add activities to see your breadth score.';
 
   return { score, filledBuckets, totalBuckets, missing, feedback };
 }
@@ -1052,7 +1054,7 @@ export default function StudentProfile() {
                 <h3 className="relative text-lg font-bold font-display text-slate-800 mb-5">Activity Scoreboard</h3>
 
                 <div className="relative flex items-center justify-around gap-4 mb-6">
-                  <ScoreRing score={diversity.score} label="Diversity" size={95} color="#a78bfa" glowColor="#c4b5fd" />
+                  <ScoreRing score={diversity.score} label="Breadth" size={95} color="#a78bfa" glowColor="#c4b5fd" />
                   <ScoreRing score={depth.score} label="Depth" size={95} color="#22d3ee" glowColor="#67e8f9" />
                   <ScoreRing score={results.ecScore} label="Overall EC" size={95} color="#34d399" glowColor="#6ee7b7" />
                 </div>
@@ -1064,12 +1066,23 @@ export default function StudentProfile() {
                     {EC_BUCKETS.map(b => {
                       const filled = ecsByBucket[b.key]?.length > 0;
                       return (
-                        <div key={b.key} className="flex-1 group relative">
-                          <div className={`h-3 rounded-full transition-all ${filled ? '' : 'bg-slate-100'}`} style={filled ? { backgroundColor: b.ring } : undefined} />
-                          <div className="absolute -top-8 left-1/2 -translate-x-1/2 hidden group-hover:block z-10">
-                            <span className="text-[9px] bg-white text-slate-800 px-2 py-0.5 rounded shadow-sm whitespace-nowrap">{b.label}</span>
-                          </div>
-                        </div>
+                        <div key={b.key} title={b.label} className={`flex-1 h-3 rounded-full transition-all ${filled ? '' : 'bg-slate-100'}`} style={filled ? { backgroundColor: b.ring } : undefined} />
+                      );
+                    })}
+                  </div>
+                  {/* Seven coloured segments meant nothing without hovering each
+                      one (impossible on a phone). A visible legend says which is
+                      which, and shows the gaps in place. */}
+                  <div className="mt-2.5 flex flex-wrap gap-x-3 gap-y-1.5">
+                    {EC_BUCKETS.map(b => {
+                      const filled = ecsByBucket[b.key]?.length > 0;
+                      return (
+                        <span key={b.key} className={`inline-flex items-center gap-1.5 text-[11px] ${filled ? 'text-slate-600' : 'text-amber-700'}`}>
+                          {filled
+                            ? <span className="w-2 h-2 rounded-full" style={{ backgroundColor: b.ring }} />
+                            : <span className="w-2 h-2 rounded-full border border-amber-500" />}
+                          {filled ? b.label : `${b.label} — not yet`}
+                        </span>
                       );
                     })}
                   </div>
@@ -1078,7 +1091,7 @@ export default function StudentProfile() {
                 {/* Feedback */}
                 <div className="relative space-y-2">
                   <div className="p-3 rounded-xl bg-violet-50 border border-violet-200">
-                    <p className="text-[10px] font-semibold text-violet-600 uppercase tracking-wider">Diversity</p>
+                    <p className="text-[10px] font-semibold text-violet-600 uppercase tracking-wider">Breadth</p>
                     <p className="text-xs text-violet-700 mt-0.5">{diversity.feedback}</p>
                   </div>
                   <div className="p-3 rounded-xl bg-cyan-50 border border-cyan-200">
@@ -1087,17 +1100,6 @@ export default function StudentProfile() {
                   </div>
                 </div>
 
-                {/* Missing categories */}
-                {diversity.missing.length > 0 && diversity.missing.length <= 4 && (
-                  <div className="relative mt-3 p-3 rounded-xl bg-amber-50 border border-amber-200">
-                    <p className="text-[10px] font-semibold text-amber-600 uppercase tracking-wider mb-1.5">Consider adding</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {diversity.missing.map(cat => (
-                        <span key={cat} className="px-2.5 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-medium rounded-full border border-amber-200">{cat}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 
@@ -1292,7 +1294,8 @@ function ConnectionCodeSection() {
         <button
           onClick={handleCopy}
           className={`px-5 py-3 rounded-xl text-sm font-semibold transition-all ${
-            copied ? 'bg-emerald-50 text-emerald-600' : 'bg-accent text-white hover:bg-accent/90'
+            // Secondary style: "Evaluate My Profile" is this page's one primary action.
+            copied ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-white text-accent border border-accent/30 hover:bg-accent/5'
           }`}
         >
           {copied ? 'Copied!' : 'Copy'}

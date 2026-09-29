@@ -13,10 +13,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const userId = (session.user as any).id as string;
 
-  const [profile, essays] = await Promise.all([
+  const [profile, essays, user] = await Promise.all([
     prisma.studentProfile.findUnique({ where: { userId } }),
     prisma.essay.findMany({ where: { userId }, orderBy: { updatedAt: 'desc' } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { createdAt: true } }),
   ]);
+  // "Welcome back" is wrong on someone's first day.
+  const firstDay = !!user && Date.now() - user.createdAt.getTime() < 24 * 60 * 60 * 1000;
 
   const totalSAT = profile ? ((profile.satMath || 0) + (profile.satRW || 0)) : 0;
   const essayCount = essays.length;
@@ -24,11 +27,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const essaysComplete = essays.filter(e => e.status === 'Complete').length;
 
   return res.json({
+    firstDay,
     profile,
     stats: {
       satScore: totalSAT > 0 ? totalSAT.toString() : '—',
       essayCount: essayCount.toString(),
-      essayStatus: essaysInReview > 0 ? `${essaysInReview} in review` : essaysComplete > 0 ? `${essaysComplete} complete` : 'none yet',
+      // Previously "none yet" whenever nothing was in review, which printed
+      // "2 · none yet" for a student with two drafts.
+      essayStatus: essaysInReview > 0 ? `${essaysInReview} in review`
+        : essaysComplete > 0 ? `${essaysComplete} complete`
+        : essayCount > 0 ? 'in draft' : 'none yet',
       holisticScore: profile?.holisticScore?.toString() || '—',
       percentile: profile?.percentile?.toString() || '—',
       gpa: profile?.gpa?.toFixed(2) || '—',

@@ -67,7 +67,9 @@ export function useInView(threshold = 0.15) {
   return { ref, isVisible };
 }
 
-export function useCountUp(end: number, duration = 2000, startOnView = true) {
+/** Animates 0 → end. `decimals` keeps fractional values intact: flooring every
+    frame used to turn a 3.98 GPA into "3". */
+export function useCountUp(end: number, duration = 2000, startOnView = true, decimals = 0) {
   const [count, setCount] = useState(0);
   const [started, setStarted] = useState(!startOnView);
   const ref = useRef<HTMLDivElement>(null);
@@ -101,7 +103,8 @@ export function useCountUp(end: number, duration = 2000, startOnView = true) {
       if (!startTime) startTime = timestamp;
       const progress = Math.min((timestamp - startTime) / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 3);
-      setCount(Math.floor(eased * end));
+      const f = 10 ** decimals;
+      setCount(progress >= 1 ? end : Math.floor(eased * end * f) / f);
 
       if (progress < 1) {
         raf = requestAnimationFrame(animate);
@@ -110,7 +113,7 @@ export function useCountUp(end: number, duration = 2000, startOnView = true) {
 
     raf = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(raf);
-  }, [started, end, duration]);
+  }, [started, end, duration, decimals]);
 
   return { count, ref };
 }

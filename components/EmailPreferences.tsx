@@ -3,12 +3,13 @@ import { useEffect, useState } from 'react';
 /* Student-facing control over the three emails. Every one is on by default
    and every one can be turned off here or from the link in any email. */
 
-interface Prefs { essayFeedback: boolean; deadlineReminders: boolean; weeklyDigest: boolean }
+interface Prefs { essayFeedback: boolean; deadlineReminders: boolean; weeklyDigest: boolean; idleNudges: boolean }
 
 const ROWS: { key: keyof Prefs; label: string; detail: string }[] = [
   { key: 'essayFeedback', label: 'Essay feedback', detail: 'When your tutor finishes reading a draft and leaves notes.' },
   { key: 'deadlineReminders', label: 'Deadline reminders', detail: 'A heads-up at 7, 3, and 1 day before an application is due. Once each, never repeated.' },
   { key: 'weeklyDigest', label: 'Weekly catch-up', detail: 'A short Sunday summary — only sent when something actually happened.' },
+  { key: 'idleNudges', label: 'Unfinished-task check-ins', detail: 'If you have been away 5 days with tasks still open. At most twice per quiet stretch.' },
 ];
 
 export default function EmailPreferences() {

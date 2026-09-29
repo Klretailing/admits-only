@@ -13,11 +13,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.json({ prefs: await getPrefs(userId) });
   }
   if (req.method === 'PUT') {
-    const { essayFeedback, deadlineReminders, weeklyDigest } = req.body || {};
+    const { essayFeedback, deadlineReminders, weeklyDigest, idleNudges } = req.body || {};
     const patch: Record<string, boolean> = {};
     if (typeof essayFeedback === 'boolean') patch.essayFeedback = essayFeedback;
     if (typeof deadlineReminders === 'boolean') patch.deadlineReminders = deadlineReminders;
     if (typeof weeklyDigest === 'boolean') patch.weeklyDigest = weeklyDigest;
+    if (typeof idleNudges === 'boolean') patch.idleNudges = idleNudges;
     await setPrefs(userId, patch as any);
     return res.json({ ok: true, prefs: await getPrefs(userId) });
   }
