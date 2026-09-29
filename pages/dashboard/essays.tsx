@@ -2396,6 +2396,15 @@ function GrammarEditor({
    SCORE BAR COMPONENT (compact for sidebar)
    ══════════════════════════════════════════════════════════════════════ */
 
+/* Score colours are bright enough for a bar fill but not for small text:
+   #f59e0b on white is 2.15:1 and #10b981 is 2.54:1. Numbers and grades use a
+   darker shade of the same hue in light mode and a lighter one in dark mode. */
+const SCORE_INK: Record<string, string> = {
+  '#10b981': 'text-emerald-700 dark:text-emerald-400',
+  '#f59e0b': 'text-amber-700 dark:text-amber-400',
+  '#ef4444': 'text-red-700 dark:text-red-400',
+};
+
 function ScoreBar({ label, value, color, sublabel, invert }: {
   label: string; value: number | null; color: string; sublabel: string; invert?: boolean;
 }) {
@@ -2418,11 +2427,12 @@ function ScoreBar({ label, value, color, sublabel, invert }: {
         <span className="text-[11px] font-semibold text-slate-600">{label}</span>
         <div className="flex items-center gap-1.5">
           {value != null && (
-            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md" style={{ backgroundColor: `${barColor}15`, color: barColor }}>
+            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${SCORE_INK[barColor] || ''}`}
+              style={{ backgroundColor: `${barColor}15`, ...(SCORE_INK[barColor] ? {} : { color: barColor }) }}>
               {grade}
             </span>
           )}
-          <span className="text-[11px] font-bold" style={{ color: barColor }}>
+          <span className={`text-[11px] font-bold ${SCORE_INK[barColor] || ''}`} style={SCORE_INK[barColor] ? undefined : { color: barColor }}>
             {value != null ? (invert ? `${value}%` : `${value}`) : '\u2014'}
           </span>
         </div>
@@ -2563,7 +2573,26 @@ export default function Essays() {
   // Load essays + ECs
   useEffect(() => {
     if (status !== 'authenticated') return;
-    fetch('/api/essays').then(r => r.json()).then(d => { setEssays(d.essays || []); setLoading(false); }).catch(() => setLoading(false));
+    fetch('/api/essays').then(r => r.json()).then(d => {
+      const list: Essay[] = d.essays || [];
+      setEssays(list);
+      setLoading(false);
+      /* Open straight into writing. The page used to land on an empty
+         "Select an Essay" panel every visit, one more click between a student
+         and the thing they came to do. A deep link (?essay=, from the
+         dashboard's "Pick up where you left off") wins; otherwise, on desktop
+         where list and editor sit side by side, open the most recently edited
+         draft. Phones keep the list first, since there the editor replaces it. */
+      const wanted = typeof router.query.essay === 'string' ? list.find(e => e.id === router.query.essay) : undefined;
+      const recent = [...list].sort((x, y) => new Date(y.updatedAt).getTime() - new Date(x.updatedAt).getTime())[0];
+      if (wanted) {
+        setActiveEssay(wanted); setEditContent(wanted.content || ''); setMobileEssayView('editor'); setMobileEditorTab('write');
+        router.replace('/dashboard/essays', undefined, { shallow: true });
+      } else if (recent && typeof window !== 'undefined' && window.innerWidth >= 1024) {
+        setActiveEssay(prev => prev || recent);
+        setEditContent(prev => prev || recent.content || '');
+      }
+    }).catch(() => setLoading(false));
     fetch('/api/profile').then(r => r.json()).then(d => { if (d.profile?.extracurriculars) setEcs(d.profile.extracurriculars as Extracurricular[]); setEcsLoading(false); }).catch(() => setEcsLoading(false));
     fetch('/api/motifs').then(r => r.json()).then(d => setSavedBoards(d.boards || [])).catch(() => {});
     fetch('/api/essays/submit-for-review').then(r => r.json()).then(d => {
@@ -3861,7 +3890,7 @@ export default function Essays() {
                               <div className="flex items-center gap-1.5 mb-2">
                                 <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
                                 <h5 className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider">Prompt Alignment</h5>
-                                <span className="text-[10px] font-bold ml-auto" style={{ color: essayInsights.promptAlignment.score >= 70 ? '#10b981' : essayInsights.promptAlignment.score >= 40 ? '#f59e0b' : '#ef4444' }}>
+                                <span className={`text-[10px] font-bold ml-auto ${SCORE_INK[essayInsights.promptAlignment.score >= 70 ? '#10b981' : essayInsights.promptAlignment.score >= 40 ? '#f59e0b' : '#ef4444']}`}>
                                   {essayInsights.promptAlignment.score}%
                                 </span>
                               </div>

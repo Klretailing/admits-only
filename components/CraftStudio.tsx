@@ -13,6 +13,12 @@ const SEV_STYLE: Record<CraftSeverity, { dot: string; chip: string; ring: string
 };
 
 const METRIC_COLOR: Record<string, string> = { good: '#10b981', warn: '#f59e0b', bad: '#ef4444' };
+// Bright hues fill the bars; the numbers need darker (light) / lighter (dark) ink to be legible.
+const METRIC_INK: Record<string, string> = {
+  good: 'text-emerald-700 dark:text-emerald-400',
+  warn: 'text-amber-700 dark:text-amber-400',
+  bad: 'text-red-700 dark:text-red-400',
+};
 
 function SuggestionCard({ s }: { s: CraftSuggestion }) {
   const [open, setOpen] = useState(false);
@@ -97,7 +103,7 @@ export default function CraftStudio({ report }: { report: CraftReport }) {
           <div key={m.key} className="rounded-lg bg-slate-50 border border-slate-100 px-2.5 py-2">
             <div className="flex items-baseline justify-between">
               <span className="text-[9.5px] font-semibold text-slate-500 uppercase tracking-wide">{m.label}</span>
-              <span className="text-[13px] font-bold" style={{ color: METRIC_COLOR[m.status] }}>{m.value}</span>
+              <span className={`text-[13px] font-bold ${METRIC_INK[m.status]}`}>{m.value}</span>
             </div>
             <div className="mt-1 h-1 rounded-full bg-slate-200 overflow-hidden">
               <div className="h-full rounded-full transition-all duration-500" style={{ width: `${m.value}%`, backgroundColor: METRIC_COLOR[m.status] }} />

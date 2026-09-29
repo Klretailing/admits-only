@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../lib/auth';
 import { prisma, ensureSchema } from '../../lib/db';
 import { ensureCommunityChannels, listCommunityChannels, isCommunityChannel } from '../../lib/community';
+import { markPodRead, unreadCounts } from '../../lib/podReads';
 import crypto from 'crypto';
 
 function generateInviteCode(): string {
@@ -28,6 +29,16 @@ function groupReactions(rows: { messageId: string; emoji: string; userId: string
     grouped[r.messageId][r.emoji].push(r.userId);
   }
   return grouped;
+}
+
+/** Private pods need membership; community channels are readable by any
+    signed-in student. One definition, used by every read path. */
+async function canRead(podId: string, userId: string): Promise<boolean> {
+  if (await isCommunityChannel(podId)) return true;
+  const membership = await (prisma as any).podMember.findUnique({
+    where: { podId_userId: { podId, userId } },
+  });
+  return !!membership;
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -58,13 +69,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (!membership) return res.status(403).json({ error: 'Not a member of this pod' });
       }
 
-      const messages = await (prisma as any).podMessage.findMany({
+      // Latest 100, shown oldest-first. `asc` + `take` returned the FIRST 100
+      // ever posted, so a busy channel would stop showing anything new.
+      const messages = (await (prisma as any).podMessage.findMany({
         where: { podId: podId as string, hidden: false },
         include: { user: { select: { id: true, name: true } } },
-        orderBy: { createdAt: 'asc' },
+        orderBy: { createdAt: 'desc' },
         take: 100,
-      });
+      })).reverse();
       return res.json({ messages });
+    }
+
+    // Unread totals for the nav badge: cheap, no message bodies.
+    if (action === 'unread') {
+      const memberships = await (prisma as any).podMember.findMany({ where: { userId: user.id }, select: { podId: true } });
+      const channels = await listCommunityChannels();
+      const ids = [...memberships.map((m: any) => m.podId), ...channels.map(c => c.id)];
+      const byPod = await unreadCounts(user.id, ids);
+      const total = Object.values(byPod).reduce((a, b) => a + b, 0);
+      return res.json({ total, byPod });
     }
 
     // Get members for a specific pod
@@ -85,18 +108,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Consolidated bootstrap: everything needed to open a pod in ONE round-trip
     if (action === 'bootstrap' && podId) {
       const pid = podId as string;
-      const membership = await (prisma as any).podMember.findUnique({
-        where: { podId_userId: { podId: pid, userId: user.id } },
-      });
-      if (!membership) return res.status(403).json({ error: 'Not a member of this pod' });
+      /* Community channels are open to every student without joining. This
+         check used to demand membership here and in `sync`, so every student
+         who opened #CollegeDecisions or #CollegeEssays got "Could not open this
+         pod" and an empty room, even though they could post into it. */
+      if (!(await canRead(pid, user.id))) return res.status(403).json({ error: 'Not a member of this pod' });
+      await markPodRead(user.id, pid).catch(() => {});
 
       const [messages, members, reactionRows, polls, stats, documents] = await Promise.all([
         (prisma as any).podMessage.findMany({
-          where: { podId: pid },
+          // hidden: two reports hide a message. Only the `messages` action
+          // filtered it before, so hidden posts still showed on screen.
+          where: { podId: pid, hidden: false },
           include: { user: { select: { id: true, name: true } } },
-          orderBy: { createdAt: 'asc' },
+          orderBy: { createdAt: 'desc' },
           take: 100,
-        }),
+        }).then((rows: any[]) => rows.reverse()),
         (prisma as any).podMember.findMany({
           where: { podId: pid },
           include: { user: { select: { id: true, name: true, email: true } } },
@@ -145,13 +172,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Incremental sync for cheap polling: only new messages + current reactions
     if (action === 'sync' && podId) {
       const pid = podId as string;
-      const membership = await (prisma as any).podMember.findUnique({
-        where: { podId_userId: { podId: pid, userId: user.id } },
-      });
-      if (!membership) return res.status(403).json({ error: 'Not a member of this pod' });
+      if (!(await canRead(pid, user.id))) return res.status(403).json({ error: 'Not a member of this pod' });
+      // Polling continues in background tabs; only count it as read when the
+      // client says the student can actually see it.
+      if (req.query.seen === '1') await markPodRead(user.id, pid).catch(() => {});
 
       const after = req.query.after as string | undefined;
-      const whereClause: any = { podId: pid };
+      const whereClause: any = { podId: pid, hidden: false };
       if (after) {
         const afterDate = new Date(after);
         if (!isNaN(afterDate.getTime())) whereClause.createdAt = { gt: afterDate };
@@ -205,7 +232,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Community channels ride along on every list response so the sidebar can
     // pin them above a student's own pods without a second round trip.
     const channels = await listCommunityChannels();
-    return res.json({ pods, channels });
+    const unread = await unreadCounts(user.id, [...pods.map((p: any) => p.id), ...channels.map(c => c.id)]);
+    return res.json({
+      pods: pods.map((p: any) => ({ ...p, unreadCount: unread[p.id] || 0 })),
+      channels: channels.map(c => ({ ...c, unreadCount: unread[c.id] || 0 })),
+    });
   }
 
   /* ─── POST: Create pod or send message ─── */

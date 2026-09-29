@@ -22,7 +22,7 @@ interface AnalyticsData {
   featureUsage: Array<{ feature: string; action: string; count: number }>;
   navSources: Array<{ source: string; count: number }>;
   navTargets: Array<{ target: string; count: number }>;
-  durationStats: { avg: number; max: number; median: number };
+  durationStats: { avg: number; max: number; median: number; visits: number };
   depthStats: { avgPageviews: number; avgClicks: number; avgFeatures: number };
   scrollDepth: Array<{ path: string; avgDepth: number; count: number }>;
   deviceBreakdown: { mobile: number; desktop: number };
@@ -254,7 +254,7 @@ export default function AdminAnalyticsPage() {
               <KPICard label="Unique Users" value={data.overview.uniqueUsers} icon="users" />
               <KPICard label="Sessions" value={data.overview.uniqueSessions} icon="sessions" />
               <KPICard label="Pageviews" value={data.overview.totalPageviews} icon="pages" />
-              <KPICard label="Avg Duration" value={formatDuration(data.durationStats.avg)} icon="clock" />
+              <KPICard label="Engaged time / visit" value={formatDuration(data.durationStats.median)} icon="clock" />
               <KPICard label="Avg Pages/Sess" value={data.depthStats.avgPageviews} icon="depth" />
               <KPICard label="Feature Events" value={data.overview.totalFeatureEvents} icon="features" />
             </div>
@@ -304,7 +304,7 @@ export default function AdminAnalyticsPage() {
                   <div className="grid grid-cols-3 gap-4 mb-4">
                     <div className="text-center p-3 rounded-xl bg-slate-50">
                       <div className="text-xl font-bold text-primary">{formatDuration(data.durationStats.median)}</div>
-                      <div className="text-[10px] text-slate-400 uppercase tracking-wider font-medium">Median Duration</div>
+                      <div className="text-[10px] text-slate-400 uppercase tracking-wider font-medium">Median engaged time</div>
                     </div>
                     <div className="text-center p-3 rounded-xl bg-slate-50">
                       <div className="text-xl font-bold text-primary">{data.depthStats.avgClicks}</div>
@@ -316,7 +316,7 @@ export default function AdminAnalyticsPage() {
                     </div>
                   </div>
                   <div className="text-xs text-slate-400">
-                    Max session: {formatDuration(data.durationStats.max)} · {data.overview.totalClicks} total clicks
+                    Average {formatDuration(data.durationStats.avg)} · longest {formatDuration(data.durationStats.max)} · {data.durationStats.visits} student visits (signed in, demo excluded; time counts only while the tab is open and in use)
                   </div>
                 </Card>
 

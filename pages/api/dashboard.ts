@@ -26,8 +26,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const essaysInReview = essays.filter(e => e.status === 'In Review').length;
   const essaysComplete = essays.filter(e => e.status === 'Complete').length;
 
+  // The draft to resume: most recently edited, not yet marked complete.
+  const draft = essays.find(e => e.status !== 'Complete');
+  const resume = draft ? {
+    id: draft.id,
+    title: draft.title || 'Untitled essay',
+    words: (draft.content || '').trim() ? (draft.content || '').trim().split(/\s+/).length : 0,
+    updatedAt: draft.updatedAt,
+    status: draft.status,
+  } : null;
+
   return res.json({
     firstDay,
+    resume,
     profile,
     stats: {
       satScore: totalSAT > 0 ? totalSAT.toString() : '—',

@@ -68,7 +68,7 @@ export async function listCommunityChannels(): Promise<
   try {
     const rows: any[] = await prisma.$queryRaw`
       SELECT p."id", p."name", p."description", p."slug",
-             (SELECT COUNT(*)::int FROM "pod_messages" m WHERE m."podId" = p."id") AS "messageCount",
+             (SELECT COUNT(*)::int FROM "pod_messages" m WHERE m."podId" = p."id" AND m."hidden" = false) AS "messageCount",
              (SELECT COUNT(DISTINCT m."userId")::int FROM "pod_messages" m WHERE m."podId" = p."id") AS "memberCount"
         FROM "study_pods" p
        WHERE p."kind" = 'community'
