@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { signOut, useSession } from 'next-auth/react';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { AdamPanel, AdamNavButton, AdamFloatingButton } from './AdamAssistant';
 import { useTheme } from '../lib/themeContext';
 import { tracker } from '../lib/analytics';
@@ -115,6 +115,37 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   const currentLabel = sidebarLinks.find((l) => l.href === router.pathname)?.label || 'Dashboard';
 
+  /* Unread posts across the student's pods and the community channels,
+     shown on the Study Pods link from anywhere in the app. Without it, new
+     activity was invisible unless you happened to open Pods. */
+  const [podUnread, setPodUnread] = useState(0);
+  useEffect(() => {
+    if (!session?.user) return;
+    let alive = true;
+    const load = () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      fetch('/api/pods?action=unread').then(r => (r.ok ? r.json() : null))
+        .then(d => { if (alive && d) setPodUnread(Number(d.total) || 0); }).catch(() => {});
+    };
+    load();
+    const id = setInterval(load, 90_000);
+    window.addEventListener('ao:unread-changed', load);
+    document.addEventListener('visibilitychange', load);
+    return () => {
+      alive = false; clearInterval(id);
+      window.removeEventListener('ao:unread-changed', load);
+      document.removeEventListener('visibilitychange', load);
+    };
+  }, [session?.user, router.pathname]);
+
+  const badgeFor = (href: string) =>
+    href === '/dashboard/pods' && podUnread > 0 ? (
+      <span className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-accent text-white text-[11px] font-bold leading-5 text-center tabular-nums"
+        aria-label={`${podUnread} unread`}>
+        {podUnread > 99 ? '99+' : podUnread}
+      </span>
+    ) : null;
+
   return (
     <div className="flex min-h-screen bg-surface">
       {/* Desktop Sidebar */}
@@ -149,7 +180,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               >
                 {link.icon}
                 {link.label}
-                {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-accent" />}
+                {badgeFor(link.href) || (active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-accent" />)}
               </Link>
             );
           })}
@@ -232,6 +263,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   >
                     {link.icon}
                     {link.label}
+                    {badgeFor(link.href)}
                   </Link>
                 );
               })}
@@ -385,7 +417,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 }`}
               >
                 {active && <div className="absolute top-0 left-1/4 right-1/4 h-[2px] bg-accent rounded-full" />}
-                <span className={active ? 'text-accent' : 'text-slate-400'}>{link.icon}</span>
+                <span className={`relative ${active ? 'text-accent' : 'text-slate-400'}`}>
+                  {link.icon}
+                  {link.href === '/dashboard/pods' && podUnread > 0 && (
+                    <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 px-1 rounded-full bg-accent text-white text-[10px] font-bold leading-4 text-center tabular-nums ring-2 ring-white"
+                      aria-label={`${podUnread} unread`}>
+                      {podUnread > 9 ? '9+' : podUnread}
+                    </span>
+                  )}
+                </span>
                 <span className={`text-[11px] font-medium ${active ? 'font-semibold' : ''}`}>{link.mobileLabel}</span>
               </Link>
             );

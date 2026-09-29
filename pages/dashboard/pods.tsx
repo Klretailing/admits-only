@@ -9,11 +9,13 @@ interface PodSummary {
   memberCount: number; myRole: string;
   lastMessage: { content: string; userName: string; createdAt: string } | null;
   joinedAt: string;
+  unreadCount?: number;
 }
 
 interface CommunityChannel {
   id: string; name: string; description: string; slug: string;
   memberCount: number; messageCount: number;
+  unreadCount?: number;
 }
 
 interface PodMessage {
@@ -131,10 +133,6 @@ function getFileIcon(fileType: string): string {
 const QUICK_REACTIONS = ['👍', '❤️', '🔥', '👏', '💯', '😂', '🎯', '✨'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
-function isUnread(lastMessage: PodSummary['lastMessage']): boolean {
-  if (!lastMessage) return false;
-  return Date.now() - new Date(lastMessage.createdAt).getTime() < 300000;
-}
 
 function formatTime(iso: string): string {
   const d = new Date(iso);
@@ -215,6 +213,18 @@ const Avatar = memo(function Avatar({ name, size = 'md' }: AvatarProps) {
   );
 });
 
+/** Real per-student unread count (see lib/podReads). Replaces a dot that lit
+    up for anyone posting in the last five minutes. */
+function UnreadBadge({ n }: { n: number }) {
+  if (!n) return null;
+  return (
+    <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-accent text-white text-[11px] font-bold leading-5 text-center flex-shrink-0 tabular-nums"
+      aria-label={`${n} unread`}>
+      {n > 99 ? '99+' : n}
+    </span>
+  );
+}
+
 interface PodListItemProps {
   pod: PodSummary;
   selected: boolean;
@@ -222,7 +232,7 @@ interface PodListItemProps {
 }
 
 const PodListItem = memo(function PodListItem({ pod, selected, onSelect }: PodListItemProps) {
-  const unread = !selected && isUnread(pod.lastMessage);
+  const unread = selected ? 0 : (pod.unreadCount || 0);
   return (
     <button
       onClick={() => onSelect(pod)}
@@ -249,11 +259,11 @@ const PodListItem = memo(function PodListItem({ pod, selected, onSelect }: PodLi
               {pod.lastMessage.content}
             </span>
           ) : (
-            <span className="text-xs text-slate-400 truncate">{pod.memberCount} members</span>
+            <span className="text-xs text-slate-400 truncate">{pod.memberCount} member{pod.memberCount === 1 ? '' : 's'}</span>
           )}
         </div>
       </div>
-      {unread && <span className="w-2 h-2 rounded-full bg-accent flex-shrink-0" />}
+      <UnreadBadge n={unread} />
     </button>
   );
 });
@@ -538,6 +548,11 @@ export default function StudyPods() {
   const handleSelectPod = useCallback(
     (pod: PodSummary) => {
       setSelectedPod(pod);
+      // Opening it marks it read on the server (bootstrap); mirror that here
+      // and tell the nav badge to refresh.
+      setPods((prev) => prev.map((p) => (p.id === pod.id ? { ...p, unreadCount: 0 } : p)));
+      setChannels((prev) => prev.map((c) => (c.id === pod.id ? { ...c, unreadCount: 0 } : c)));
+      if (typeof window !== 'undefined') setTimeout(() => window.dispatchEvent(new Event('ao:unread-changed')), 800);
       setActiveTab('chat');
       setMobileShowChat(true);
       setSelectedSession(null);
@@ -561,7 +576,9 @@ export default function StudyPods() {
       const url = after
         ? `/api/pods?action=sync&podId=${selectedPod.id}&after=${encodeURIComponent(after)}`
         : `/api/pods?action=sync&podId=${selectedPod.id}`;
-      const res = await fetch(url);
+      // Only count it as read when the student can actually see the chat.
+      const seen = typeof document !== 'undefined' && document.visibilityState === 'visible' ? '&seen=1' : '';
+      const res = await fetch(url + seen);
       if (!res.ok) return;
       const data = await res.json();
       const incoming: PodMessage[] = data.messages || [];
@@ -1285,6 +1302,7 @@ export default function StudyPods() {
                               : `${ch.messageCount} post${ch.messageCount === 1 ? '' : 's'} · ${ch.memberCount} student${ch.memberCount === 1 ? '' : 's'}`}
                           </span>
                         </span>
+                        <UnreadBadge n={active ? 0 : (ch.unreadCount || 0)} />
                       </button>
                     );
                   })}
@@ -1341,7 +1359,11 @@ export default function StudyPods() {
                     <Avatar name={selectedPod.name} />
                     <div className="flex-1 min-w-0">
                       <h3 className="text-sm font-bold text-primary truncate">{selectedPod.name}</h3>
-                      <p className="text-xs text-slate-400 truncate">{selectedPod.memberCount} members</p>
+                      <p className="text-xs text-slate-400 truncate">
+                        {activeChannel
+                          ? `Open to every student · ${activeChannel.memberCount} ${activeChannel.memberCount === 1 ? 'has' : 'have'} posted`
+                          : `${selectedPod.memberCount} member${selectedPod.memberCount === 1 ? '' : 's'}`}
+                      </p>
                     </div>
                     <div className="flex items-center gap-1">
                       {activeTab === 'chat' && (
