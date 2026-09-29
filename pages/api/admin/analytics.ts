@@ -1,7 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../lib/auth';
+import { Prisma } from '@prisma/client';
 import { prisma, ensureSchema } from '../../../lib/db';
+
+// Same definition as the audience insights: seeded demo/internal accounts.
+const DEMO_USER_IDS = Prisma.sql`SELECT id FROM "users" WHERE email ILIKE '%admitsonly.com'`;
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getServerSession(req, res, authOptions);
@@ -26,7 +30,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     totalNavEvents,
   ] = await Promise.all([
     prisma.analyticsEvent.count({ where: { createdAt: { gte: since } } }),
-    prisma.analyticsEvent.count({ where: { type: 'session', createdAt: { gte: since } } }),
+    // Distinct visits. Counting 'session' rows would multiply by the
+    // once-a-minute snapshots the tracker now sends.
+    prisma.$queryRaw<{ n: number }[]>`SELECT COUNT(DISTINCT "sessionId")::int AS n FROM "analytics_events" WHERE "createdAt" >= ${since} AND "sessionId" IS NOT NULL`.then(r => r[0]?.n || 0),
     prisma.analyticsEvent.count({ where: { type: 'pageview', createdAt: { gte: since } } }),
     prisma.analyticsEvent.count({ where: { type: 'click', createdAt: { gte: since } } }),
     prisma.analyticsEvent.count({ where: { type: 'feature', createdAt: { gte: since } } }),
@@ -113,30 +119,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   `;
   const navTargets = navTargetsRaw.map(r => ({ target: r.target, count: Number(r.count) }));
 
-  // Session duration stats (from session events)
-  const durationStatsRaw: Array<{ avg_dur: number; max_dur: number; median_dur: number }> = await prisma.$queryRaw`
-    SELECT
-      ROUND(AVG((meta->>'durationSeconds')::numeric))::int as avg_dur,
-      MAX((meta->>'durationSeconds')::int) as max_dur,
-      PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY (meta->>'durationSeconds')::int)::int as median_dur
-    FROM "analytics_events"
-    WHERE "type" = 'session' AND "createdAt" >= ${since} AND meta->>'durationSeconds' IS NOT NULL
-  `;
+  /* Student visits, measured the new way (see lib/analytics.ts): engaged time
+     = visible tab + recent activity, one number per visit (the MAX of its
+     cumulative snapshots). Only signed-in, non-demo visits count, so
+     marketing-page bounces and demo tours no longer drag the figure around.
+     Snapshots from before the new tracker (no "v") are left out rather than
+     mixed in, since they measured something different. */
+  const studentVisits = Prisma.sql`
+    SELECT "sessionId",
+           MAX((meta->>'engagedSeconds')::int)  AS engaged,
+           MAX((meta->>'pageviewCount')::int)   AS pv,
+           MAX((meta->>'clickCount')::int)      AS clicks,
+           MAX((meta->>'featureUseCount')::int) AS features
+      FROM "analytics_events"
+     WHERE "type" = 'session' AND "createdAt" >= ${since}
+       AND meta->>'v' = '2' AND "sessionId" IS NOT NULL
+       AND "sessionId" IN (SELECT "sessionId" FROM "analytics_events"
+                            WHERE "userId" IS NOT NULL AND "userId" NOT IN (${DEMO_USER_IDS}))
+       AND "sessionId" NOT IN (SELECT "sessionId" FROM "analytics_events"
+                                WHERE "sessionId" IS NOT NULL AND "userId" IN (${DEMO_USER_IDS}))
+     GROUP BY "sessionId"`;
+
+  const durationStatsRaw: Array<{ avg_dur: number; max_dur: number; median_dur: number; visits: number }> = await prisma.$queryRaw`
+    SELECT ROUND(AVG(engaged))::int AS avg_dur, MAX(engaged)::int AS max_dur,
+           PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY engaged)::int AS median_dur,
+           COUNT(*)::int AS visits
+      FROM (${studentVisits}) v`;
   const durationStats = {
     avg: Number(durationStatsRaw[0]?.avg_dur || 0),
     max: Number(durationStatsRaw[0]?.max_dur || 0),
     median: Number(durationStatsRaw[0]?.median_dur || 0),
+    visits: Number(durationStatsRaw[0]?.visits || 0),
   };
 
-  // Session depth stats (pages per session, clicks per session)
+  // Session depth stats (pages per session, clicks per session), same visits
   const depthStatsRaw: Array<{ avg_pv: number; avg_clicks: number; avg_features: number }> = await prisma.$queryRaw`
-    SELECT
-      ROUND(AVG((meta->>'pageviewCount')::numeric), 1) as avg_pv,
-      ROUND(AVG((meta->>'clickCount')::numeric), 1) as avg_clicks,
-      ROUND(AVG((meta->>'featureUseCount')::numeric), 1) as avg_features
-    FROM "analytics_events"
-    WHERE "type" = 'session' AND "createdAt" >= ${since} AND meta->>'pageviewCount' IS NOT NULL
-  `;
+    SELECT ROUND(AVG(pv), 1) AS avg_pv, ROUND(AVG(clicks), 1) AS avg_clicks, ROUND(AVG(features), 1) AS avg_features
+      FROM (${studentVisits}) v`;
   const depthStats = {
     avgPageviews: Number(depthStatsRaw[0]?.avg_pv || 0),
     avgClicks: Number(depthStatsRaw[0]?.avg_clicks || 0),

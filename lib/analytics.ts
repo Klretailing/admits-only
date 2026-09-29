@@ -40,6 +40,34 @@ const FLUSH_INTERVAL = 30_000;
 const BUFFER_LIMIT = 50;
 const SESSION_KEY = 'ao_session_id';
 
+/* ─── session timing ───
+   The old measurement recorded duration once, on `beforeunload`, as wall time
+   since the script loaded. Three things made that read short and noisy:
+     • phones rarely fire `beforeunload` (switching apps or swiping a tab away
+       skips it), so most mobile sessions were never recorded at all;
+     • the clock restarted on every full page load while the session id did
+       not, so one visit with a reload became several short "sessions";
+     • wall time counts a tab left open overnight the same as writing.
+   Now: ENGAGED time only accrues while the tab is visible AND the student did
+   something (typed, clicked, scrolled, moved) in the last two minutes. It is
+   persisted per tab so reloads continue the same session, and cumulative
+   snapshots go out on visibilitychange/pagehide — which mobile browsers do
+   fire — plus once a minute while engaged. Readers take the MAX per session.
+   After 30 minutes of inactivity the next action starts a new session, the
+   usual definition, so returning to an old tab counts as a return visit. */
+const TICK_MS = 5_000;
+const ACTIVE_WINDOW_MS = 120_000;
+const SESSION_TIMEOUT_MS = 30 * 60_000;
+const SNAPSHOT_EVERY_MS = 60_000;
+const K = { start: 'ao_session_start', engaged: 'ao_engaged_ms', last: 'ao_last_active', pv: 'ao_pageviews' };
+
+function ssGet(key: string): number {
+  try { return Number(sessionStorage.getItem(key)) || 0; } catch { return 0; }
+}
+function ssSet(key: string, v: number) {
+  try { sessionStorage.setItem(key, String(Math.round(v))); } catch { /* private mode */ }
+}
+
 function generateSessionId(): string {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
     return crypto.randomUUID();
@@ -88,12 +116,33 @@ class Analytics {
   private lastScrollPath = '';
   private featuresUsed = new Set<string>();
   private deviceInfoSent = false;
+  private engagedMs = 0;
+  private lastActivity = 0;
+  private lastTick = 0;
+  private lastSnapshotEngaged = -1;
+  private lastSnapshotAt = 0;
+  private tickTimer: ReturnType<typeof setInterval> | null = null;
+  private moveThrottle = 0;
 
   init() {
     if (this.initialized || typeof window === 'undefined') return;
     this.initialized = true;
     this.sessionId = getOrCreateSessionId();
-    this.sessionStart = Date.now();
+    const now = Date.now();
+    const last = ssGet(K.last);
+    if (last && now - last > SESSION_TIMEOUT_MS) {
+      // Came back to an old tab: that is a new visit, not a 9-hour session.
+      this.startNewSession(now, false);
+    } else {
+      // A reload continues the same session instead of restarting its clock.
+      this.sessionStart = ssGet(K.start) || now;
+      this.engagedMs = ssGet(K.engaged);
+      this.pageviewCount = ssGet(K.pv);
+    }
+    this.lastActivity = now;
+    this.lastTick = now;
+    ssSet(K.start, this.sessionStart);
+    ssSet(K.last, now);
     this.currentPath = window.location.pathname;
     this.deviceInfo = getDeviceInfo();
 
@@ -101,9 +150,16 @@ class Analytics {
 
     document.addEventListener('click', this.handleClick);
     window.addEventListener('beforeunload', this.handleUnload);
+    window.addEventListener('pagehide', this.handleUnload);
+    document.addEventListener('visibilitychange', this.handleVisibility);
     window.addEventListener('scroll', this.handleScroll, { passive: true });
+    for (const ev of ['keydown', 'pointerdown', 'touchstart', 'input', 'wheel'] as const) {
+      window.addEventListener(ev, this.markActive, { passive: true, capture: true });
+    }
+    window.addEventListener('mousemove', this.handleMove, { passive: true });
 
     this.flushTimer = setInterval(() => this.flush(), FLUSH_INTERVAL);
+    this.tickTimer = setInterval(this.tick, TICK_MS);
   }
 
   setUserId(id: string | undefined) {
@@ -112,6 +168,8 @@ class Analytics {
 
   pageview(path: string) {
     this.pageviewCount++;
+    if (typeof window !== 'undefined') ssSet(K.pv, this.pageviewCount);
+    this.markActive();
 
     if (this.maxScrollDepth > 0 && this.lastScrollPath) {
       this.push({
@@ -220,9 +278,101 @@ class Analytics {
     }, 150);
   };
 
-  private handleUnload = () => {
-    const durationSeconds = Math.round((Date.now() - this.sessionStart) / 1000);
+  /* ─── engaged-time machinery ─── */
 
+  private startNewSession(now: number, emitPrevious: boolean) {
+    if (emitPrevious) { this.snapshot(true); this.flush(true); }
+    this.sessionId = generateSessionId();
+    try { sessionStorage.setItem(SESSION_KEY, this.sessionId); } catch { /* ignore */ }
+    this.sessionStart = now;
+    this.engagedMs = 0;
+    this.pageviewCount = 0;
+    this.clickCount = 0;
+    this.featureUseCount = 0;
+    this.featuresUsed.clear();
+    this.lastSnapshotEngaged = -1;
+    ssSet(K.start, now); ssSet(K.engaged, 0); ssSet(K.pv, 0);
+  }
+
+  private markActive = () => {
+    const now = Date.now();
+    if (this.lastActivity && now - this.lastActivity > SESSION_TIMEOUT_MS) {
+      this.tick();                       // close out the old session's time
+      this.startNewSession(now, true);
+      this.lastTick = now;
+    }
+    this.lastActivity = now;
+    ssSet(K.last, now);
+  };
+
+  private handleMove = () => {
+    const now = Date.now();
+    if (now - this.moveThrottle < 5_000) return;
+    this.moveThrottle = now;
+    this.markActive();
+  };
+
+  /** Accrue engaged time since the last tick, if the student was present for it. */
+  private tick = () => {
+    const now = Date.now();
+    const elapsed = Math.min(now - this.lastTick, TICK_MS * 2); // a throttled/suspended tab can't bank hours
+    this.lastTick = now;
+    const visible = typeof document === 'undefined' || document.visibilityState === 'visible';
+    if (visible && now - this.lastActivity < ACTIVE_WINDOW_MS) {
+      this.engagedMs += elapsed;
+      ssSet(K.engaged, this.engagedMs);
+    }
+    if (now - this.lastSnapshotAt >= SNAPSHOT_EVERY_MS && Math.round(this.engagedMs / 1000) !== this.lastSnapshotEngaged) {
+      this.snapshot(false);
+    }
+  };
+
+  /** Cumulative state of this session. Several per session is expected;
+      readers take the MAX per sessionId. */
+  private snapshot(final: boolean) {
+    const engagedSeconds = Math.round(this.engagedMs / 1000);
+    this.lastSnapshotEngaged = engagedSeconds;
+    this.lastSnapshotAt = Date.now();
+    this.push({
+      type: 'session',
+      timestamp: Date.now(),
+      path: this.currentPath,
+      sessionId: this.sessionId,
+      userId: this.userId,
+      meta: {
+        v: 2,
+        engagedSeconds,
+        durationSeconds: Math.round((Date.now() - this.sessionStart) / 1000),
+        pageviewCount: this.pageviewCount,
+        clickCount: this.clickCount,
+        featureUseCount: this.featureUseCount,
+        uniqueFeaturesUsed: this.featuresUsed.size,
+        featuresUsedList: Array.from(this.featuresUsed).join(','),
+        final,
+      },
+    });
+  }
+
+  private handleVisibility = () => {
+    if (document.visibilityState === 'hidden') {
+      this.tick();
+      this.flushScroll();
+      this.snapshot(true);
+      this.flush(true);
+    } else {
+      this.lastTick = Date.now();
+      this.markActive();
+    }
+  };
+
+  private handleUnload = () => {
+    this.tick();
+    this.flushScroll();
+    this.snapshot(true);
+    this.flush(true);
+  };
+
+  private flushScroll() {
     if (this.maxScrollDepth > 0 && this.lastScrollPath) {
       this.push({
         type: 'scroll',
@@ -232,26 +382,9 @@ class Analytics {
         userId: this.userId,
         meta: { maxDepthPercent: this.maxScrollDepth },
       });
+      this.maxScrollDepth = 0;
     }
-
-    this.push({
-      type: 'session',
-      timestamp: Date.now(),
-      path: this.currentPath,
-      sessionId: this.sessionId,
-      userId: this.userId,
-      meta: {
-        durationSeconds,
-        pageviewCount: this.pageviewCount,
-        clickCount: this.clickCount,
-        featureUseCount: this.featureUseCount,
-        uniqueFeaturesUsed: this.featuresUsed.size,
-        featuresUsedList: Array.from(this.featuresUsed).join(','),
-      },
-    });
-
-    this.flush(true);
-  };
+  }
 
   private push(evt: AnalyticsEvent) {
     this.buffer.push(evt);
@@ -280,8 +413,15 @@ class Analytics {
     if (typeof window === 'undefined') return;
     document.removeEventListener('click', this.handleClick);
     window.removeEventListener('beforeunload', this.handleUnload);
+    window.removeEventListener('pagehide', this.handleUnload);
+    document.removeEventListener('visibilitychange', this.handleVisibility);
     window.removeEventListener('scroll', this.handleScroll);
+    for (const ev of ['keydown', 'pointerdown', 'touchstart', 'input', 'wheel'] as const) {
+      window.removeEventListener(ev, this.markActive, { capture: true } as any);
+    }
+    window.removeEventListener('mousemove', this.handleMove);
     if (this.flushTimer) clearInterval(this.flushTimer);
+    if (this.tickTimer) clearInterval(this.tickTimer);
     if (this.scrollTimer) clearTimeout(this.scrollTimer);
     this.flush();
     this.initialized = false;
