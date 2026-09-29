@@ -186,6 +186,15 @@ interface DashboardProfile {
   percentile: number | null;
 }
 
+function relativeDays(iso: string): string {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 7) return `${days} days ago`;
+  if (days < 14) return 'last week';
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
 export default function Dashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -193,6 +202,7 @@ export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [profile, setProfile] = useState<DashboardProfile | null>(null);
   const [firstDay, setFirstDay] = useState(false);
+  const [resume, setResume] = useState<{ id: string; title: string; words: number; updatedAt: string; status: string } | null>(null);
   const [readiness, setReadiness] = useState<{ readiness: number; checklist: any[]; nudges: any[] } | null>(null);
   const [dismissedNudges, setDismissedNudges] = useState<Set<string>>(new Set());
 
@@ -209,6 +219,7 @@ export default function Dashboard() {
         setStats(data.stats);
         setProfile(data.profile);
         setFirstDay(!!data.firstDay);
+        setResume(data.resume || null);
       })
       .catch(() => {});
   }, [status]);
@@ -259,6 +270,32 @@ export default function Dashboard() {
         {/* One honest progress bar + next action. Replaces the earlier
             ring/mini-bar/emoji cluster — see components/ProgressSummary. */}
         <ProgressSummary checklist={readiness?.checklist} />
+
+        {/* Pick up where you left off. Essays are where the long, focused
+            sessions happen, and returning students previously had to find
+            their draft again: dashboard → Essays → empty editor → pick from
+            the list. This is one click, straight into the editor. */}
+        {resume && (
+          <Link
+            href={`/dashboard/essays?essay=${encodeURIComponent(resume.id)}`}
+            className="flex items-center gap-4 bg-white rounded-2xl border border-slate-100 surface surface-interactive p-4 sm:p-5 group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Pick up where you left off</p>
+              <p className="mt-0.5 text-sm font-semibold text-primary truncate">{resume.title}</p>
+              <p className="text-xs text-slate-500">
+                {resume.words === 0 ? 'Not started yet' : `${resume.words} word${resume.words === 1 ? '' : 's'}`}
+                {' · '}edited {relativeDays(resume.updatedAt)}
+                {resume.status === 'In Review' ? ' · with your tutor' : ''}
+              </p>
+            </div>
+            <span className="text-sm font-semibold text-accent flex-shrink-0 hidden sm:inline">Keep writing →</span>
+            <svg className="w-4 h-4 text-slate-400 flex-shrink-0 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+          </Link>
+        )}
 
         {/* Smart Nudges Banner */}
         {readiness?.nudges && readiness.nudges.filter(n => !dismissedNudges.has(n.id)).length > 0 && (

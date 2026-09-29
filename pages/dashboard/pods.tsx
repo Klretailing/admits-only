@@ -85,15 +85,17 @@ interface AchievementDef {
 type ReactionMap = Record<string, Record<string, string[]>>;
 type TabKey = 'chat' | 'documents' | 'focus' | 'leaderboard';
 
+// Initials sit at 14px, so the ink must clear 4.5:1 on its tint. The 600
+// shades didn't (lime 2.85:1, amber and cyan close behind); 700/800 do.
 const AVATAR_COLORS = [
-  'bg-indigo-100 text-indigo-600',
-  'bg-emerald-100 text-emerald-600',
-  'bg-rose-100 text-rose-600',
-  'bg-amber-100 text-amber-600',
-  'bg-cyan-100 text-cyan-600',
-  'bg-violet-100 text-violet-600',
-  'bg-lime-100 text-lime-600',
-  'bg-red-100 text-red-600',
+  'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300',
+  'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300',
+  'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300',
+  'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300',
+  'bg-cyan-100 text-cyan-800 dark:bg-cyan-500/15 dark:text-cyan-300',
+  'bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300',
+  'bg-lime-100 text-lime-800 dark:bg-lime-500/15 dark:text-lime-300',
+  'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300',
 ];
 
 function getAvatarColor(name: string): string {
