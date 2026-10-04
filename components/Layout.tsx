@@ -99,6 +99,18 @@ export default function Layout({ children }: LayoutProps) {
   const userRole = (session?.user as any)?.role;
   const dashboardHref = userRole === 'parent' ? '/parent' : userRole === 'educator' ? '/educator' : '/dashboard';
 
+  /* Until the session check answers, render BOTH button sets and let the
+     pre-paint hint (lib/authHint.ts) show the right one. Treating "loading"
+     as "signed out" made Sign In flash and vanish for signed-in students. */
+  const resolved = status !== 'loading';
+  const authSwitch = (signedIn: ReactNode, signedOut: ReactNode) =>
+    resolved ? (isLoggedIn ? signedIn : signedOut) : (
+      <>
+        <span className="auth-in-only contents">{signedIn}</span>
+        <span className="auth-out-only contents">{signedOut}</span>
+      </>
+    );
+
   return (
     <>
       <Head>
@@ -134,11 +146,10 @@ export default function Layout({ children }: LayoutProps) {
                   {link.label}
                 </Link>
               ))}
-              {isLoggedIn ? (
+              {authSwitch(
                 <Link href={dashboardHref} className="ml-2 btn-primary text-sm !py-2.5 !px-5">
                   Dashboard
-                </Link>
-              ) : (
+                </Link>,
                 <>
                   <Link href="/auth/login" className="ml-2 px-4 py-2 text-sm font-medium text-slate-600 hover:text-primary transition-colors">
                     Sign In
@@ -146,9 +157,23 @@ export default function Layout({ children }: LayoutProps) {
                   <Link href="/auth/register" className="btn-primary text-sm !py-2.5 !px-5">
                     Get Started
                   </Link>
-                </>
+                </>,
               )}
             </nav>
+
+            {/* Phones: the account button lives in the header too. It used to
+                exist only inside the hamburger menu, so on a phone there was
+                no visible way to sign in. */}
+            <div className="md:hidden ml-auto mr-1 flex items-center">
+              {authSwitch(
+                <Link href={dashboardHref} className="btn-primary text-sm !py-2 !px-3.5">
+                  Dashboard
+                </Link>,
+                <Link href="/auth/login" className="px-3 py-2 text-sm font-semibold text-slate-700 hover:text-primary transition-colors">
+                  Sign In
+                </Link>,
+              )}
+            </div>
 
             {/* Mobile toggle */}
             <button
@@ -184,15 +209,14 @@ export default function Layout({ children }: LayoutProps) {
                   {link.label}
                 </Link>
               ))}
-              {isLoggedIn ? (
+              {authSwitch(
                 <Link
                   href={dashboardHref}
                   onClick={() => setMobileOpen(false)}
                   className="block mt-2 btn-primary text-sm text-center"
                 >
                   Dashboard
-                </Link>
-              ) : (
+                </Link>,
                 <>
                   <Link
                     href="/auth/login"
@@ -208,7 +232,7 @@ export default function Layout({ children }: LayoutProps) {
                   >
                     Get Started
                   </Link>
-                </>
+                </>,
               )}
             </div>
           )}
