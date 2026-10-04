@@ -1,6 +1,7 @@
 import Link from 'next/link';
+import { signOutAndForget } from '../lib/authHint';
 import { useRouter } from 'next/router';
-import { signOut, useSession } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import { useState, type ReactNode } from 'react';
 import { useTheme } from '../lib/themeContext';
 
@@ -177,7 +178,7 @@ export default function EducatorDashboardLayout({ children }: { children: ReactN
             {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
           </button>
           <button
-            onClick={() => signOut({ callbackUrl: '/' })}
+            onClick={() => signOutAndForget({ callbackUrl: '/' })}
             className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-500 hover:text-red-600 hover:bg-red-50 transition-all mt-1"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -241,7 +242,7 @@ export default function EducatorDashboardLayout({ children }: { children: ReactN
                 </div>
               </div>
               <button
-                onClick={() => { setMobileMenuOpen(false); signOut({ callbackUrl: '/' }); }}
+                onClick={() => { setMobileMenuOpen(false); signOutAndForget({ callbackUrl: '/' }); }}
                 className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-500 hover:text-red-600 hover:bg-red-50 transition-all"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -360,3 +360,12 @@ html.dark .bg-slate-900 .section-label { color: #c7ccff; }
    a hair under AA. 90% clears it comfortably at 14.6:1 while still reading
    as secondary against the pure-white headline above it. */
 .text-white\/80 { color: rgb(255 255 255 / 0.9); }
+
+
+/* ─── Signed-in hint (lib/authHint.ts) ───
+   Until the session check answers, the header renders both button sets and
+   these rules show the one matching the last known state, so there is no
+   Sign In ⇄ Dashboard flicker. Once the session resolves, React renders only
+   the correct set and these classes are gone from the DOM. */
+html.ao-auth-in .auth-out-only { display: none !important; }
+html:not(.ao-auth-in) .auth-in-only { display: none !important; }

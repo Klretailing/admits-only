@@ -7,6 +7,7 @@ import { SessionProvider, useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import { useEffect, Component as ReactComponent, type ErrorInfo, type ReactNode } from 'react'
 import Layout from '../components/Layout'
+import { setAuthHint } from '../lib/authHint'
 import { tracker } from '../lib/analytics'
 import { ThemeProvider } from '../lib/themeContext'
 
@@ -70,6 +71,12 @@ function AnalyticsInit() {
   useEffect(() => {
     tracker.setUserId((session?.user as any)?.id || undefined);
   }, [session]);
+
+  // Keep the signed-in hint true to the real session (lib/authHint.ts).
+  const { status } = useSession();
+  useEffect(() => {
+    if (status !== 'loading') setAuthHint(status === 'authenticated');
+  }, [status]);
 
   return null;
 }

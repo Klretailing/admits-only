@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { signIn } from 'next-auth/react';
+import { useEffect, useState } from 'react';
+import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -10,6 +10,17 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  /* Already signed in? Go straight to the dashboard. If the header ever shows
+     "Sign In" to a signed-in student (e.g. their session check failed on a
+     cold start), clicking it now lands them where they meant to be instead of
+     on a login form for an account they're already in. */
+  const { data: session, status } = useSession();
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    const role = (session?.user as any)?.role;
+    router.replace(role === 'parent' ? '/parent' : role === 'educator' ? '/educator' : '/dashboard');
+  }, [status, session, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

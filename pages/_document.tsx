@@ -10,6 +10,10 @@ const themeInitScript = `
     if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
       document.documentElement.classList.add('dark');
     }
+    // Signed-in hint for the header (see lib/authHint.ts).
+    if (localStorage.getItem('ao_auth') === 'in') {
+      document.documentElement.classList.add('ao-auth-in');
+    }
   } catch (e) {}
 })();
 `;
