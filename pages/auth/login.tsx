@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { signIn, useSession } from 'next-auth/react';
+import { safeNext } from '../../lib/authHint';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -19,7 +20,8 @@ export default function Login() {
   useEffect(() => {
     if (status !== 'authenticated') return;
     const role = (session?.user as any)?.role;
-    router.replace(role === 'parent' ? '/parent' : role === 'educator' ? '/educator' : '/dashboard');
+    const next = role === 'student' ? safeNext(router.query.next) : null;
+    router.replace(next || (role === 'parent' ? '/parent' : role === 'educator' ? '/educator' : '/dashboard'));
   }, [status, session, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,7 +44,8 @@ export default function Login() {
       const { getSession } = await import('next-auth/react');
       const sess = await getSession();
       const role = (sess?.user as any)?.role;
-      router.push(role === 'parent' ? '/parent' : role === 'educator' ? '/educator' : '/dashboard');
+      const next = role === 'student' ? safeNext(router.query.next) : null;
+      router.push(next || (role === 'parent' ? '/parent' : role === 'educator' ? '/educator' : '/dashboard'));
     }
   };
 
@@ -135,7 +138,7 @@ export default function Login() {
 
           <p className="mt-6 text-center text-sm text-slate-500">
             Don&apos;t have an account?{' '}
-            <Link href="/auth/register" className="text-accent font-semibold hover:underline">
+            <Link href={safeNext(router.query.next) ? `/auth/register?next=${encodeURIComponent(safeNext(router.query.next)!)}` : '/auth/register'} className="text-accent font-semibold hover:underline">
               Create one
             </Link>
           </p>

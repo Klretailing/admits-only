@@ -1,0 +1,12 @@
+# Public marketing pages and free tools are indexable; signed-in areas and
+# the API are not.
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /educator
+Disallow: /parent
+Disallow: /api/
+Disallow: /auth/reset-password
+
+Sitemap: https://www.admitsonly.com/sitemap.xml

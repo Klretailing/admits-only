@@ -2465,6 +2465,7 @@ export default function Essays() {
   const [creating, setCreating] = useState(false);
 
   const [activeEssay, setActiveEssay] = useState<Essay | null>(null);
+  const importedRef = useRef(false);
   const [mobileEssayView, setMobileEssayView] = useState<'list' | 'editor'>('list');
   const [mobileEditorTab, setMobileEditorTab] = useState<'write' | 'scores'>('write');
   const [editContent, setEditContent] = useState('');
@@ -2583,6 +2584,34 @@ export default function Essays() {
          dashboard's "Pick up where you left off") wins; otherwise, on desktop
          where list and editor sit side by side, open the most recently edited
          draft. Phones keep the list first, since there the editor replaces it. */
+      /* Arriving from the free essay checker after signing up: turn the
+         essay they just checked into a saved one, so signing up never means
+         starting over. Runs once; identical text opens the existing essay. */
+      if (router.query.import === 'checker' && !importedRef.current) {
+        importedRef.current = true;
+        let draft: { text?: string; prompt?: string } | null = null;
+        try { draft = JSON.parse(localStorage.getItem('ao_checker_draft') || 'null'); } catch { draft = null; }
+        const text = (draft?.text || '').trim();
+        router.replace('/dashboard/essays', undefined, { shallow: true });
+        if (text) {
+          const same = list.find(e => (e.content || '').trim() === text);
+          const open = (e: Essay) => { setActiveEssay(e); setEditContent(e.content || ''); setMobileEssayView('editor'); setMobileEditorTab('write'); };
+          if (same) { open(same); try { localStorage.removeItem('ao_checker_draft'); } catch {} return; }
+          fetch('/api/essays', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'Personal statement', prompt: draft?.prompt || '', content: text }),
+          }).then(r => r.json()).then(data => {
+            if (data.essay) {
+              setEssays(prev => [data.essay, ...prev]);
+              open(data.essay);
+              try { localStorage.removeItem('ao_checker_draft'); } catch {}
+            }
+          }).catch(() => {});
+          return;
+        }
+      }
+
       const wanted = typeof router.query.essay === 'string' ? list.find(e => e.id === router.query.essay) : undefined;
       const recent = [...list].sort((x, y) => new Date(y.updatedAt).getTime() - new Date(x.updatedAt).getTime())[0];
       if (wanted) {

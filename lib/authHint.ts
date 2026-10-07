@@ -33,3 +33,13 @@ export function signOutAndForget(opts?: SignOutParams<true>) {
   setAuthHint(false);
   return signOut(opts);
 }
+
+/** A post-sign-in destination from ?next=, accepted only if it is a path on
+    this site. Anything else (absolute URLs, protocol-relative "//evil.com",
+    backslash tricks) is ignored, so the parameter can't be used to bounce a
+    student to another site right after they sign in. */
+export function safeNext(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
+  if (!raw.startsWith('/') || raw.startsWith('//') || raw.includes('\\')) return null;
+  return raw;
+}

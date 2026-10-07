@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { signIn } from 'next-auth/react';
+import { safeNext } from '../../lib/authHint';
 import Head from 'next/head';
 import Link from 'next/link';
 
@@ -56,10 +57,12 @@ export default function Register() {
       const signed = await signIn('credentials', { email: form.email, password: form.password, redirect: false });
       if (signed && !signed.error) {
         const role = data.user?.role || form.role;
-        router.push(role === 'parent' ? '/parent' : role === 'educator' ? '/educator' : '/dashboard');
+        const next = role === 'student' ? safeNext(router.query.next) : null;
+        router.push(next || (role === 'parent' ? '/parent' : role === 'educator' ? '/educator' : '/dashboard'));
         return;
       }
-      router.push('/auth/login?registered=true');
+      const nextQ = safeNext(router.query.next);
+      router.push('/auth/login?registered=true' + (nextQ ? `&next=${encodeURIComponent(nextQ)}` : ''));
     } catch {
       setError('Something went wrong. Please try again.');
       setLoading(false);
@@ -199,7 +202,7 @@ export default function Register() {
 
           <p className="mt-6 text-center text-sm text-slate-500">
             Already have an account?{' '}
-            <Link href="/auth/login" className="text-accent font-semibold hover:underline">
+            <Link href={safeNext(router.query.next) ? `/auth/login?next=${encodeURIComponent(safeNext(router.query.next)!)}` : '/auth/login'} className="text-accent font-semibold hover:underline">
               Sign in
             </Link>
           </p>

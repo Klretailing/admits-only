@@ -4,6 +4,8 @@ import { useState, useEffect, type ReactNode, type FormEvent } from 'react';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 
+const SITE_URL = 'https://www.admitsonly.com';
+
 interface LayoutProps {
   children: ReactNode;
 }
@@ -32,6 +34,9 @@ function Logo() {
 }
 
 const navLinks = [
+  // First, because it is the one thing a visitor can use right now, free,
+  // without an account.
+  { href: '/essay-checker', label: 'Essay Checker' },
   { href: '/services', label: 'Programs' },
   { href: '/consulting', label: 'Consulting' },
   { href: '/about', label: 'About' },
@@ -94,6 +99,8 @@ function FooterNewsletter() {
 
 export default function Layout({ children }: LayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const router = useRouter();
+  const canonicalUrl = SITE_URL + (router.asPath.split(/[?#]/)[0] === '/' ? '/' : router.asPath.split(/[?#]/)[0]);
   const { data: session, status } = useSession();
   const isLoggedIn = status === 'authenticated' && !!session;
   const userRole = (session?.user as any)?.role;
@@ -119,6 +126,26 @@ export default function Layout({ children }: LayoutProps) {
         <meta name="keywords" content="college admissions platform, AI essay coach, college match tool, SAT prep tracker, study groups, career roadmap, holistic admissions scoring, college application help" />
         <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect rx='20' width='100' height='100' fill='%236366f1'/><text x='50' y='68' font-size='60' text-anchor='middle' fill='white' font-weight='bold'>A</text></svg>" />
         <title>AdmitsOnly | The College Admissions Platform — AI Tools for Students</title>
+        {/* One canonical address. The same site is also served on two
+            *.vercel.app domains, which otherwise compete with
+            www.admitsonly.com in search results. */}
+        <link rel="canonical" key="canonical" href={canonicalUrl} />
+        {/* Link previews. Without these, a link pasted into iMessage,
+            Instagram, Discord or a group chat showed as a bare URL, and word
+            of mouth between students is how a product like this spreads.
+            Pages can override any of these by reusing the same key. */}
+        <meta property="og:site_name" content="AdmitsOnly" />
+        <meta property="og:type" key="og:type" content="website" />
+        <meta property="og:url" key="og:url" content={canonicalUrl} />
+        <meta property="og:title" key="og:title" content="AdmitsOnly | The all-in-one college admissions platform" />
+        <meta property="og:description" key="og:description" content="Essay feedback, college matching for 170+ universities, deadlines, and a community of students applying alongside you. Free to start." />
+        <meta property="og:image" key="og:image" content={`${SITE_URL}/og.png`} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" key="twitter:title" content="AdmitsOnly | The all-in-one college admissions platform" />
+        <meta name="twitter:description" key="twitter:description" content="Essay feedback, college matching for 170+ universities, deadlines, and a community of students applying alongside you. Free to start." />
+        <meta name="twitter:image" key="twitter:image" content={`${SITE_URL}/og.png`} />
       </Head>
 
       {/* Skip to content — accessibility */}
@@ -135,8 +162,10 @@ export default function Layout({ children }: LayoutProps) {
           <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
             <Logo />
 
-            {/* Desktop nav */}
-            <nav className="hidden md:flex items-center gap-1">
+            {/* Desktop nav. From lg (1024px), not md: seven links plus two buttons
+                need ~1000px, and at tablet widths the row overflowed and the whole
+                page scrolled sideways. Tablets use the menu button instead. */}
+            <nav className="hidden lg:flex items-center gap-1">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
@@ -164,7 +193,7 @@ export default function Layout({ children }: LayoutProps) {
             {/* Phones: the account button lives in the header too. It used to
                 exist only inside the hamburger menu, so on a phone there was
                 no visible way to sign in. */}
-            <div className="md:hidden ml-auto mr-1 flex items-center">
+            <div className="lg:hidden ml-auto mr-1 flex items-center">
               {authSwitch(
                 <Link href={dashboardHref} className="btn-primary text-sm !py-2 !px-3.5">
                   Dashboard
@@ -177,7 +206,7 @@ export default function Layout({ children }: LayoutProps) {
 
             {/* Mobile toggle */}
             <button
-              className="md:hidden p-2 text-slate-600 hover:text-primary"
+              className="lg:hidden p-2 text-slate-600 hover:text-primary"
               onClick={() => setMobileOpen(!mobileOpen)}
               aria-label="Toggle menu"
             >
@@ -198,7 +227,7 @@ export default function Layout({ children }: LayoutProps) {
 
           {/* Mobile menu */}
           {mobileOpen && (
-            <div className="md:hidden border-t border-slate-100 bg-white px-6 py-4 space-y-1">
+            <div className="lg:hidden border-t border-slate-100 bg-white px-6 py-4 space-y-1">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
@@ -243,7 +272,7 @@ export default function Layout({ children }: LayoutProps) {
         {/* Footer */}
         <footer className="bg-primary text-white">
           <div className="max-w-7xl mx-auto px-6 py-16">
-            <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-5">
+            <div className="grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-5">
               <div className="lg:col-span-2">
                 <div className="flex items-center gap-2.5">
                   <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-accent to-purple-600 flex items-center justify-center">

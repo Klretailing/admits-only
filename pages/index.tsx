@@ -523,7 +523,7 @@ export default function Home() {
             {/* Newsletter */}
             <RevealSection delay={100}>
               <div className="mt-16 pt-12 border-t border-white/10 text-center">
-                <div className="badge bg-accent/10 text-accent border-accent/20 mb-3">Free Weekly Newsletter</div>
+                <div className="badge bg-accent/10 text-indigo-200 border-accent/20 mb-3">Free Weekly Newsletter</div>
                 <h3 className="text-xl font-bold font-display text-white">Learner&apos;s Edge Weekly</h3>
                 <p className="mt-2 text-sm text-slate-400 max-w-lg mx-auto">
                   Internships, volunteer events, admissions insights, and EdTech picks for K–12 families — every week.
