@@ -85,7 +85,7 @@ const SECTIONS: { verb: string; line: string; icon: ReactNode; tools: Tool[] }[]
     tools: [
       { name: 'Study pods', body: 'Small groups with chat, shared files and a focus timer.', href: '/dashboard/pods' },
       { name: 'Community channels', body: '#CollegeEssays and #CollegeDecisions, open to every student.', href: '/dashboard/pods' },
-      { name: 'Parents & tutors', body: 'Share progress with the people helping you, without screenshots.', href: '/services' },
+      { name: 'Parents & tutors', body: 'Share progress with the people helping you, without screenshots.', href: '/dashboard/profile#share' },
     ],
   },
 ];
@@ -261,8 +261,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── WHAT'S INSIDE ─── */}
-      <section className="max-w-6xl mx-auto px-6 pb-20 lg:pb-24">
+      {/* ─── WHAT'S INSIDE ─── (the nav's "What's inside" links to #inside) */}
+      <section id="inside" className="max-w-6xl mx-auto px-6 pb-20 lg:pb-24 scroll-mt-24">
         <h2 className="text-3xl lg:text-4xl font-bold">What&apos;s inside</h2>
         <p className="mt-3 text-lg text-slate-700 max-w-2xl">Four kinds of help, each one a page of the same notebook.</p>
         <div className="mt-10 grid gap-6 lg:grid-cols-2">
@@ -330,7 +330,7 @@ export default function Home() {
             See deadlines and progress at a glance, with your student&apos;s permission, so the dinner-table
             conversation can be about something else.
           </p>
-          <Link href="/auth/register" className="mt-4 inline-block font-semibold underline underline-offset-4 decoration-[1.5px]">Create a parent account</Link>
+          <Link href="/auth/register?role=parent" className="mt-4 inline-block font-semibold underline underline-offset-4 decoration-[1.5px]">Create a parent account</Link>
         </div>
         <div className="rounded-2xl border bg-white p-7">
           <h2 className="text-2xl font-bold">For tutors and counselors</h2>
@@ -338,7 +338,7 @@ export default function Home() {
             Review essays inline, keep session notes, and follow each student&apos;s progress, in the same notebook
             they already use.
           </p>
-          <Link href="/consulting" className="mt-4 inline-block font-semibold underline underline-offset-4 decoration-[1.5px]">See tutoring and consulting</Link>
+          <Link href="/auth/register?role=educator" className="mt-4 inline-block font-semibold underline underline-offset-4 decoration-[1.5px]">Create a tutor account</Link>
         </div>
       </section>
 
@@ -351,7 +351,7 @@ export default function Home() {
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <Link href="/auth/register" className="btn-primary text-base !px-6 !py-3">Start your notebook, free</Link>
-            <Link href="/consulting" className="btn-secondary text-base !px-6 !py-3">Talk to a consultant</Link>
+            <Link href="/essay-checker" className="btn-secondary text-base !px-6 !py-3">Check an essay first</Link>
           </div>
 
           <div className="mt-16 rounded-2xl border bg-white p-7 text-left sm:text-center">

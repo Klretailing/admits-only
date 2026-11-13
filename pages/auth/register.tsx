@@ -28,8 +28,13 @@ export default function Register() {
         .then(r => (r.ok ? r.json() : null))
         .then(data => { if (data?.tutorName) setTutorName(data.tutorName); })
         .catch(() => {});
+    } else {
+      // "Create a parent account" / "Create a tutor account" links preselect
+      // the role, so a parent doesn't land on a form that says Student.
+      const role = router.query.role;
+      if (role === 'parent' || role === 'educator') setForm((prev) => ({ ...prev, role }));
     }
-  }, [router.isReady, router.query.invite, router.query.email]);
+  }, [router.isReady, router.query.invite, router.query.email, router.query.role]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

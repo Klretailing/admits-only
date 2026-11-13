@@ -157,6 +157,49 @@ const ADAM_MESSAGES: { role: 'user' | 'assistant'; content: string }[] = [
   { role: 'assistant', content: "Start from the specific, not the school. You have the wildfire-detection ML project and the robotics vision work — CMU's real strength is exactly that intersection of machine learning and physical systems. Name one lab or professor whose work connects to your smoke-detection project, then say what you'd want to ask or build with them. Admissions can tell the difference between \"CMU is prestigious\" and \"here's the precise problem I want to work on here.\" Want me to look at your draft once you have a paragraph?" },
 ];
 
+/* ─── Keeping the demo in the current application cycle ───
+   The story above is written for the 2025–26 cycle (EA/REA in, UCs in,
+   RD supplements still open). Left alone, a year later every deadline reads
+   "past due" and the tutor/parent demos show nothing coming up. So the dates
+   are shifted by whole years into the current cycle, which starts Aug 1. */
+const BASE_CYCLE = 2025;
+
+function currentCycle(now: Date = new Date()): number {
+  return now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
+}
+
+function shiftYear(date: string, years: number): string {
+  return date.replace(/^(\d{4})/, (y) => String(Number(y) + years));
+}
+
+function collegesForCycle(cycle: number) {
+  const by = cycle - BASE_CYCLE;
+  return COLLEGES.map((c) => ({ ...c, deadline: shiftYear(c.deadline, by) }));
+}
+
+function podNameForCycle(cycle: number): string {
+  return `Bay Area CS Applicants '${String(cycle + 1).slice(-2)}`;
+}
+
+/** Roll an already-seeded demo forward when a new cycle starts. Rewrites the
+ *  shared demo tracker at most once a year (visitor edits to it reset then). */
+async function refreshDemoCycle(uid: string) {
+  const rows: any[] = await prisma.$queryRaw`
+    SELECT "data" FROM "saved_applications" WHERE "id" = ${'sa_demo_ethan'} AND "userId" = ${uid}`;
+  if (rows.length === 0) return;
+  const apps: { deadline?: string }[] = Array.isArray(rows[0].data) ? rows[0].data : [];
+  // The cycle's earliest deadlines (Oct/Nov) carry the cycle's start year.
+  const years = apps.map((a) => Number((a.deadline || '').slice(0, 4))).filter((y) => y > 2000);
+  const stored = years.length ? Math.min(...years) : null;
+  const cycle = currentCycle();
+  if (stored !== null && stored >= cycle) return;
+  await prisma.$executeRaw`
+    UPDATE "saved_applications" SET "data" = ${JSON.stringify(collegesForCycle(cycle))}::jsonb, "updatedAt" = NOW()
+    WHERE "id" = ${'sa_demo_ethan'}`;
+  await prisma.$executeRaw`
+    UPDATE "study_pods" SET "name" = ${podNameForCycle(cycle)}, "updatedAt" = NOW() WHERE "id" = ${'pod_demo_cs'}`;
+}
+
 export async function seedDemoStudent() {
   try {
     const ids: Record<string, string> = {};
@@ -173,7 +216,11 @@ export async function seedDemoStudent() {
     // half-seeded forever: profile and tracker, but no essays, pod or Adam.)
     // Every insert below is conflict-safe, so re-running heals a partial seed.
     const done: any[] = await prisma.$queryRaw`SELECT 1 FROM "adam_memory" WHERE "userId" = ${uid} LIMIT 1`;
-    if (done.length > 0) return;
+    if (done.length > 0) {
+      await refreshDemoCycle(uid);
+      return;
+    }
+    const cycle = currentCycle();
 
     // 1. Profile + stats
     const existing = await prisma.studentProfile.findUnique({ where: { userId: uid } });
@@ -190,7 +237,7 @@ export async function seedDemoStudent() {
     // 2. Application tracker
     await prisma.$executeRaw`
       INSERT INTO "saved_applications" ("id", "userId", "data", "updatedAt")
-      VALUES (${'sa_demo_ethan'}, ${uid}, ${JSON.stringify(COLLEGES)}::jsonb, NOW())
+      VALUES (${'sa_demo_ethan'}, ${uid}, ${JSON.stringify(collegesForCycle(cycle))}::jsonb, NOW())
       ON CONFLICT ("userId") DO NOTHING`;
 
     // 3. Essays — "updatedAt" is Prisma-managed (@updatedAt) and has no DB
@@ -206,7 +253,7 @@ export async function seedDemoStudent() {
     // 4. Study Pod + members + conversation
     await prisma.$executeRaw`
       INSERT INTO "study_pods" ("id", "name", "description", "inviteCode", "updatedAt")
-      VALUES (${'pod_demo_cs'}, ${"Bay Area CS Applicants '26"}, ${'Seniors grinding through CS apps — essay swaps, deadline reminders, and moral support.'}, ${'CS26BAY'}, NOW())
+      VALUES (${'pod_demo_cs'}, ${podNameForCycle(cycle)}, ${'Seniors grinding through CS apps — essay swaps, deadline reminders, and moral support.'}, ${'CS26BAY'}, NOW())
       ON CONFLICT ("id") DO NOTHING`;
     const memberEmails = [STUDENT, ...PODMATES];
     for (let i = 0; i < memberEmails.length; i++) {

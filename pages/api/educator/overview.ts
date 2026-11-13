@@ -104,6 +104,9 @@ async function getUpcomingDeadlines(
 
           for (const app of data) {
             if (!app || !app.deadline) continue;
+            // A submitted or decided application has no deadline left to
+            // help with; listing it buried the ones that do.
+            if (['submitted', 'accepted', 'rejected', 'waitlisted', 'deferred'].includes(app.status)) continue;
             const deadline = new Date(app.deadline);
             if (isNaN(deadline.getTime())) continue;
             const diff = deadline.getTime() - now.getTime();
