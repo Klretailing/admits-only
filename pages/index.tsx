@@ -311,10 +311,10 @@ export default function Home() {
               Every Saturday my grandmother wakes at four to push her cart three miles to the market. I have been her
               helper since I was seven&hellip;
             </p>
-            <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3 text-sm">
               {[['Rhythm', '82'], ['Readability', '96'], ['Tone', '88'], ['Narrative', '74']].map(([k, v]) => (
-                <div key={k} className="rounded-lg border-[1.5px] border-ink bg-white px-3 py-2 flex items-baseline justify-between">
-                  <span className="text-slate-700">{k}</span><span className="font-display font-bold text-lg">{v}</span>
+                <div key={k} className="rounded-lg border-[1.5px] border-ink bg-white px-2 sm:px-3 py-2 flex flex-col sm:flex-row sm:items-baseline sm:justify-between sm:gap-2 min-w-0">
+                  <span className="text-slate-700 text-[11px] sm:text-sm">{k}</span><span className="font-display font-bold text-lg">{v}</span>
                 </div>
               ))}
             </div>
