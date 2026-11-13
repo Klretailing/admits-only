@@ -80,24 +80,22 @@ export default function FAQ() {
   return (
     <>
       <Head>
-        <title>College Admissions Consulting FAQ | AdmitsOnly Programs &amp; Enrollment</title>
-        <meta name="description" content="Frequently asked questions about AdmitsOnly's college admissions consulting programs, enrollment process, delivery formats, and how our academic coaching helps students get into top universities." />
+        <title>FAQ | AdmitsOnly — The Notebook, Programs &amp; Enrollment</title>
+        <meta name="description" content="Answers about AdmitsOnly: the free notebook for grades 9 to 12, our mentor-led programs, enrollment, formats and pricing." />
       </Head>
 
       <div className="bg-white">
         {/* Hero */}
-        <section className="relative overflow-hidden bg-primary">
-          <div className="absolute inset-0 bg-grid opacity-30" />
-          <div className="absolute bottom-0 -left-40 w-96 h-96 bg-accent/20 rounded-full blur-3xl animate-pulse-soft" />
+        <section className="relative">
 
           <div className="relative max-w-7xl mx-auto px-6 py-24 lg:py-28">
             <div className="max-w-3xl">
               <div className="section-label">Support</div>
-              <h1 className="mt-6 text-4xl sm:text-5xl lg:text-6xl font-extrabold font-display text-white leading-[1.1] tracking-tight">
+              <h1 className="mt-6 text-4xl sm:text-5xl lg:text-6xl font-bold font-display text-primary leading-[1.1] tracking-tight">
                 Frequently asked{' '}
                 <span className="gradient-text">questions</span>
               </h1>
-              <p className="mt-6 text-lg lg:text-xl text-slate-300 leading-relaxed max-w-2xl">
+              <p className="mt-6 text-lg lg:text-xl text-slate-700 leading-relaxed max-w-2xl">
                 Everything you need to know about our college admissions programs, enrollment process, and how we work with families.
               </p>
             </div>

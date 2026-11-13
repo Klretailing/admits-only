@@ -234,8 +234,8 @@ export default function ParentActionItems() {
             </div>
             <div className="w-12 h-12 relative">
               <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                <circle cx="50" cy="50" r="40" fill="none" stroke="#f1f5f9" strokeWidth="8" />
-                <circle cx="50" cy="50" r="40" fill="none" stroke="#0d9488" strokeWidth="8"
+                <circle cx="50" cy="50" r="40" fill="none" stroke="#f9f4eb" strokeWidth="8" />
+                <circle cx="50" cy="50" r="40" fill="none" stroke="#86847d" strokeWidth="8"
                   strokeLinecap="round" strokeDasharray={`${donePct * 2.51} 251`} />
               </svg>
             </div>

@@ -6,6 +6,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { AdamPanel, AdamNavButton, AdamFloatingButton } from './AdamAssistant';
 import { useTheme } from '../lib/themeContext';
 import { tracker } from '../lib/analytics';
+import LogoMark from './LogoMark';
 
 /** The pages that get a slot in the mobile tab bar; the rest live under More. */
 const MOBILE_TABS = ['/dashboard', '/dashboard/essays', '/dashboard/progress', '/dashboard/pods'];
@@ -83,7 +84,7 @@ const sidebarLinks = [
   },
   {
     href: '/dashboard/college-heatmap',
-    label: 'Admissions Map',
+    label: 'College Map',
     mobileLabel: 'Map',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -153,11 +154,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-slate-100">
         <div className="p-5 border-b border-slate-100">
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 rounded-xl bg-accent flex items-center justify-center shadow-sm transition-shadow">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L2 9L12 16L22 9L12 2Z" fill="white" opacity="0.9" />
-                <path d="M4 11V17L12 22L20 17V11" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-              </svg>
+            <div className="w-9 h-9 rounded-xl logo-tile flex items-center justify-center">
+              <LogoMark size={18} />
             </div>
             <span className="text-lg font-bold font-display tracking-tight text-primary">
               Admits<span className="gradient-text">Only</span>
@@ -236,11 +234,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <aside className="absolute left-0 top-0 bottom-0 w-72 bg-white shadow-sm flex flex-col animate-fade-in">
             <div className="p-5 border-b border-slate-100 flex items-center justify-between">
               <Link href="/" className="flex items-center gap-2.5" onClick={() => setMobileMenuOpen(false)}>
-                <div className="w-9 h-9 rounded-xl bg-accent flex items-center justify-center">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 2L2 9L12 16L22 9L12 2Z" fill="white" opacity="0.9" />
-                    <path d="M4 11V17L12 22L20 17V11" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-                  </svg>
+                <div className="w-9 h-9 rounded-xl logo-tile flex items-center justify-center">
+                  <LogoMark size={18} />
                 </div>
                 <span className="text-lg font-bold font-display tracking-tight text-primary">
                   Admits<span className="gradient-text">Only</span>

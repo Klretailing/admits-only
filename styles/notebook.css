@@ -1,0 +1,262 @@
+/* ══════════════════════════════════════════════════════════════════════
+   NOTEBOOK — the visual language of the site.
+
+   Graphite on paper. Loaded LAST (after globals, theme-tokens, theme-dark),
+   so it is the final word on the shared building blocks. Colours throughout
+   the app were already converted to graphite by design/ink.cjs with their
+   contrast preserved; this file adds the decisions that make it a notebook
+   rather than a grey website:
+
+     PAPER     warm off-white page with a faint dot grid, like a bullet journal
+     INK       one near-black for text, borders and primary actions
+     CARDS     a drawn ink outline and a hard, unblurred offset shadow: paper
+               lifted off the page. No glows, gradients or glass.
+     PRESS     interactive cards lift on hover and press flat on click, the
+               shadow shrinking under them — a physical "3D" without blur
+     VOICES    Shantell Sans: tidy for interface text, hand-lettered for
+               headings (same family, informality axis). Caveat for margin
+               notes. Literata for the student's own writing.
+     RED       one red pencil, for errors, overdue and destructive actions only
+
+   Dark mode is a chalkboard: graphite slate, chalk-white lines and type.
+   ══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --ink: 28 27 25;          /* #1c1b18 */
+  --paper: 246 243 236;     /* #f7f3ea */
+  --card: 255 253 248;      /* #fefdfb */
+  --line: 28 27 25;         /* card outlines */
+  --rule: 214 207 194;      /* hairlines, dividers — a light pencil line */
+  --shadow-ink: 28 27 25;
+  --red-pencil: 180 35 24;  /* #af2b27: 6.4:1 on paper */
+  --dot: 28 27 25;
+}
+html.dark {
+  --ink: 240 236 227;       /* chalk */
+  --paper: 24 23 20;
+  --card: 33 32 29;
+  --line: 240 236 227;
+  --rule: 64 61 56;
+  --shadow-ink: 0 0 0;
+  --red-pencil: 248 113 102;
+  --dot: 240 236 227;
+}
+
+/* ─── paper & type ─────────────────────────────────────────────────── */
+html, body { background-color: rgb(var(--paper)); }
+body {
+  color: rgb(var(--ink));
+  letter-spacing: 0;
+  font-feature-settings: normal;
+  font-variation-settings: 'INFM' 0, 'BNCE' 0;
+  /* A dot grid at 3% ink: you notice paper, not a pattern. Fixed so it reads
+     as the sheet under the content rather than scrolling with it. */
+  background-image: radial-gradient(rgb(var(--dot) / 0.07) 1px, transparent 1.2px);
+  background-size: 22px 22px;
+  background-attachment: fixed;
+}
+html.dark body { background-image: radial-gradient(rgb(var(--dot) / 0.06) 1px, transparent 1.2px); }
+
+/* Headings are lettered by hand: the same family at full informality with a
+   little bounce. Body text stays tidy so numbers and deadlines are crisp. */
+h1, h2, h3, .font-display {
+  letter-spacing: 0;
+  font-feature-settings: normal;
+  font-variation-settings: 'INFM' 100, 'BNCE' 45;
+}
+h4, h5, h6 { letter-spacing: 0; font-feature-settings: normal; }
+
+/* The margin-note voice: a teacher's pencil aside. Use sparingly. */
+.font-hand, .note {
+  font-family: 'Caveat Variable', cursive;
+  font-variation-settings: normal;
+  letter-spacing: 0;
+}
+/* :where() keeps this at zero specificity, so a display utility on the same
+   element (`note hidden lg:block`) always wins. */
+:where(.note) { display: inline-block; font-size: 1.35em; line-height: 1; transform: rotate(-2deg); }
+
+/* The student's own writing gets a neutral page: the notebook's handwriting
+   is the interface's voice, not theirs. */
+.font-serif, .student-page { font-family: 'Literata Variable', Georgia, serif; font-variation-settings: normal; }
+
+::selection { background: rgb(var(--ink)); color: rgb(var(--paper)); }
+
+/* Tiny uppercase, widely tracked labels are a hallmark of generated UI and
+   read like a ransom note in a handwritten face. Sentence case instead. */
+.uppercase.tracking-wider, .uppercase.tracking-widest, .uppercase[class*="tracking-[0."] {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* ─── surfaces ─────────────────────────────────────────────────────── */
+.bg-surface { background-color: transparent !important; }  /* let the paper show */
+.bg-white { background-color: rgb(var(--card)); }
+
+/* Hairline borders become a visible pencil rule. */
+.border-slate-100, .border-slate-200, .border-gray-100, .border-gray-200,
+.divide-slate-100 > * + *, .divide-slate-200 > * + * { border-color: rgb(var(--rule)) !important; }
+
+/* THE CARD. Any rounded-2xl box with a border is a card: drawn outline plus
+   a hard offset shadow. Nested cards drop to a rule and no shadow, so depth
+   only ever reads at one level. */
+.rounded-2xl.border:not(.border-dashed):not(.border-transparent):not(.border-0), .card, .surface, .surface-raised, .dash-stat-card, .modal-card {
+  border: 1.5px solid rgb(var(--line) / 0.9) !important;
+  box-shadow: 3px 3px 0 0 rgb(var(--shadow-ink) / 0.9) !important;
+  background-color: rgb(var(--card));
+}
+html.dark .rounded-2xl.border, html.dark .card, html.dark .surface, html.dark .surface-raised,
+html.dark .dash-stat-card, html.dark .modal-card {
+  border-color: rgb(var(--line) / 0.55) !important;
+  box-shadow: 4px 4px 0 0 rgb(0 0 0 / 0.75) !important;
+}
+.rounded-2xl .rounded-2xl.border, .rounded-2xl .surface, .modal-card .rounded-2xl.border {
+  border: 1px solid rgb(var(--rule)) !important;
+  box-shadow: none !important;
+}
+.surface-raised, .modal-card { box-shadow: 5px 5px 0 0 rgb(var(--shadow-ink) / 0.9) !important; }
+.modal-card { animation: modalIn 0.18s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+.modal-backdrop { background: rgb(var(--ink) / 0.28) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+.slideover-panel { border-left: 1.5px solid rgb(var(--line) / 0.9); box-shadow: -5px 0 0 0 rgb(var(--shadow-ink) / 0.12) !important; }
+
+/* PRESS. Cards you can click lift toward you on hover and press flat when
+   clicked — the shadow grows and shrinks under them like real paper. */
+.surface-interactive, .card, .dash-card-hover, .dash-stat-card {
+  transition: transform 140ms cubic-bezier(0.3, 0.7, 0.4, 1), box-shadow 140ms cubic-bezier(0.3, 0.7, 0.4, 1) !important;
+}
+.surface-interactive:hover, .card:hover, .dash-card-hover:hover, a.dash-stat-card:hover {
+  transform: translate(-2px, -2px) !important;
+  box-shadow: 5px 5px 0 0 rgb(var(--shadow-ink) / 0.9) !important;
+}
+.surface-interactive:active, .card:active, .dash-card-hover:active, a.dash-stat-card:active {
+  transform: translate(2px, 2px) !important;
+  box-shadow: 1px 1px 0 0 rgb(var(--shadow-ink) / 0.9) !important;
+}
+html.dark .surface-interactive:hover, html.dark .card:hover, html.dark .dash-card-hover:hover { box-shadow: 6px 6px 0 0 rgb(0 0 0 / 0.75) !important; }
+.dash-stat-card::before { display: none !important; }  /* the old coloured top bar */
+
+/* ─── buttons ──────────────────────────────────────────────────────── */
+.btn-primary, .bg-accent, .bg-indigo-500, .bg-indigo-600 {
+  background-color: rgb(var(--ink)) !important;
+  color: rgb(var(--paper)) !important;
+}
+.btn-primary, .btn-secondary {
+  border: 1.5px solid rgb(var(--ink)) !important;
+  border-radius: 0.625rem;
+  box-shadow: 3px 3px 0 0 rgb(var(--shadow-ink) / 0.9) !important;
+  transition: transform 120ms ease, box-shadow 120ms ease !important;
+}
+.btn-secondary { background-color: rgb(var(--card)) !important; color: rgb(var(--ink)) !important; }
+.btn-primary:hover, .btn-secondary:hover { transform: translate(-1px, -1px) !important; box-shadow: 4px 4px 0 0 rgb(var(--shadow-ink) / 0.9) !important; }
+.btn-primary:active, .btn-secondary:active { transform: translate(2px, 2px) !important; box-shadow: 1px 1px 0 0 rgb(var(--shadow-ink) / 0.9) !important; }
+.btn-primary:disabled, .btn-primary[aria-disabled="true"] { transform: none !important; box-shadow: none !important; }
+html.dark .btn-primary, html.dark .btn-secondary { box-shadow: 3px 3px 0 0 rgb(0 0 0 / 0.75) !important; }
+/* On a chalkboard the primary action is chalk, not ink. */
+html.dark .btn-primary, html.dark .bg-accent, html.dark .bg-indigo-500, html.dark .bg-indigo-600 {
+  background-color: rgb(var(--ink)) !important;
+  color: rgb(24 23 20) !important;
+}
+html.dark .bg-accent *, html.dark .btn-primary * { color: inherit; }
+.hover\:bg-accent\/90:hover, .hover\:bg-indigo-600:hover { background-color: rgb(var(--ink) / 0.86) !important; }
+
+/* Accent text is ink now, so links need their underline back to be links. */
+a.text-accent:not(.btn-primary):not(.btn-secondary) {
+  text-decoration-line: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+.text-accent { color: rgb(var(--ink)) !important; }
+.border-accent { border-color: rgb(var(--ink)) !important; }
+
+/* ─── the old "gradient text" is now a pencil underline ─────────────── */
+.gradient-text {
+  background: none !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+  -webkit-text-fill-color: currentColor !important;
+  color: inherit !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 12' preserveAspectRatio='none'%3E%3Cpath d='M2 8.5C30 4.5 58 9.5 88 6.5S150 3 198 6' fill='none' stroke='%231c1b18' stroke-width='3.2' stroke-linecap='round'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-size: 100% 0.28em !important;
+  background-position: 0 98% !important;
+  padding-bottom: 0.06em;
+}
+html.dark .gradient-text {
+  /* theme-dark.css sets gradient text with a `background` shorthand at
+     higher specificity, which resets size/repeat/position and made the
+     underline a solid blob — so every longhand is restated here. */
+  -webkit-text-fill-color: currentColor !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+  background-repeat: no-repeat !important;
+  background-size: 100% 0.28em !important;
+  background-position: 0 98% !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 12' preserveAspectRatio='none'%3E%3Cpath d='M2 8.5C30 4.5 58 9.5 88 6.5S150 3 198 6' fill='none' stroke='%23f0ece4' stroke-width='3.2' stroke-linecap='round'/%3E%3C/svg%3E") !important;
+}
+
+/* ─── chips, inputs, focus ─────────────────────────────────────────── */
+.badge, .badge-accent, .badge-warm {
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  border: 1px solid rgb(var(--ink) / 0.8) !important;
+  background-color: rgb(var(--card)) !important;
+  color: rgb(var(--ink)) !important;
+}
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select {
+  border-color: rgb(var(--ink) / 0.35);
+}
+input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible, a:focus-visible {
+  outline: 2px solid rgb(var(--ink)) !important;
+  outline-offset: 2px;
+  box-shadow: none;
+}
+[class*="focus:ring"]:focus { --tw-ring-color: rgb(var(--ink) / 0.25) !important; }
+
+/* ─── things a notebook does not have ──────────────────────────────── */
+.glow, .glow-warm, .status-pulse { display: none !important; }
+.animate-pulse-soft, .animate-float { animation: none !important; }
+.glass-card { background-color: rgb(var(--card)) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+.bg-grid { background-image: none !important; }   /* the paper already has a grid */
+
+/* Errors and destructive actions: the red pencil. */
+.text-red-pencil { color: rgb(var(--red-pencil)); }
+
+@media (prefers-reduced-motion: reduce) {
+  .surface-interactive, .card, .dash-card-hover, .dash-stat-card, .btn-primary, .btn-secondary { transition: none !important; }
+  .surface-interactive:hover, .card:hover, .dash-card-hover:hover, .btn-primary:hover, .btn-secondary:hover,
+  .surface-interactive:active, .card:active, .btn-primary:active, .btn-secondary:active { transform: none !important; }
+}
+
+/* ─── the logo tile ─── ink with a paper mark; chalk with an ink mark on the
+   dark theme, so it never disappears into the page. */
+.logo-tile {
+  background-color: rgb(28 27 25) !important;
+  color: rgb(246 243 236) !important;
+  box-shadow: 2px 2px 0 0 rgb(var(--shadow-ink) / 0.25);
+}
+html.dark .logo-tile { background-color: rgb(240 236 227) !important; color: rgb(28 27 25) !important; box-shadow: none; }
+/* The footer and admin sidebar are ink in both themes: invert the tile there. */
+.bg-primary .logo-tile, .bg-slate-900 .logo-tile { background-color: rgb(246 243 236) !important; color: rgb(28 27 25) !important; }
+
+/* Section labels were small tracked pills; in the notebook they are margin
+   notes in pencil, which every page that uses them picks up at once. */
+.section-label {
+  display: inline-block !important;
+  font-family: 'Caveat Variable', cursive !important;
+  font-size: 1.45rem !important;
+  line-height: 1 !important;
+  font-weight: 500 !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  color: rgb(var(--ink) / 0.78) !important;
+  background: none !important;
+  border: 0 !important;
+  padding: 0 !important;
+  transform: rotate(-2deg);
+}
+
+/* Faintest muted ink. Pages now sit on paper, which is a shade darker than
+   the white they used to sit on, so the old value fell to 4.42:1. #6b6863
+   measures 5.01:1 on paper, 5.46:1 on cards and stays a step lighter than
+   text-slate-400 (#67655f), so the hierarchy is unchanged. */
+html:not(.dark) .text-slate-300 { color: #6b6863; }

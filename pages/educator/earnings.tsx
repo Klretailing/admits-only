@@ -446,8 +446,8 @@ export default function EducatorEarnings() {
               <BarChart
                 data={chartData}
                 valueKey={chartView === 'monthly' ? 'earnings' : 'cumulative'}
-                gradientFrom={chartView === 'monthly' ? '#ea580c' : '#059669'}
-                gradientTo={chartView === 'monthly' ? '#f97316' : '#34d399'}
+                gradientFrom={chartView === 'monthly' ? '#8c8781' : '#87837d'}
+                gradientTo={chartView === 'monthly' ? '#9e9a93' : '#c0bab3'}
               />
             ) : (
               <div className="flex items-center justify-center h-48 text-sm text-slate-400">

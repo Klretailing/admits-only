@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import '../styles/globals.css';
 import '../styles/theme-tokens.css';
+import LogoMark from '../components/LogoMark';
 
 export const metadata = {
   title: 'Page not found | AdmitsOnly',
@@ -15,11 +16,8 @@ export default function NotFound() {
     <main className="min-h-screen flex items-center justify-center bg-surface px-6 py-16 font-sans text-slate-900">
       <div className="w-full max-w-md text-center">
         <Link href="/" className="inline-flex items-center gap-2.5 mb-8">
-          <span className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center shadow-sm">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <path d="M12 2L2 9L12 16L22 9L12 2Z" fill="white" opacity="0.9" />
-              <path d="M4 11V17L12 22L20 17V11" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-            </svg>
+          <span className="w-10 h-10 rounded-xl logo-tile flex items-center justify-center">
+            <LogoMark size={20} />
           </span>
           <span className="text-xl font-bold tracking-tight text-primary">AdmitsOnly</span>
         </Link>

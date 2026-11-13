@@ -111,8 +111,8 @@ export default function ParentProgress() {
             {/* Progress Ring */}
             <div className="relative w-28 h-28 shrink-0">
               <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                <circle cx="50" cy="50" r="42" fill="none" stroke="#f1f5f9" strokeWidth="8" />
-                <circle cx="50" cy="50" r="42" fill="none" stroke="#0d9488" strokeWidth="8"
+                <circle cx="50" cy="50" r="42" fill="none" stroke="#f9f4eb" strokeWidth="8" />
+                <circle cx="50" cy="50" r="42" fill="none" stroke="#86847d" strokeWidth="8"
                   strokeLinecap="round" strokeDasharray={`${overallPct * 2.64} 264`}
                   className="transition-all duration-1000" />
               </svg>

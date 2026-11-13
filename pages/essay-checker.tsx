@@ -123,7 +123,7 @@ export default function EssayChecker() {
             value={text}
             onChange={e => setText(e.target.value)}
             placeholder="Paste or start typing your essay here…"
-            className="mt-4 w-full min-h-[280px] lg:min-h-[420px] rounded-2xl border border-slate-200 bg-white p-5 text-[15px] leading-relaxed text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent resize-y"
+            className="mt-4 w-full min-h-[280px] lg:min-h-[420px] rounded-2xl border border-slate-200 bg-white p-5 student-page text-[16px] leading-[1.8] text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent resize-y"
           />
           <div className="mt-2 flex items-center justify-between text-sm">
             <span className={words > WORD_LIMIT ? 'font-semibold text-red-700' : 'text-slate-500'}>

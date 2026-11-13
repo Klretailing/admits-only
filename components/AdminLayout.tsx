@@ -3,6 +3,7 @@ import { signOutAndForget } from '../lib/authHint';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import { useState, type ReactNode } from 'react';
+import LogoMark from './LogoMark';
 
 const adminLinks = [
   {
@@ -148,11 +149,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       <aside className="hidden lg:flex flex-col w-64 bg-primary">
         <div className="p-5 border-b border-white/10">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L2 9L12 16L22 9L12 2Z" fill="white" opacity="0.9" />
-                <path d="M4 11V17L12 22L20 17V11" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-              </svg>
+            <div className="w-9 h-9 rounded-xl logo-tile flex items-center justify-center">
+              <LogoMark size={18} />
             </div>
             <div>
               <span className="text-lg font-bold font-display tracking-tight text-white">
@@ -210,11 +208,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           <aside className="absolute left-0 top-0 bottom-0 w-72 bg-primary shadow-2xl flex flex-col animate-fade-in">
             <div className="p-5 border-b border-white/10 flex items-center justify-between">
               <Link href="/" className="flex items-center gap-2.5" onClick={() => setMobileMenuOpen(false)}>
-                <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 2L2 9L12 16L22 9L12 2Z" fill="white" opacity="0.9" />
-                    <path d="M4 11V17L12 22L20 17V11" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-                  </svg>
+                <div className="w-9 h-9 rounded-xl logo-tile flex items-center justify-center">
+                  <LogoMark size={18} />
                 </div>
                 <div>
                   <span className="text-lg font-bold font-display tracking-tight text-white">

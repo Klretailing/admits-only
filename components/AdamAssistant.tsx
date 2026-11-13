@@ -95,12 +95,12 @@ export function AdamNavButton({
       <span className="relative flex items-center justify-center w-7 h-7 flex-shrink-0">
         {/* soft radial glow behind the avatar — intentional attention affordance */}
         <span className="absolute inset-0 rounded-full bg-orange-500/40 blur-md animate-pulse" />
-        <span className="relative w-7 h-7 rounded-full bg-orange-500 text-white flex items-center justify-center shadow-[0_0_12px_rgba(249,115,22,0.55)]">
+        <span className="relative w-7 h-7 rounded-full bg-orange-500 text-white flex items-center justify-center shadow-[0_0_12px_rgba(158,154,147,0.55)]">
           <AdamMark className="w-4 h-4" />
         </span>
       </span>
       <span className="flex-1 text-left">Ask Adam</span>
-      <span className="w-1.5 h-1.5 rounded-full bg-orange-500 shadow-[0_0_6px_rgba(249,115,22,0.8)]" />
+      <span className="w-1.5 h-1.5 rounded-full bg-orange-500 shadow-[0_0_6px_rgba(158,154,147,0.8)]" />
     </button>
   );
 }
@@ -112,7 +112,7 @@ export function AdamFloatingButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="lg:hidden fixed bottom-20 right-4 z-40 w-14 h-14 rounded-full bg-orange-600 text-white flex items-center justify-center shadow-[0_0_20px_rgba(249,115,22,0.6)] active:scale-95 transition-transform"
+      className="lg:hidden fixed bottom-20 right-4 z-40 w-14 h-14 rounded-full bg-orange-600 text-white flex items-center justify-center shadow-[0_0_20px_rgba(158,154,147,0.6)] active:scale-95 transition-transform"
       title="Ask Adam"
       aria-label="Ask Adam"
     >
@@ -318,7 +318,7 @@ export function AdamPanel({
             <div className="flex flex-col items-center text-center py-10 px-4">
               <span className="relative flex items-center justify-center mb-4">
                 <span className="absolute inset-0 rounded-full bg-orange-500/25 blur-lg" />
-                <span className="relative w-14 h-14 rounded-full bg-orange-600 text-white flex items-center justify-center shadow-[0_0_18px_rgba(249,115,22,0.5)]">
+                <span className="relative w-14 h-14 rounded-full bg-orange-600 text-white flex items-center justify-center shadow-[0_0_18px_rgba(158,154,147,0.5)]">
                   <AdamMark className="w-7 h-7" />
                 </span>
               </span>
@@ -343,7 +343,7 @@ export function AdamPanel({
           {showGreeting && (
             <div>
               <div className="flex gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center flex-shrink-0 shadow-[0_0_10px_rgba(249,115,22,0.45)]">
+                <div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center flex-shrink-0 shadow-[0_0_10px_rgba(158,154,147,0.45)]">
                   <AdamMark className="w-4 h-4" />
                 </div>
                 <div className="max-w-[85%] bg-white rounded-2xl rounded-tl-md border border-slate-100 px-4 py-3 text-[13.5px] leading-relaxed text-slate-700 shadow-sm">
@@ -372,7 +372,7 @@ export function AdamPanel({
             messages.map((msg, i) =>
               msg.role === 'assistant' ? (
                 <div key={i} className="flex gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center flex-shrink-0 shadow-[0_0_10px_rgba(249,115,22,0.45)]">
+                  <div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center flex-shrink-0 shadow-[0_0_10px_rgba(158,154,147,0.45)]">
                     <AdamMark className="w-4 h-4" />
                   </div>
                   <div className="max-w-[85%] bg-white rounded-2xl rounded-tl-md border border-slate-100 px-4 py-3 text-[13.5px] leading-relaxed text-slate-700 shadow-sm">
@@ -391,7 +391,7 @@ export function AdamPanel({
           {/* Typing indicator */}
           {loading && (
             <div className="flex gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center flex-shrink-0 shadow-[0_0_10px_rgba(249,115,22,0.45)]">
+              <div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center flex-shrink-0 shadow-[0_0_10px_rgba(158,154,147,0.45)]">
                 <AdamMark className="w-4 h-4" />
               </div>
               <div className="bg-white rounded-2xl rounded-tl-md border border-slate-100 px-4 py-3 shadow-sm">

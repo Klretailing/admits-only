@@ -1556,12 +1556,12 @@ function analyzeMotifs(rawBullets: string[]): MotifAnalysis {
 /* ─── Visual Board: Color palette ─── */
 
 const MOTIF_PALETTE = [
-  { bg: '#EEF2FF', border: '#6366F1', text: '#3730A3', accent: '#818CF8', light: '#C7D2FE', gradient: 'from-indigo-500 to-violet-500' },
-  { bg: '#FEF3C7', border: '#D97706', text: '#78350F', accent: '#FBBF24', light: '#FDE68A', gradient: 'from-amber-500 to-orange-500' },
-  { bg: '#D1FAE5', border: '#059669', text: '#064E3B', accent: '#34D399', light: '#A7F3D0', gradient: 'from-emerald-500 to-teal-500' },
-  { bg: '#FFE4E6', border: '#E11D48', text: '#881337', accent: '#FB7185', light: '#FECDD3', gradient: 'from-rose-500 to-pink-500' },
-  { bg: '#E0F2FE', border: '#0284C7', text: '#0C4A6E', accent: '#38BDF8', light: '#BAE6FD', gradient: 'from-sky-500 to-blue-500' },
-  { bg: '#F3E8FF', border: '#9333EA', text: '#581C87', accent: '#C084FC', light: '#DDD6FE', gradient: 'from-purple-500 to-fuchsia-500' },
+  { bg: '#f6f2e9', border: '#7a7771', text: '#43433f', accent: '#99958e', light: '#d7d3cb', gradient: 'from-indigo-500 to-violet-500' },
+  { bg: '#f7f2ea', border: '#93908a', text: '#4c4843', accent: '#ccc8c0', light: '#eae6de', gradient: 'from-amber-500 to-orange-500' },
+  { bg: '#f5f0e8', border: '#87837d', text: '#464440', accent: '#c0bab3', light: '#e6e3db', gradient: 'from-emerald-500 to-teal-500' },
+  { bg: '#eeeae2', border: '#cc4440', text: '#891715', accent: '#fb7468', light: '#dcd9d1', gradient: 'from-rose-500 to-pink-500' },
+  { bg: '#f3efe7', border: '#817d76', text: '#474641', accent: '#b4b1aa', light: '#e4dfd7', gradient: 'from-sky-500 to-blue-500' },
+  { bg: '#f0ece3', border: '#6d6a65', text: '#3e3d39', accent: '#a29f98', light: '#e0dad2', gradient: 'from-purple-500 to-fuchsia-500' },
 ];
 
 /* ─── Interactive Storyboard Component (HTML-based, draggable) ─── */
@@ -2397,12 +2397,12 @@ function GrammarEditor({
    ══════════════════════════════════════════════════════════════════════ */
 
 /* Score colours are bright enough for a bar fill but not for small text:
-   #f59e0b on white is 2.15:1 and #10b981 is 2.54:1. Numbers and grades use a
+   #b6b0a9 on white is 2.15:1 and #a7a29b is 2.54:1. Numbers and grades use a
    darker shade of the same hue in light mode and a lighter one in dark mode. */
 const SCORE_INK: Record<string, string> = {
-  '#10b981': 'text-emerald-700 dark:text-emerald-400',
-  '#f59e0b': 'text-amber-700 dark:text-amber-400',
-  '#ef4444': 'text-red-700 dark:text-red-400',
+  '#a7a29b': 'text-emerald-700 dark:text-emerald-400',
+  '#b6b0a9': 'text-amber-700 dark:text-amber-400',
+  '#de574e': 'text-red-700 dark:text-red-400',
 };
 
 function ScoreBar({ label, value, color, sublabel, invert }: {
@@ -2413,10 +2413,10 @@ function ScoreBar({ label, value, color, sublabel, invert }: {
   let grade = '';
   if (value != null) {
     if (invert) {
-      barColor = value <= 20 ? '#10b981' : value <= 45 ? '#f59e0b' : '#ef4444';
+      barColor = value <= 20 ? '#a7a29b' : value <= 45 ? '#b6b0a9' : '#de574e';
       grade = value <= 20 ? 'A' : value <= 35 ? 'B' : value <= 50 ? 'C' : 'D';
     } else {
-      barColor = value >= 70 ? '#10b981' : value >= 45 ? '#f59e0b' : '#ef4444';
+      barColor = value >= 70 ? '#a7a29b' : value >= 45 ? '#b6b0a9' : '#de574e';
       grade = value >= 80 ? 'A' : value >= 65 ? 'B' : value >= 45 ? 'C' : 'D';
     }
   }
@@ -3664,7 +3664,7 @@ export default function Essays() {
                           { val: essay.originalityScore, label: 'T', inv: false },
                           { val: essay.overallScore, label: 'I', inv: false },
                         ].map((s, si) => {
-                          const c = s.val != null ? (s.inv ? (s.val <= 20 ? '#10b981' : s.val <= 45 ? '#f59e0b' : '#ef4444') : (s.val >= 70 ? '#10b981' : s.val >= 45 ? '#f59e0b' : '#ef4444')) : '#cbd5e1';
+                          const c = s.val != null ? (s.inv ? (s.val <= 20 ? '#a7a29b' : s.val <= 45 ? '#b6b0a9' : '#de574e') : (s.val >= 70 ? '#a7a29b' : s.val >= 45 ? '#b6b0a9' : '#de574e')) : '#d9d3cb';
                           return (
                             <div key={si} className="flex-1 h-1 rounded-full overflow-hidden bg-slate-100" title={s.label}>
                               <div className="h-full rounded-full transition-all duration-500" style={{ width: `${s.val != null ? (s.inv ? 100 - s.val : s.val) : 0}%`, backgroundColor: c }} />
@@ -3919,7 +3919,7 @@ export default function Essays() {
                               <div className="flex items-center gap-1.5 mb-2">
                                 <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
                                 <h5 className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider">Prompt Alignment</h5>
-                                <span className={`text-[10px] font-bold ml-auto ${SCORE_INK[essayInsights.promptAlignment.score >= 70 ? '#10b981' : essayInsights.promptAlignment.score >= 40 ? '#f59e0b' : '#ef4444']}`}>
+                                <span className={`text-[10px] font-bold ml-auto ${SCORE_INK[essayInsights.promptAlignment.score >= 70 ? '#a7a29b' : essayInsights.promptAlignment.score >= 40 ? '#b6b0a9' : '#de574e']}`}>
                                   {essayInsights.promptAlignment.score}%
                                 </span>
                               </div>
@@ -3928,7 +3928,7 @@ export default function Essays() {
                                   className="h-full rounded-full transition-all duration-700 ease-out"
                                   style={{
                                     width: `${essayInsights.promptAlignment.score}%`,
-                                    backgroundColor: essayInsights.promptAlignment.score >= 70 ? '#10b981' : essayInsights.promptAlignment.score >= 40 ? '#f59e0b' : '#ef4444',
+                                    backgroundColor: essayInsights.promptAlignment.score >= 70 ? '#a7a29b' : essayInsights.promptAlignment.score >= 40 ? '#b6b0a9' : '#de574e',
                                   }}
                                 />
                               </div>
@@ -4091,7 +4091,7 @@ export default function Essays() {
                       value={editContent}
                       onChange={e => handleContentChange(e.target.value)}
                       placeholder="Start writing your essay here...&#10;&#10;Your writing will be analyzed in real-time as you type. Tap &quot;Live Scores&quot; above to see your scores, tips, and suggestions."
-                      className="flex-1 min-h-0 w-full px-4 lg:px-6 py-4 lg:py-5 text-[14px] lg:text-[15px] leading-[1.8] focus:outline-none resize-none font-sans text-slate-800 placeholder:text-slate-300"
+                      className="flex-1 min-h-0 w-full px-4 lg:px-6 py-4 lg:py-5 text-[15px] lg:text-[16px] leading-[1.8] focus:outline-none resize-none student-page text-slate-800 placeholder:text-slate-300"
                     />
                   )}
                 </div>
@@ -4122,15 +4122,15 @@ export default function Essays() {
                     <div className="bg-white rounded-xl border border-slate-100 surface p-4">
                       <h4 className="text-[11px] font-bold text-primary uppercase tracking-wider mb-3">Live Scores</h4>
                       <div className="space-y-2.5">
-                        <ScoreBar label="Voice & Authenticity" value={activeEssay.aiScore} color="#3b82f6" invert
+                        <ScoreBar label="Voice & Authenticity" value={activeEssay.aiScore} color="#88857f" invert
                           sublabel={activeEssay.aiScore != null ? (activeEssay.aiScore <= 15 ? 'Genuine, personal voice' : activeEssay.aiScore <= 35 ? 'Mostly authentic' : 'Sounds formulaic') : ''} />
-                        <ScoreBar label="Language & Precision" value={activeEssay.vocabScore} color="#8b5cf6"
+                        <ScoreBar label="Language & Precision" value={activeEssay.vocabScore} color="#7d7b75"
                           sublabel={activeEssay.vocabScore != null ? (activeEssay.vocabScore >= 70 ? 'Sophisticated word choice' : activeEssay.vocabScore >= 45 ? 'Adequate vocabulary' : 'Too basic') : ''} />
-                        <ScoreBar label="Structure & Coherence" value={activeEssay.grammarScore} color="#6366f1"
+                        <ScoreBar label="Structure & Coherence" value={activeEssay.grammarScore} color="#7a7771"
                           sublabel={activeEssay.grammarScore != null ? (activeEssay.grammarScore >= 70 ? 'Well-organized flow' : activeEssay.grammarScore >= 45 ? 'Some drift detected' : 'Topic drift or grammar issues') : ''} />
-                        <ScoreBar label="Storytelling" value={activeEssay.originalityScore} color="#ec4899"
+                        <ScoreBar label="Storytelling" value={activeEssay.originalityScore} color="#e35d53"
                           sublabel={activeEssay.originalityScore != null ? (activeEssay.originalityScore >= 70 ? 'Vivid, show-don\'t-tell' : activeEssay.originalityScore >= 45 ? 'More details needed' : 'Too abstract, needs scenes') : ''} />
-                        <ScoreBar label="Admissions Impact" value={activeEssay.overallScore} color="#10b981"
+                        <ScoreBar label="Admissions Impact" value={activeEssay.overallScore} color="#a7a29b"
                           sublabel={activeEssay.overallScore != null ? (activeEssay.overallScore >= 70 ? 'Compelling read' : activeEssay.overallScore >= 45 ? 'Good with room to improve' : 'Needs significant revision') : ''} />
                       </div>
                     </div>
@@ -4228,15 +4228,15 @@ export default function Essays() {
                 <div className="bg-white rounded-xl border border-slate-100 surface p-4">
                   <h4 className="text-[11px] font-bold text-primary uppercase tracking-wider mb-3">Live Scores</h4>
                   <div className="space-y-2.5">
-                    <ScoreBar label="Voice & Authenticity" value={activeEssay.aiScore} color="#3b82f6" invert
+                    <ScoreBar label="Voice & Authenticity" value={activeEssay.aiScore} color="#88857f" invert
                       sublabel={activeEssay.aiScore != null ? (activeEssay.aiScore <= 15 ? 'Genuine, personal voice' : activeEssay.aiScore <= 35 ? 'Mostly authentic' : 'Sounds formulaic') : ''} />
-                    <ScoreBar label="Language & Precision" value={activeEssay.vocabScore} color="#8b5cf6"
+                    <ScoreBar label="Language & Precision" value={activeEssay.vocabScore} color="#7d7b75"
                       sublabel={activeEssay.vocabScore != null ? (activeEssay.vocabScore >= 70 ? 'Sophisticated word choice' : activeEssay.vocabScore >= 45 ? 'Adequate vocabulary' : 'Too basic') : ''} />
-                    <ScoreBar label="Structure & Coherence" value={activeEssay.grammarScore} color="#6366f1"
+                    <ScoreBar label="Structure & Coherence" value={activeEssay.grammarScore} color="#7a7771"
                       sublabel={activeEssay.grammarScore != null ? (activeEssay.grammarScore >= 70 ? 'Well-organized flow' : activeEssay.grammarScore >= 45 ? 'Some drift detected' : 'Topic drift or grammar issues') : ''} />
-                    <ScoreBar label="Storytelling" value={activeEssay.originalityScore} color="#ec4899"
+                    <ScoreBar label="Storytelling" value={activeEssay.originalityScore} color="#e35d53"
                       sublabel={activeEssay.originalityScore != null ? (activeEssay.originalityScore >= 70 ? 'Vivid, show-don\'t-tell' : activeEssay.originalityScore >= 45 ? 'More details needed' : 'Too abstract, needs scenes') : ''} />
-                    <ScoreBar label="Admissions Impact" value={activeEssay.overallScore} color="#10b981"
+                    <ScoreBar label="Admissions Impact" value={activeEssay.overallScore} color="#a7a29b"
                       sublabel={activeEssay.overallScore != null ? (activeEssay.overallScore >= 70 ? 'Compelling read' : activeEssay.overallScore >= 45 ? 'Good with room to improve' : 'Needs significant revision') : ''} />
                   </div>
                 </div>
@@ -4266,7 +4266,7 @@ export default function Essays() {
                             <div key={dim.key} className="flex items-center gap-2">
                               <span className="text-[10px] text-slate-500 w-16">{dim.label}</span>
                               <div className="flex-1 h-1.5 rounded-full bg-slate-100">
-                                <div className="h-full rounded-full transition-all" style={{ width: (val * 10) + '%', backgroundColor: val >= 8 ? '#10b981' : val >= 5 ? '#f59e0b' : '#ef4444' }} />
+                                <div className="h-full rounded-full transition-all" style={{ width: (val * 10) + '%', backgroundColor: val >= 8 ? '#a7a29b' : val >= 5 ? '#b6b0a9' : '#de574e' }} />
                               </div>
                               <span className="text-[10px] font-bold text-primary w-4 text-right">{val}</span>
                             </div>

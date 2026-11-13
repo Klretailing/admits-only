@@ -155,8 +155,8 @@ function ActivityHeatmap({ data }: { data: Array<{ dow: number; hour: number; co
                   className="flex-1 h-4 rounded-sm transition-colors"
                   style={{
                     backgroundColor: intensity > 0
-                      ? `rgba(99, 102, 241, ${0.08 + intensity * 0.85})`
-                      : 'rgb(241, 245, 249)',
+                      ? `rgba(122, 119, 113, ${0.08 + intensity * 0.85})`
+                      : 'rgb(249, 244, 235)',
                   }}
                   title={`${day} ${hour}:00 — ${count} pageviews`}
                 />
@@ -532,7 +532,7 @@ function DeviceDonut({ desktop, mobile }: { desktop: number; mobile: number }) {
 
   return (
     <svg viewBox="0 0 80 80" className="w-full h-full">
-      <circle cx="40" cy="40" r="36" fill="none" stroke="#f1f5f9" strokeWidth="8" />
+      <circle cx="40" cy="40" r="36" fill="none" stroke="#f9f4eb" strokeWidth="8" />
       <circle
         cx="40" cy="40" r="36" fill="none"
         stroke="url(#donut-grad)" strokeWidth="8"
@@ -542,8 +542,8 @@ function DeviceDonut({ desktop, mobile }: { desktop: number; mobile: number }) {
       />
       <defs>
         <linearGradient id="donut-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#6366f1" />
-          <stop offset="100%" stopColor="#a855f7" />
+          <stop offset="0%" stopColor="#7a7771" />
+          <stop offset="100%" stopColor="#847f7b" />
         </linearGradient>
       </defs>
       <text x="40" y="38" textAnchor="middle" className="fill-primary text-[13px] font-bold">{desktopPct}%</text>

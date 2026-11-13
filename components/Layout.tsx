@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useState, useEffect, type ReactNode, type FormEvent } from 'react';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
+import LogoMark from './LogoMark';
 
 const SITE_URL = 'https://www.admitsonly.com';
 
@@ -13,19 +14,14 @@ interface LayoutProps {
 function Logo() {
   return (
     <Link href="/" className="flex items-center gap-2.5 group" aria-label="AdmitsOnly Home">
-      <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-accent to-purple-600 flex items-center justify-center shadow-lg shadow-accent/20 group-hover:shadow-accent/40 transition-shadow">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2L2 9L12 16L22 9L12 2Z" fill="white" opacity="0.9" />
-          <path d="M4 11V17L12 22L20 17V11" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-          <line x1="20" y1="9" x2="20" y2="18" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
-          <circle cx="20" cy="19.5" r="1.2" fill="white" />
-        </svg>
+      <div className="relative w-10 h-10 rounded-xl logo-tile flex items-center justify-center">
+        <LogoMark size={20} />
       </div>
       <div className="flex flex-col">
         <span className="text-xl font-bold font-display tracking-tight text-primary leading-none">
           Admits<span className="gradient-text">Only</span>
         </span>
-        <span className="text-[10px] font-medium text-slate-400 tracking-widest uppercase leading-none mt-0.5">
+        <span className="text-[10px] font-medium text-slate-400 tracking-widest uppercase leading-none mt-1.5">
           Learning Collective
         </span>
       </div>
@@ -122,10 +118,10 @@ export default function Layout({ children }: LayoutProps) {
     <>
       <Head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="description" content="AdmitsOnly is the all-in-one college admissions platform. AI essay coaching, SAT/ACT tracking, college matching for 170+ universities, Study Pods, career roadmaps, and holistic profile scoring." />
-        <meta name="keywords" content="college admissions platform, AI essay coach, college match tool, SAT prep tracker, study groups, career roadmap, holistic admissions scoring, college application help" />
-        <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect rx='20' width='100' height='100' fill='%236366f1'/><text x='50' y='68' font-size='60' text-anchor='middle' fill='white' font-weight='bold'>A</text></svg>" />
-        <title>AdmitsOnly | The College Admissions Platform — AI Tools for Students</title>
+        <meta name="description" content="AdmitsOnly is the all-in-one notebook for high school, grades 9 to 12: activities and GPA, essay feedback, study groups, career exploration and college planning, in one place. Free to start." />
+        <meta name="keywords" content="high school planner, student planner app, GPA tracker, extracurricular tracker, essay feedback, college essay checker, study group app, career exploration for teens, college list builder" />
+        <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect rx='20' width='100' height='100' fill='%237a7771'/><text x='50' y='68' font-size='60' text-anchor='middle' fill='white' font-weight='bold'>A</text></svg>" />
+        <title>AdmitsOnly | The All-in-One Notebook for High School</title>
         {/* One canonical address. The same site is also served on two
             *.vercel.app domains, which otherwise compete with
             www.admitsonly.com in search results. */}
@@ -137,14 +133,14 @@ export default function Layout({ children }: LayoutProps) {
         <meta property="og:site_name" content="AdmitsOnly" />
         <meta property="og:type" key="og:type" content="website" />
         <meta property="og:url" key="og:url" content={canonicalUrl} />
-        <meta property="og:title" key="og:title" content="AdmitsOnly | The all-in-one college admissions platform" />
-        <meta property="og:description" key="og:description" content="Essay feedback, college matching for 170+ universities, deadlines, and a community of students applying alongside you. Free to start." />
+        <meta property="og:title" key="og:title" content="AdmitsOnly | All four years of high school, in one notebook" />
+        <meta property="og:description" key="og:description" content="Activities and GPA, essay feedback, study groups, careers and college planning. One free notebook for grades 9 to 12." />
         <meta property="og:image" key="og:image" content={`${SITE_URL}/og.png`} />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" key="twitter:title" content="AdmitsOnly | The all-in-one college admissions platform" />
-        <meta name="twitter:description" key="twitter:description" content="Essay feedback, college matching for 170+ universities, deadlines, and a community of students applying alongside you. Free to start." />
+        <meta name="twitter:title" key="twitter:title" content="AdmitsOnly | All four years of high school, in one notebook" />
+        <meta name="twitter:description" key="twitter:description" content="Activities and GPA, essay feedback, study groups, careers and college planning. One free notebook for grades 9 to 12." />
         <meta name="twitter:image" key="twitter:image" content={`${SITE_URL}/og.png`} />
       </Head>
 
@@ -275,24 +271,22 @@ export default function Layout({ children }: LayoutProps) {
             <div className="grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-5">
               <div className="lg:col-span-2">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-accent to-purple-600 flex items-center justify-center">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <path d="M12 2L2 9L12 16L22 9L12 2Z" fill="white" opacity="0.9" />
-                      <path d="M4 11V17L12 22L20 17V11" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-                    </svg>
+                  <div className="w-9 h-9 rounded-xl logo-tile flex items-center justify-center">
+                    <LogoMark size={18} />
                   </div>
                   <span className="text-lg font-bold font-display">AdmitsOnly</span>
                 </div>
                 <p className="mt-4 text-slate-400 text-sm leading-relaxed max-w-sm">
-                  The all-in-one college admissions platform. AI essay coaching, SAT tracking, college matching,
-                  Study Pods, and expert consulting — everything students need to get into their dream school.
+                  The notebook for all four years of high school. Activities and grades, writing feedback, study
+                  groups, careers and college planning, kept in one place.
                 </p>
               </div>
 
               <div>
                 <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-4">Platform</h4>
                 <ul className="space-y-3 text-sm text-slate-300">
-                  <li><Link href="/auth/register" className="hover:text-white transition-colors">Get Started Free</Link></li>
+                  <li><Link href="/auth/register" className="hover:text-white transition-colors">Start your notebook</Link></li>
+                  <li><Link href="/essay-checker" className="hover:text-white transition-colors">Free essay checker</Link></li>
                   <li><Link href="/services" className="hover:text-white transition-colors">Programs</Link></li>
                   <li><Link href="/consulting" className="hover:text-white transition-colors">Consulting</Link></li>
                   <li><Link href="/auth/login" className="hover:text-white transition-colors">Sign In</Link></li>
@@ -311,14 +305,14 @@ export default function Layout({ children }: LayoutProps) {
 
               <div>
                 <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-4">Newsletter</h4>
-                <p className="text-sm text-slate-400 leading-relaxed mb-4">Free weekly education insights for Bay Area families.</p>
+                <p className="text-sm text-slate-400 leading-relaxed mb-4">Opportunities and study tips for families, once a week.</p>
                 <FooterNewsletter />
               </div>
             </div>
 
             <div className="mt-12 pt-8 border-t border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4">
               <p className="text-sm text-slate-500">&copy; {new Date().getFullYear()} AdmitsOnly Learning Collective. All rights reserved.</p>
-              <p className="text-sm text-slate-500">Empowering the next generation of leaders.</p>
+              <p className="text-sm text-slate-500">Made for grades 9 through 12.</p>
             </div>
           </div>
         </footer>

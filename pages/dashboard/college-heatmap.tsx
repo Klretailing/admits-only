@@ -82,7 +82,7 @@ function computeMatch(
 /* Pick white or dark ink for text sitting on an arbitrary swatch from the
    temperature ramp. The mid-ramp ambers/oranges are far too light for white
    text (they measured 3.6:1), so the numeral flips to near-black there. */
-const INK_DARK = '#0f172a';
+const INK_DARK = '#1a1714';
 
 function relLuminance(r: number, g: number, b: number): number {
   const f = (v: number) => { const s = v / 255; return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); };
@@ -109,10 +109,16 @@ function readableOn(bg: string): string {
    "Warm". Colour and label now both derive from the tier, using the same
    rose / amber / emerald the list view already used, so they cannot disagree.
    `solid` backs white text (all ≥ 4.5:1); `rgb` is for text-free map dots. */
+/* Monochrome tiers, read like pencil shading: the surer the fit, the darker
+   the mark. Safety is inked in, match is shaded graphite, reach is a light
+   sketch with an ink outline. Red is deliberately not used — a reach school
+   is ambitious, not an error, and red pencil means "wrong" in this notebook.
+   `solid` fills tiles; text on them is chosen by readableOn(). `rgb` is the
+   radar dot colour. */
 const TIER_STYLE: Record<'reach' | 'match' | 'safety', { label: string; solid: string; rgb: [number, number, number] }> = {
-  reach:  { label: 'Reach',  solid: 'rgb(190,18,60)', rgb: [244, 63, 94] },
-  match:  { label: 'Match',  solid: 'rgb(180,83,9)',  rgb: [245, 158, 11] },
-  safety: { label: 'Safety', solid: 'rgb(4,120,87)',  rgb: [16, 185, 129] },
+  reach:  { label: 'Reach',  solid: 'rgb(233,228,217)', rgb: [150, 145, 136] },
+  match:  { label: 'Match',  solid: 'rgb(107,104,99)',  rgb: [107, 104, 99] },
+  safety: { label: 'Safety', solid: 'rgb(28,27,25)',    rgb: [28, 27, 25] },
 };
 const tierColor = (t: HeatmapTile['tier']) => TIER_STYLE[t].solid;
 const tierRGB = (t: HeatmapTile['tier']) => TIER_STYLE[t].rgb;
@@ -294,7 +300,7 @@ function RadarView({
       // Background — theme-aware (checked per frame so the radar follows the
       // light/dark toggle instantly, mid-animation)
       const isDark = document.documentElement.classList.contains('dark');
-      ctx.fillStyle = isDark ? '#16171b' : '#ffffff';
+      ctx.fillStyle = isDark ? '#181714' : '#ffffff';
       ctx.fillRect(0, 0, w, h);
 
       const [ccx, ccy] = toScreen(0, 0);
@@ -306,13 +312,13 @@ function RadarView({
         if (sr < 3) continue;
         ctx.beginPath();
         ctx.arc(ccx, ccy, sr, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(148,163,184,0.15)';
+        ctx.strokeStyle = 'rgba(166,161,154,0.15)';
         ctx.lineWidth = 1;
         ctx.stroke();
       }
 
       // Cross axes
-      ctx.strokeStyle = 'rgba(148,163,184,0.15)';
+      ctx.strokeStyle = 'rgba(166,161,154,0.15)';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(0, ccy);
@@ -333,14 +339,14 @@ function RadarView({
       // Zone bands — filled circles outer to inner
       const zones = isDark
         ? [
-            { r: 345, fill: 'rgba(244,63,94,0.07)', stroke: 'rgba(251,113,133,0.25)', label: 'Reach', labelColor: '#fb7185' },
-            { r: 255, fill: 'rgba(245,158,11,0.08)', stroke: 'rgba(251,191,36,0.25)', label: 'Match', labelColor: '#fbbf24' },
-            { r: 155, fill: 'rgba(16,185,129,0.09)', stroke: 'rgba(52,211,153,0.25)', label: 'Safety', labelColor: '#34d399' },
+            { r: 345, fill: 'rgba(224,89,80,0.07)', stroke: 'rgba(251,116,104,0.25)', label: 'Reach', labelColor: '#fb7468' },
+            { r: 255, fill: 'rgba(182,176,169,0.08)', stroke: 'rgba(204,200,192,0.25)', label: 'Match', labelColor: '#ccc8c0' },
+            { r: 155, fill: 'rgba(167,162,155,0.09)', stroke: 'rgba(192,186,179,0.25)', label: 'Safety', labelColor: '#c0bab3' },
           ]
         : [
-            { r: 345, fill: 'rgba(244,63,94,0.05)', stroke: 'rgba(244,63,94,0.2)', label: 'Reach', labelColor: '#e11d48' },
-            { r: 255, fill: 'rgba(245,158,11,0.06)', stroke: 'rgba(245,158,11,0.2)', label: 'Match', labelColor: '#d97706' },
-            { r: 155, fill: 'rgba(16,185,129,0.07)', stroke: 'rgba(16,185,129,0.2)', label: 'Safety', labelColor: '#059669' },
+            { r: 345, fill: 'rgba(224,89,80,0.05)', stroke: 'rgba(224,89,80,0.2)', label: 'Reach', labelColor: '#cc4440' },
+            { r: 255, fill: 'rgba(182,176,169,0.06)', stroke: 'rgba(182,176,169,0.2)', label: 'Match', labelColor: '#93908a' },
+            { r: 155, fill: 'rgba(167,162,155,0.07)', stroke: 'rgba(167,162,155,0.2)', label: 'Safety', labelColor: '#87837d' },
           ];
 
       for (const z of zones) {
@@ -380,8 +386,8 @@ function RadarView({
         ccx + Math.cos(sweepAngle) * sweepLen,
         ccy + Math.sin(sweepAngle) * sweepLen
       );
-      sweepGrad.addColorStop(0, 'rgba(99,102,241,0.08)');
-      sweepGrad.addColorStop(1, 'rgba(99,102,241,0)');
+      sweepGrad.addColorStop(0, 'rgba(122,119,113,0.08)');
+      sweepGrad.addColorStop(1, 'rgba(122,119,113,0)');
       ctx.beginPath();
       ctx.moveTo(ccx, ccy);
       ctx.lineTo(
@@ -398,8 +404,8 @@ function RadarView({
       ctx.arc(ccx, ccy, sweepLen, sweepAngle - 0.3, sweepAngle, false);
       ctx.closePath();
       const coneGrad = ctx.createRadialGradient(ccx, ccy, 0, ccx, ccy, sweepLen);
-      coneGrad.addColorStop(0, 'rgba(99,102,241,0.04)');
-      coneGrad.addColorStop(1, 'rgba(99,102,241,0)');
+      coneGrad.addColorStop(0, 'rgba(122,119,113,0.04)');
+      coneGrad.addColorStop(1, 'rgba(122,119,113,0)');
       ctx.fillStyle = coneGrad;
       ctx.fill();
 
@@ -408,8 +414,8 @@ function RadarView({
         if (!node.tile.isSaved) continue;
         const [sx, sy] = toScreen(node.x * eased, node.y * eased);
         const grad = ctx.createLinearGradient(ccx, ccy, sx, sy);
-        grad.addColorStop(0, 'rgba(99,102,241,0.08)');
-        grad.addColorStop(1, 'rgba(99,102,241,0.2)');
+        grad.addColorStop(0, 'rgba(122,119,113,0.08)');
+        grad.addColorStop(1, 'rgba(122,119,113,0.2)');
         ctx.beginPath();
         ctx.moveTo(ccx, ccy);
         ctx.lineTo(sx, sy);
@@ -465,7 +471,7 @@ function RadarView({
         if (node.tile.isSaved) {
           ctx.beginPath();
           ctx.arc(sx, sy, finalRadius + 3, 0, Math.PI * 2);
-          ctx.strokeStyle = `rgba(99,102,241,${0.45 + 0.2 * Math.sin(elapsed * 2)})`;
+          ctx.strokeStyle = `rgba(122,119,113,${0.45 + 0.2 * Math.sin(elapsed * 2)})`;
           ctx.lineWidth = 1.2;
           ctx.stroke();
         }
@@ -475,7 +481,7 @@ function RadarView({
           const labelAlpha = Math.min(0.75, (cam.zoom - 1.2) * 1.5);
           ctx.font = `500 ${Math.max(8, Math.min(11, 9 * cam.zoom))}px "Inter", system-ui, sans-serif`;
           ctx.textAlign = 'center';
-          ctx.fillStyle = isDark ? `rgba(216,220,228,${labelAlpha})` : `rgba(30,41,59,${labelAlpha})`;
+          ctx.fillStyle = isDark ? `rgba(225,219,211,${labelAlpha})` : `rgba(43,40,38,${labelAlpha})`;
           ctx.fillText(node.tile.college.name, sx, sy + finalRadius + 11);
         }
       }
@@ -490,7 +496,7 @@ function RadarView({
         ctx.globalAlpha = (1 - phase) * 0.12;
         ctx.beginPath();
         ctx.arc(ccx, ccy, ringR, 0, Math.PI * 2);
-        ctx.strokeStyle = '#818cf8';
+        ctx.strokeStyle = '#99958e';
         ctx.lineWidth = 1;
         ctx.stroke();
       }
@@ -498,9 +504,9 @@ function RadarView({
 
       const youR = Math.max(4, 5 * cam.zoom);
       const youGrad = ctx.createRadialGradient(ccx - 1, ccy - 1, 0, ccx, ccy, youR);
-      youGrad.addColorStop(0, '#c4b5fd');
-      youGrad.addColorStop(0.5, '#818cf8');
-      youGrad.addColorStop(1, '#6366f1');
+      youGrad.addColorStop(0, '#c3beb7');
+      youGrad.addColorStop(0.5, '#99958e');
+      youGrad.addColorStop(1, '#7a7771');
       ctx.fillStyle = youGrad;
       ctx.beginPath();
       ctx.arc(ccx, ccy, youR, 0, Math.PI * 2);
@@ -513,7 +519,7 @@ function RadarView({
 
       ctx.font = `bold ${Math.max(9, Math.min(11, 10 * cam.zoom))}px "Inter", system-ui, sans-serif`;
       ctx.textAlign = 'center';
-      ctx.fillStyle = 'rgba(99,102,241,0.7)';
+      ctx.fillStyle = 'rgba(122,119,113,0.7)';
       ctx.fillText('YOU', ccx, ccy + youR + 13);
     }
 
@@ -819,8 +825,8 @@ const TREND_CONFIGS: Record<TrendMetric, { label: string; description: string; b
     description: 'HS graduates + international students entering the applicant pool each year',
     barKey: 'pool',
     maxKey: 'pool',
-    color: '#f97316',
-    colorDark: '#ea580c',
+    color: '#9e9a93',
+    colorDark: '#8c8781',
     format: (v: number) => `${(v / 1000).toFixed(1)}M`,
   },
   apps: {
@@ -828,8 +834,8 @@ const TREND_CONFIGS: Record<TrendMetric, { label: string; description: string; b
     description: 'Total Common App applications submitted per cycle (thousands)',
     barKey: 'commonAppVolume',
     maxKey: 'commonAppVolume',
-    color: '#10b981',
-    colorDark: '#059669',
+    color: '#a7a29b',
+    colorDark: '#87837d',
     format: (v: number) => `${(v / 1000).toFixed(1)}M`,
   },
   intl: {
@@ -837,8 +843,8 @@ const TREND_CONFIGS: Record<TrendMetric, { label: string; description: string; b
     description: 'Domestic HS grads (orange) overlaid with international enrollment (green)',
     barKey: 'split',
     maxKey: 'split',
-    color: '#f97316',
-    colorDark: '#ea580c',
+    color: '#9e9a93',
+    colorDark: '#8c8781',
     format: (v: number) => `${(v / 1000).toFixed(1)}M`,
   },
 };
@@ -953,11 +959,11 @@ function TrendsView() {
                   <div className="w-full flex flex-col items-stretch" style={{ height: `${totalPct}%` }}>
                     <div
                       className="w-full rounded-t-md transition-all duration-500"
-                      style={{ height: `${intlPct / totalPct * 100}%`, backgroundColor: '#10b981', opacity: d.actual ? 1 : 0.5 }}
+                      style={{ height: `${intlPct / totalPct * 100}%`, backgroundColor: '#a7a29b', opacity: d.actual ? 1 : 0.5 }}
                     />
                     <div
                       className="w-full rounded-b-md transition-all duration-500"
-                      style={{ height: `${domesticPct / totalPct * 100}%`, backgroundColor: '#f97316', opacity: d.actual ? 1 : 0.5 }}
+                      style={{ height: `${domesticPct / totalPct * 100}%`, backgroundColor: '#9e9a93', opacity: d.actual ? 1 : 0.5 }}
                     />
                   </div>
                   <span className={`text-[9px] sm:text-[10px] tabular-nums shrink-0 ${isCurrentYear ? 'font-bold text-primary' : 'text-slate-400'}`}>{d.label}</span>
@@ -1020,7 +1026,7 @@ function TrendsView() {
             </div>
           )}
           <div className="flex items-center gap-1.5 text-[10px]">
-            <div className="w-3 h-3 rounded-sm" style={{ background: `repeating-linear-gradient(135deg, ${metric === 'intl' ? '#f97316' : config.color}22 0px, ${metric === 'intl' ? '#f97316' : config.color}22 4px, ${metric === 'intl' ? '#f97316' : config.color}44 4px, ${metric === 'intl' ? '#f97316' : config.color}44 8px)` }} />
+            <div className="w-3 h-3 rounded-sm" style={{ background: `repeating-linear-gradient(135deg, ${metric === 'intl' ? '#9e9a93' : config.color}22 0px, ${metric === 'intl' ? '#9e9a93' : config.color}22 4px, ${metric === 'intl' ? '#9e9a93' : config.color}44 4px, ${metric === 'intl' ? '#9e9a93' : config.color}44 8px)` }} />
             <span className="text-slate-500">Projected</span>
           </div>
         </div>
@@ -1249,7 +1255,7 @@ export default function CollegeHeatmapPage() {
   if (status === 'loading') {
     return (
       <DashboardLayout>
-        <Head><title>Admissions Map | AdmitsOnly</title></Head>
+        <Head><title>College Map | AdmitsOnly</title></Head>
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="flex flex-col items-center gap-3">
             <div className="w-10 h-10 border-3 border-accent border-t-transparent rounded-full animate-spin" />
@@ -1262,12 +1268,12 @@ export default function CollegeHeatmapPage() {
 
   return (
     <DashboardLayout>
-      <Head><title>Admissions Map | AdmitsOnly</title></Head>
+      <Head><title>College Map | AdmitsOnly</title></Head>
 
       <div className="max-w-7xl mx-auto space-y-6">
         <PageHeader
           eyebrow="College list"
-          title="Admissions Map"
+          title="College Map"
           subtitle={<>{pool.length} colleges &middot; {tierCounts.reach} reach &middot; {tierCounts.match} match &middot; {tierCounts.safety} safety</>}
           icon={
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1419,7 +1425,7 @@ export default function CollegeHeatmapPage() {
                   sliderDebounceRef.current = setTimeout(() => tracker.feature('college-heatmap', 'gpa_slider', { gpa: v }), 800);
                 }}
                 className="w-full h-2 rounded-full appearance-none cursor-pointer accent-accent"
-                style={{ background: `linear-gradient(to right, #6366f1 ${((gpa - 2) / 2) * 100}%, #e2e8f0 ${((gpa - 2) / 2) * 100}%)` }}
+                style={{ background: `linear-gradient(to right, #7a7771 ${((gpa - 2) / 2) * 100}%, #ebe7df ${((gpa - 2) / 2) * 100}%)` }}
               />
               <div className="flex justify-between text-[10px] text-slate-400 mt-1"><span>2.0</span><span>3.0</span><span>4.0</span></div>
             </div>
@@ -1436,7 +1442,7 @@ export default function CollegeHeatmapPage() {
                   sliderDebounceRef.current = setTimeout(() => tracker.feature('college-heatmap', 'sat_slider', { sat: v }), 800);
                 }}
                 className="w-full h-2 rounded-full appearance-none cursor-pointer accent-accent"
-                style={{ background: `linear-gradient(to right, #6366f1 ${((sat - 800) / 800) * 100}%, #e2e8f0 ${((sat - 800) / 800) * 100}%)` }}
+                style={{ background: `linear-gradient(to right, #7a7771 ${((sat - 800) / 800) * 100}%, #ebe7df ${((sat - 800) / 800) * 100}%)` }}
               />
               <div className="flex justify-between text-[10px] text-slate-400 mt-1"><span>800</span><span>1200</span><span>1600</span></div>
             </div>
@@ -1453,7 +1459,7 @@ export default function CollegeHeatmapPage() {
                   sliderDebounceRef.current = setTimeout(() => tracker.feature('college-heatmap', 'act_slider', { act: v }), 800);
                 }}
                 className="w-full h-2 rounded-full appearance-none cursor-pointer accent-accent"
-                style={{ background: `linear-gradient(to right, #6366f1 ${(act / 36) * 100}%, #e2e8f0 ${(act / 36) * 100}%)` }}
+                style={{ background: `linear-gradient(to right, #7a7771 ${(act / 36) * 100}%, #ebe7df ${(act / 36) * 100}%)` }}
               />
               <div className="flex justify-between text-[10px] text-slate-400 mt-1"><span>Off</span><span>18</span><span>36</span></div>
               {act > 0 && <p className="text-[10px] text-slate-400 mt-1">SAT equivalent: {actToSat(act)}</p>}
@@ -1517,26 +1523,27 @@ export default function CollegeHeatmapPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5">
             {visibleTiles.map(tile => {
               const color = tierColor(tile.tier);
+              const ink = readableOn(color);
               return (
                 <button
                   key={tile.college.id}
                   onClick={() => setSelectedTile(tile)}
-                  className="relative group text-left rounded-xl border border-white/20 overflow-hidden transition-all duration-300 hover:scale-105 hover:z-10 focus:outline-none focus:ring-2 focus:ring-accent/40"
-                  style={{ backgroundColor: color, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}
+                  className="relative group text-left rounded-xl border-[1.5px] border-ink overflow-hidden surface-interactive"
+                  style={{ backgroundColor: color, color: ink, boxShadow: '2px 2px 0 0 rgb(var(--shadow-ink) / 0.9)' }}
                 >
                   <div className="p-3 min-h-[90px] flex flex-col justify-between">
                     <div>
-                      <p className="text-[11px] font-bold text-white leading-tight truncate drop-shadow-sm">{tile.college.name}</p>
-                      <p className="text-[9px] text-white/90 mt-0.5 truncate">{tile.college.location}</p>
+                      <p className="text-[11px] font-bold leading-tight truncate">{tile.college.name}</p>
+                      <p className="text-[9px] opacity-90 mt-0.5 truncate">{tile.college.location}</p>
                     </div>
                     <div className="flex items-end justify-between mt-2">
                       <div>
-                        <div className="text-lg font-bold text-white drop-shadow-sm tabular-nums">{tile.overallFit}</div>
-                        <div className="text-[9px] text-white/90 font-medium uppercase tracking-wide">{tierLabel(tile.tier)}</div>
+                        <div className="text-lg font-bold tabular-nums">{tile.overallFit}</div>
+                        <div className="text-[9px] opacity-90 font-medium">{tierLabel(tile.tier)}</div>
                       </div>
                       {tile.isSaved && (
-                        <div className="w-5 h-5 rounded-full bg-white/25 flex items-center justify-center">
-                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <div className="w-5 h-5 rounded-full bg-current/20 flex items-center justify-center">
+                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                             <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                           </svg>
                         </div>
@@ -1556,7 +1563,7 @@ export default function CollegeHeatmapPage() {
             {/* Tier summary cards */}
             <div className="grid grid-cols-3 gap-3">
               {(['reach', 'match', 'safety'] as const).map(tier => {
-                const cfg = { reach: { label: 'Reach', color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200', ring: 'ring-rose-500/20', desc: 'Ambitious — your stats are below their typical admits' }, match: { label: 'Match', color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200', ring: 'ring-amber-500/20', desc: 'Competitive — your stats align with their typical admits' }, safety: { label: 'Safety', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', ring: 'ring-emerald-500/20', desc: 'Strong fit — your stats exceed their typical admits' } }[tier];
+                const cfg = { reach: { label: 'Reach', color: 'text-slate-700', bg: 'bg-white', border: 'border-slate-400 border-dashed', ring: 'ring-slate-400/30', desc: 'Ambitious — your stats are below their typical admits' }, match: { label: 'Match', color: 'text-slate-800', bg: 'bg-slate-100', border: 'border-slate-500', ring: 'ring-slate-500/30', desc: 'Competitive — your stats align with their typical admits' }, safety: { label: 'Safety', color: 'text-ink', bg: 'bg-slate-200', border: 'border-ink', ring: 'ring-slate-700/30', desc: 'Strong fit — your stats exceed their typical admits' } }[tier];
                 const count = tierCounts[tier];
                 const isActive = filterTier === tier;
                 return (
@@ -1567,7 +1574,7 @@ export default function CollegeHeatmapPage() {
                       isActive ? `${cfg.border} ${cfg.bg} ring-2 ${cfg.ring}` : 'border-slate-100 bg-white hover:border-slate-200'
                     }`}
                   >
-                    <div className={`text-2xl sm:text-3xl font-bold font-display ${cfg.color}`}>{count}</div>
+                    <div className="text-2xl sm:text-3xl font-bold font-display text-primary">{count}</div>
                     <div className={`text-sm font-semibold mt-1 ${isActive ? cfg.color : 'text-slate-600'}`}>{cfg.label}</div>
                     <div className="text-xs text-slate-400 mt-0.5 hidden sm:block">{cfg.desc}</div>
                   </button>
@@ -1637,7 +1644,7 @@ export default function CollegeHeatmapPage() {
                   </div>
                 </div>
                 {listTiles.map(tile => {
-                  const tierCfg = { reach: { label: 'Reach', color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200' }, match: { label: 'Match', color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200' }, safety: { label: 'Safety', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' } }[tile.tier];
+                  const tierCfg = { reach: { label: 'Reach', color: 'text-slate-700', bg: 'bg-white', border: 'border-slate-400 border-dashed' }, match: { label: 'Match', color: 'text-slate-800', bg: 'bg-slate-100', border: 'border-slate-500' }, safety: { label: 'Safety', color: 'text-paper', bg: 'bg-ink', border: 'border-ink' } }[tile.tier];
                   const isExpanded = expandedId === tile.college.id;
                   return (
                     <div key={tile.college.id} className="bg-white rounded-2xl border border-slate-100 surface surface-interactive overflow-hidden">
@@ -1808,7 +1815,7 @@ export default function CollegeHeatmapPage() {
                   <span className="text-slate-400">Fit score</span>
                   <span className="font-bold" style={{ color: tierColor(selectedTile.tier) }}>{tierLabel(selectedTile.tier)}</span>
                 </div>
-                <div className="h-3 rounded-full overflow-hidden" style={{ background: 'linear-gradient(to right, rgb(244,63,94), rgb(245,158,11), rgb(16,185,129))' }}>
+                <div className="h-3 rounded-full overflow-hidden" style={{ background: 'linear-gradient(to right, rgb(224,89,80), rgb(182,176,169), rgb(167,162,155))' }}>
                   <div className="relative h-full">
                     <div className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white border-2 shadow-md transition-all" style={{ left: `calc(${selectedTile.overallFit}% - 8px)`, borderColor: tierColor(selectedTile.tier) }} />
                   </div>
@@ -1869,7 +1876,7 @@ export default function CollegeHeatmapPage() {
                 {generateAdvice(selectedTile, gpa, bestSAT).map((tip, i) => (
                   <div key={i} className="flex gap-2 items-start">
                     <div className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5 ${
-                      selectedTile.tier === 'reach' ? 'bg-rose-50 text-rose-600' : selectedTile.tier === 'match' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'
+                      selectedTile.tier === 'reach' ? 'bg-white border border-slate-400 text-slate-700' : selectedTile.tier === 'match' ? 'bg-slate-100 text-slate-800' : 'bg-ink text-paper'
                     }`}>
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
                     </div>

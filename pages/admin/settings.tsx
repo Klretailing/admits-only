@@ -434,7 +434,7 @@ export default function AdminSettings() {
               <div className="bg-white rounded-2xl border border-slate-100 p-6">
                 <div className="flex items-start justify-between gap-4 mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#003087] flex items-center justify-center text-white font-bold italic">P</div>
+                    <div className="w-10 h-10 rounded-xl bg-[#3a3733] flex items-center justify-center text-white font-bold italic">P</div>
                     <div>
                       <h3 className="text-lg font-bold font-display text-primary">PayPal (Payments)</h3>
                       <p className="text-xs text-slate-400">Confirms your keys work — without making a real purchase.</p>
@@ -495,7 +495,7 @@ export default function AdminSettings() {
                 <h3 className="text-lg font-bold font-display text-primary mb-6">Connected Services</h3>
                 <div className="space-y-4">
                   {[
-                    { name: 'Stripe', status: 'Connected', statusColor: 'text-green-600', desc: 'Payment processing — Live mode', icon: 'S', iconBg: 'bg-[#635BFF]/10', iconColor: 'text-[#635BFF]' },
+                    { name: 'Stripe', status: 'Connected', statusColor: 'text-green-600', desc: 'Payment processing — Live mode', icon: 'S', iconBg: 'bg-[#78736d]/10', iconColor: 'text-[#78736d]' },
                     { name: 'Google Calendar', status: 'Connected', statusColor: 'text-green-600', desc: 'Session scheduling and reminders', icon: 'G', iconBg: 'bg-blue-50', iconColor: 'text-blue-600' },
                     { name: 'SendGrid', status: 'Connected', statusColor: 'text-green-600', desc: 'Transactional emails and notifications', icon: 'SG', iconBg: 'bg-blue-50', iconColor: 'text-blue-600' },
                     { name: 'Zoom', status: 'Not connected', statusColor: 'text-slate-400', desc: 'Video coaching sessions', icon: 'Z', iconBg: 'bg-blue-50', iconColor: 'text-blue-600' },

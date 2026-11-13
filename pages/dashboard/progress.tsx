@@ -102,12 +102,12 @@ const typeColors: Record<string, string> = {
 };
 
 const typeTimelineColors: Record<string, string> = {
-  EA: '#3b82f6',
-  ED: '#ef4444',
-  ED2: '#f43f5e',
-  RD: '#22c55e',
-  REA: '#6366f1',
-  Rolling: '#f59e0b',
+  EA: '#88857f',
+  ED: '#de574e',
+  ED2: '#e05950',
+  RD: '#b0aba4',
+  REA: '#7a7771',
+  Rolling: '#b6b0a9',
 };
 
 function getDaysUntil(deadline: string): number | null {
@@ -178,10 +178,10 @@ function ProgressRing({ pct, size = 36, stroke = 3 }: { pct: number; size?: numb
   return (
     <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <circle cx={center} cy={center} r={r} fill="none" stroke="#e2e8f0" strokeWidth={stroke} />
+        <circle cx={center} cy={center} r={r} fill="none" stroke="#ebe7df" strokeWidth={stroke} />
         <circle
           cx={center} cy={center} r={r} fill="none"
-          stroke="#6366f1" strokeWidth={stroke}
+          stroke="#7a7771" strokeWidth={stroke}
           strokeDasharray={circ} strokeDashoffset={offset}
           strokeLinecap="round"
           transform={`rotate(-90 ${center} ${center})`}
@@ -761,7 +761,7 @@ export default function Applications() {
                           {/* Dot on timeline */}
                           <div
                             className="absolute -left-6 top-5 w-3 h-3 rounded-full border-2 border-white shadow-sm"
-                            style={{ backgroundColor: typeTimelineColors[app.type] || '#6366f1' }}
+                            style={{ backgroundColor: typeTimelineColors[app.type] || '#7a7771' }}
                           />
                           <div className="flex items-center justify-between gap-3">
                             <div className="min-w-0 flex-1">

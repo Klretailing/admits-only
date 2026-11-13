@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
+import LogoMark from '../../components/LogoMark';
 
 interface InviteInfo {
   tutorName: string;
@@ -52,11 +53,8 @@ export default function JoinInvite() {
         <div className="w-full max-w-md">
           {/* Brand */}
           <div className="flex items-center justify-center gap-2.5 mb-8">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L2 9L12 16L22 9L12 2Z" fill="white" opacity="0.95" />
-                <path d="M4 11V17L12 22L20 17V11" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-              </svg>
+            <div className="w-9 h-9 rounded-xl logo-tile flex items-center justify-center">
+              <LogoMark size={18} />
             </div>
             <span className="text-lg font-bold tracking-tight text-slate-900">AdmitsOnly</span>
           </div>

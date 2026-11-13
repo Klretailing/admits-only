@@ -10,10 +10,10 @@
    utilities used everywhere for secondary copy were far below the AA
    threshold of 4.5:1 for normal text:
 
-     .text-slate-400 (#94a3b8) on white .......... 2.56:1   FAIL
+     .text-slate-400 (#a6a19a) on white .......... 2.56:1   FAIL
      .text-slate-400 on slate-50 ................. 2.45:1   FAIL
-     .text-slate-300 (#cbd5e1) as body text ...... ~1.8:1   FAIL
-     .bg-accent (#6366f1) behind white button text 4.47:1   FAIL (just)
+     .text-slate-300 (#d9d3cb) as body text ...... ~1.8:1   FAIL
+     .bg-accent (#7a7771) behind white button text 4.47:1   FAIL (just)
 
    Rather than hand-edit thousands of class usages, this layer remaps the
    *text* rendering of those utilities to accessible values. Background and
@@ -25,19 +25,19 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 /* ─── Light mode: muted ink ───
-   #5b6675 → 5.83:1 on white, 5.57:1 on slate-50, 5.32:1 on slate-100.
+   #67655f → 5.83:1 on white, 5.57:1 on slate-50, 5.32:1 on slate-100.
    Comfortably AA on every light surface in the app while still reading as
-   clearly "secondary" next to text-primary (#0f172a). */
-html:not(.dark) .text-slate-400 { color: #5b6675; }
+   clearly "secondary" next to text-primary (#1a1714). */
+html:not(.dark) .text-slate-400 { color: #67655f; }
 
-/* #67727f → 4.89:1 on white, 4.68:1 on slate-50. slate-300 is used both for
+/* #75706b → 4.89:1 on white, 4.68:1 on slate-50. slate-300 is used both for
    faint placeholder copy ("No apps yet") and for decorative chevrons; this
    value clears AA on both surfaces without making the chevrons look heavy. */
-html:not(.dark) .text-slate-300 { color: #67727f; }
+html:not(.dark) .text-slate-300 { color: #75706b; }
 
 /* slate-500 is already close; nudge it so it also passes on tinted panels
    (it measured 4.34:1 on slate-100 — marginally under). */
-html:not(.dark) .text-slate-500 { color: #556070; }
+html:not(.dark) .text-slate-500 { color: #615f5a; }
 
 /* ─── Light mode: semantic status ink ───
    Status colors at the -500/-600 level are used as *text* on their own
@@ -45,66 +45,66 @@ html:not(.dark) .text-slate-500 { color: #556070; }
    on those chips they land at 2.9–4.2:1. Remapping the text rendering to the
    -700 step keeps each hue's identity while clearing AA on both white and
    the tinted chip. Backgrounds/borders of the same hue are untouched. */
-html:not(.dark) .text-green-500,   html:not(.dark) .text-green-600   { color: #15803d; }
-html:not(.dark) .text-emerald-500, html:not(.dark) .text-emerald-600 { color: #047857; }
-html:not(.dark) .text-teal-500,    html:not(.dark) .text-teal-600    { color: #0f766e; }
-html:not(.dark) .text-amber-500,   html:not(.dark) .text-amber-600   { color: #b45309; }
-html:not(.dark) .text-orange-500,  html:not(.dark) .text-orange-600  { color: #c2410c; }
-html:not(.dark) .text-cyan-500,    html:not(.dark) .text-cyan-600    { color: #0e7490; }
-html:not(.dark) .text-sky-500,     html:not(.dark) .text-sky-600     { color: #0369a1; }
-html:not(.dark) .text-blue-500,    html:not(.dark) .text-blue-600    { color: #1d4ed8; }
-html:not(.dark) .text-indigo-500,  html:not(.dark) .text-indigo-600  { color: #4f46e5; }
-html:not(.dark) .text-violet-500,  html:not(.dark) .text-violet-600  { color: #6d28d9; }
-html:not(.dark) .text-purple-500,  html:not(.dark) .text-purple-600  { color: #7e22ce; }
-html:not(.dark) .text-fuchsia-500, html:not(.dark) .text-fuchsia-600 { color: #a21caf; }
-html:not(.dark) .text-pink-500,    html:not(.dark) .text-pink-600    { color: #be185d; }
-html:not(.dark) .text-rose-500,    html:not(.dark) .text-rose-600    { color: #be123c; }
-html:not(.dark) .text-red-500,     html:not(.dark) .text-red-600     { color: #b91c1c; }
+html:not(.dark) .text-green-500,   html:not(.dark) .text-green-600   { color: #716f6a; }
+html:not(.dark) .text-emerald-500, html:not(.dark) .text-emerald-600 { color: #6b6964; }
+html:not(.dark) .text-teal-500,    html:not(.dark) .text-teal-600    { color: #6c6963; }
+html:not(.dark) .text-amber-500,   html:not(.dark) .text-amber-600   { color: #716f6a; }
+html:not(.dark) .text-orange-500,  html:not(.dark) .text-orange-600  { color: #6f6d67; }
+html:not(.dark) .text-cyan-500,    html:not(.dark) .text-cyan-600    { color: #6e6a66; }
+html:not(.dark) .text-sky-500,     html:not(.dark) .text-sky-600     { color: #65645f; }
+html:not(.dark) .text-blue-500,    html:not(.dark) .text-blue-600    { color: #5d5c57; }
+html:not(.dark) .text-indigo-500,  html:not(.dark) .text-indigo-600  { color: #62605a; }
+html:not(.dark) .text-violet-500,  html:not(.dark) .text-violet-600  { color: #5a5853; }
+html:not(.dark) .text-purple-500,  html:not(.dark) .text-purple-600  { color: #5b5955; }
+html:not(.dark) .text-fuchsia-500, html:not(.dark) .text-fuchsia-600 { color: #635f5b; }
+html:not(.dark) .text-pink-500,    html:not(.dark) .text-pink-600    { color: #b6322b; }
+html:not(.dark) .text-rose-500,    html:not(.dark) .text-rose-600    { color: #b32e2a; }
+html:not(.dark) .text-red-500,     html:not(.dark) .text-red-600     { color: #b12b28; }
 /* The -400 step appears on category chips; same treatment. */
-html:not(.dark) .text-emerald-400 { color: #047857; }
-html:not(.dark) .text-indigo-400  { color: #4f46e5; }
-html:not(.dark) .text-purple-400  { color: #7e22ce; }
-html:not(.dark) .text-amber-400   { color: #b45309; }
-html:not(.dark) .text-rose-400    { color: #be123c; }
-html:not(.dark) .text-sky-400     { color: #0369a1; }
+html:not(.dark) .text-emerald-400 { color: #6b6964; }
+html:not(.dark) .text-indigo-400  { color: #62605a; }
+html:not(.dark) .text-purple-400  { color: #5b5955; }
+html:not(.dark) .text-amber-400   { color: #716f6a; }
+html:not(.dark) .text-rose-400    { color: #b32e2a; }
+html:not(.dark) .text-sky-400     { color: #65645f; }
 
 /* ─── Dark mode: muted ink ───
-   The generated dark layer mapped slate-200/300 to #707786, which is only
-   3.63:1 on the #1e2025 card surface. #8a90a0 gives 5.10:1 on card and
-   5.61:1 on the #16171b body.
+   The generated dark layer mapped slate-200/300 to #7b7671, which is only
+   3.63:1 on the #21201d card surface. #92908a gives 5.10:1 on card and
+   5.61:1 on the #181714 body.
 
    NOTE ON SPECIFICITY: theme-dark.css loads after this file and its rules are
    also !important at (0,2,0). The `[class]` attribute selector below adds one
    point so these deliberately win, without resorting to duplicated classes. */
 html.dark[class] .text-slate-200,
-html.dark[class] .text-slate-300 { color: #8a90a0 !important; }
+html.dark[class] .text-slate-300 { color: #92908a !important; }
 
 /* slate-400 is dark mode's inactive-control ink (unselected tabs, captions).
-   At #8a90a0 it clears AA on the card and body surfaces but lands at 4.25:1
-   on the lighter #2b2e36 chip used for tab groups — #9aa1b0 clears all three. */
-html.dark[class] .text-slate-400 { color: #9aa1b0 !important; }
+   At #92908a it clears AA on the card and body surfaces but lands at 4.25:1
+   on the lighter #2f2e2b chip used for tab groups — #a5a09a clears all three. */
+html.dark[class] .text-slate-400 { color: #a5a09a !important; }
 
 /* ─── Accent ───
-   The brand indigo #6366f1 sits at 4.47:1 against white — a hair under AA,
+   The brand indigo #7a7771 sits at 4.47:1 against white — a hair under AA,
    which fails white-on-accent buttons in BOTH themes and accent-on-white
-   links in light. #5457dd is visually near-identical but measures 5.55:1
+   links in light. #6b6863 is visually near-identical but measures 5.55:1
    against white, clearing AA for both directions at once. Dark mode keeps its
-   own lighter #a5acfa for accent *text* (set in theme-dark.css). */
-:root { --ao-accent: #5457dd; }
-.bg-accent { background-color: #5457dd; }
-.hover\:bg-accent:hover { background-color: #4a4dd0; }
-html:not(.dark) .text-accent { color: #5457dd; }
-html:not(.dark) .border-accent { border-color: #5457dd; }
+   own lighter #b7b1aa for accent *text* (set in theme-dark.css). */
+:root { --ao-accent: #6b6863; }
+.bg-accent { background-color: #6b6863; }
+.hover\:bg-accent:hover { background-color: #625e59; }
+html:not(.dark) .text-accent { color: #6b6863; }
+html:not(.dark) .border-accent { border-color: #6b6863; }
 
 /* indigo-500 is used interchangeably with the accent as a solid button
    background; same 4.47:1 problem, same fix. */
-.bg-indigo-500 { background-color: #5457dd; }
-.hover\:bg-indigo-600:hover { background-color: #4a4dd0; }
+.bg-indigo-500 { background-color: #6b6863; }
+.hover\:bg-indigo-600:hover { background-color: #625e59; }
 
 /* .btn-primary compiles its own `background-color` from @apply bg-accent, so
    the `.bg-accent` rule above never reaches it — it needs its own override. */
-.btn-primary { background-color: #5457dd; }
-.btn-primary:hover { background-color: #4a4dd0; }
+.btn-primary { background-color: #6b6863; }
+.btn-primary:hover { background-color: #625e59; }
 
 /* ─── Data-viz numerals ───
    Vivid chart colors (cyan-400, emerald-400) are fine for rings, bars, and
@@ -112,12 +112,12 @@ html:not(.dark) .border-accent { border-color: #5457dd; }
    were also being applied to the numeral *inside* the ring, landing at
    1.8–1.9:1. `.viz-numeral` renders those figures in high-contrast ink while
    the graphic keeps its vivid color. */
-.viz-numeral { color: #0f172a; }
-html.dark .viz-numeral { color: #e8eaef; }
+.viz-numeral { color: #1a1714; }
+html.dark .viz-numeral { color: #f0e9e1; }
 
 /* `.viz-caption` is for the small tier/label text that sat on vivid colors. */
-html:not(.dark) .viz-caption { color: #556070; }
-html.dark .viz-caption { color: #9aa1b0; }
+html:not(.dark) .viz-caption { color: #615f5a; }
+html.dark .viz-caption { color: #a5a09a; }
 
 /* ─── On-gradient text ───
    White text over the mid-tone orange assistant gradient measured 2.8:1.
@@ -134,22 +134,22 @@ html.dark .viz-caption { color: #9aa1b0; }
    Targeting `.bg-X.text-white` hits exactly the failing combination — an
    element that is BOTH the colored fill and the white-text surface — and
    leaves every decorative use alone. Each lands at 5.0:1 or better. */
-.bg-emerald-500.text-white, .bg-emerald-600.text-white { background-color: #047857; }
+.bg-emerald-500.text-white, .bg-emerald-600.text-white { background-color: #6b6964; }
 .bg-emerald-500.text-white:hover, .bg-emerald-600.text-white:hover,
-.hover\:bg-emerald-600.text-white:hover { background-color: #036b4d; }
+.hover\:bg-emerald-600.text-white:hover { background-color: #615d58; }
 
-.bg-teal-500.text-white, .bg-teal-600.text-white { background-color: #0f766e; }
+.bg-teal-500.text-white, .bg-teal-600.text-white { background-color: #6c6963; }
 .bg-teal-500.text-white:hover, .bg-teal-600.text-white:hover,
-.hover\:bg-teal-600.text-white:hover, .hover\:bg-teal-700.text-white:hover { background-color: #0c625c; }
+.hover\:bg-teal-600.text-white:hover, .hover\:bg-teal-700.text-white:hover { background-color: #5a5752; }
 
-.bg-green-500.text-white, .bg-green-600.text-white { background-color: #15803d; }
-.bg-green-500.text-white:hover, .bg-green-600.text-white:hover { background-color: #126733; }
+.bg-green-500.text-white, .bg-green-600.text-white { background-color: #716f6a; }
+.bg-green-500.text-white:hover, .bg-green-600.text-white:hover { background-color: #5c5954; }
 
-.bg-orange-500.text-white, .bg-orange-600.text-white { background-color: #c2410c; }
-.bg-orange-500.text-white:hover, .bg-orange-600.text-white:hover { background-color: #a3370a; }
+.bg-orange-500.text-white, .bg-orange-600.text-white { background-color: #6f6d67; }
+.bg-orange-500.text-white:hover, .bg-orange-600.text-white:hover { background-color: #5e5b56; }
 
-.bg-amber-500.text-white, .bg-amber-600.text-white { background-color: #b45309; }
-.bg-amber-500.text-white:hover, .bg-amber-600.text-white:hover { background-color: #954507; }
+.bg-amber-500.text-white, .bg-amber-600.text-white { background-color: #716f6a; }
+.bg-amber-500.text-white:hover, .bg-amber-600.text-white:hover { background-color: #5d5c57; }
 
 /* ═══════════════════════════════════════════════════════════════════
    ELEVATION — physical, layered surfaces.
@@ -164,9 +164,9 @@ html.dark .viz-caption { color: #9aa1b0; }
 .surface {
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 0.9),      /* top highlight  */
-    0 0 0 1px rgb(15 23 42 / 0.04),            /* hairline ring  */
-    0 1px 2px rgb(15 23 42 / 0.05),            /* contact shadow */
-    0 8px 20px -6px rgb(15 23 42 / 0.08);      /* ambient        */
+    0 0 0 1px rgb(26 23 20 / 0.04),            /* hairline ring  */
+    0 1px 2px rgb(26 23 20 / 0.05),            /* contact shadow */
+    0 8px 20px -6px rgb(26 23 20 / 0.08);      /* ambient        */
 }
 html.dark .surface {
   box-shadow:
@@ -181,9 +181,9 @@ html.dark .surface {
 .surface-raised {
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 0.9),
-    0 0 0 1px rgb(15 23 42 / 0.05),
-    0 2px 4px rgb(15 23 42 / 0.05),
-    0 16px 32px -10px rgb(15 23 42 / 0.13);
+    0 0 0 1px rgb(26 23 20 / 0.05),
+    0 2px 4px rgb(26 23 20 / 0.05),
+    0 16px 32px -10px rgb(26 23 20 / 0.13);
 }
 html.dark .surface-raised {
   box-shadow:
@@ -204,14 +204,14 @@ html.dark .surface-raised {
   transform: translateY(-2px);
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 0.95),
-    0 0 0 1px rgb(84 87 221 / 0.16),
-    0 4px 8px rgb(15 23 42 / 0.06),
-    0 18px 36px -10px rgb(15 23 42 / 0.16);
+    0 0 0 1px rgb(107 104 99 / 0.16),
+    0 4px 8px rgb(26 23 20 / 0.06),
+    0 18px 36px -10px rgb(26 23 20 / 0.16);
 }
 html.dark .surface-interactive:hover {
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 0.08),
-    0 0 0 1px rgb(129 140 248 / 0.3),
+    0 0 0 1px rgb(153 149 142 / 0.3),
     0 4px 8px rgb(0 0 0 / 0.5),
     0 18px 36px -10px rgb(0 0 0 / 0.7);
 }
@@ -254,13 +254,13 @@ html.theme-transition *::after {
 }
 
 /* ─── PayPal brand chip ───
-   The chip used PayPal navy (#003087) as an arbitrary Tailwind value, which
+   The chip used PayPal navy (#3a3733) as an arbitrary Tailwind value, which
    the generated dark layer cannot see — on a dark card it measured 1.38:1.
    A semantic class lets both themes carry the brand while staying readable
    (11.85:1 in light on the pale navy tint, 5.29:1 in dark on PayPal's own
    lighter brand blue). */
-.brand-paypal { background-color: rgb(0 48 135 / 0.06); color: #003087; }
-html.dark .brand-paypal { background-color: rgb(0 156 222 / 0.12); color: #009cde; }
+.brand-paypal { background-color: rgb(58 55 51 / 0.06); color: #3a3733; }
+html.dark .brand-paypal { background-color: rgb(151 146 140 / 0.12); color: #97928c; }
 
 /* ═══════════════════════════════════════════════════════════════════
    COMPONENT CLASSES IN DARK MODE
@@ -274,39 +274,39 @@ html.dark .brand-paypal { background-color: rgb(0 156 222 / 0.12); color: #009cd
    Each composed class therefore needs its own dark counterpart.
    ═══════════════════════════════════════════════════════════════════ */
 
-html.dark .section-title { color: #e8eaef; }
-html.dark .section-subtitle { color: #aab1bf; }
-html.dark .stat-number { color: #e8eaef; }
+html.dark .section-title { color: #f0e9e1; }
+html.dark .section-subtitle { color: #b5b0a9; }
+html.dark .stat-number { color: #f0e9e1; }
 
 html.dark .card,
 html.dark .card-flat {
-  background-color: #1e2025;
-  border-color: #2f323a;
-  color: #d9dce4;
+  background-color: #21201d;
+  border-color: #33322f;
+  color: #e2dbd3;
 }
-html.dark .card:hover { border-color: #3a3e48; }
+html.dark .card:hover { border-color: #3f3e3a; }
 
 html.dark .glass-card {
-  background-color: rgb(30 32 37 / 0.72);
+  background-color: rgb(33 32 29 / 0.72);
   border-color: rgb(255 255 255 / 0.08);
 }
 
 html.dark .btn-secondary {
-  background-color: #1e2025;
-  color: #e8eaef;
-  border-color: #3a3e48;
+  background-color: #21201d;
+  color: #f0e9e1;
+  border-color: #3f3e3a;
 }
-html.dark .btn-secondary:hover { border-color: #454a56; }
+html.dark .btn-secondary:hover { border-color: #4b4a46; }
 
 html.dark .badge-accent {
-  background-color: #282a44;
-  color: #a5acfa;
-  border-color: #34375e;
+  background-color: #2d2c29;
+  color: #b7b1aa;
+  border-color: #3c3a37;
 }
 html.dark .badge-warm {
-  background-color: #3c3221;
-  color: #fcd34d;
-  border-color: #5f461d;
+  background-color: #36332f;
+  color: #dcd6ce;
+  border-color: #4d4a45;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -323,26 +323,26 @@ html.dark .badge-warm {
 html:not(.dark) .bg-primary .text-slate-300,
 html:not(.dark) .bg-slate-900 .text-slate-300,
 html:not(.dark) .bg-primary .text-slate-400,
-html:not(.dark) .bg-slate-900 .text-slate-400 { color: #b6bdcb; }
+html:not(.dark) .bg-slate-900 .text-slate-400 { color: #c1bcb5; }
 
 html:not(.dark) .bg-primary .text-slate-500,
-html:not(.dark) .bg-slate-900 .text-slate-500 { color: #a7aebe; }
+html:not(.dark) .bg-slate-900 .text-slate-500 { color: #b3ada6; }
 
 /* Section titles/subtitles that sit on the navy ground in light mode. */
 html:not(.dark) .bg-primary .section-title,
-html:not(.dark) .bg-slate-900 .section-title { color: #f1f5f9; }
+html:not(.dark) .bg-slate-900 .section-title { color: #f9f4eb; }
 html:not(.dark) .bg-primary .section-subtitle,
-html:not(.dark) .bg-slate-900 .section-subtitle { color: #cbd5e1; }
+html:not(.dark) .bg-slate-900 .section-subtitle { color: #d9d3cb; }
 
 /* ─── Accent badges (.badge-accent / .section-label) ───
    Another @apply casualty: these compile `color` from `text-accent`, so the
    `.text-accent` remap above never reaches them and they kept the original
-   #6366f1 (4.47:1). Setting the color on the composed class directly gives
+   #7a7771 (4.47:1). Setting the color on the composed class directly gives
    4.83:1 on the light tint and 6.57:1 on the dark one. */
 html:not(.dark) .badge-accent,
-html:not(.dark) .section-label { color: #4338ca; }
+html:not(.dark) .section-label { color: #54514c; }
 html.dark .badge-accent,
-html.dark .section-label { color: #b9c0ff; }
+html.dark .section-label { color: #c7c4bc; }
 
 /* ...but these badges also appear on the navy hero, where a DARKER accent is
    exactly wrong (it measured 2.26:1 there). Inside dark sections they need
@@ -354,7 +354,7 @@ html:not(.dark) .bg-slate-900 .section-label,
 html.dark .bg-primary .badge-accent,
 html.dark .bg-primary .section-label,
 html.dark .bg-slate-900 .badge-accent,
-html.dark .bg-slate-900 .section-label { color: #c7ccff; }
+html.dark .bg-slate-900 .section-label { color: #d3cfc7; }
 
 /* Hero/footer subtitles use white at 80% over navy, which lands at 4.47:1 —
    a hair under AA. 90% clears it comfortably at 14.6:1 while still reading

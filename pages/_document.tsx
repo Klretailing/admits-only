@@ -23,12 +23,8 @@ export default function Document() {
     <Html lang="en">
       <Head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&display=swap"
-          rel="stylesheet"
-        />
+        {/* Fonts are self-hosted via @fontsource (imported in _app.tsx). */}
+        <meta name="theme-color" content="#f7f3ea" />
       </Head>
       <body>
         <Main />

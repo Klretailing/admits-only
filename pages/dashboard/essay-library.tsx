@@ -453,7 +453,7 @@ export default function EssaySamples() {
                   <div className={reader.locked ? 'relative' : 'max-w-none'}>
                     {reader.essay.essay.split('\n').map((para, i) =>
                       para.trim() ? (
-                        <p key={i} className="text-sm text-slate-700 leading-relaxed mb-4">{para}</p>
+                        <p key={i} className="student-page text-[15px] text-slate-800 leading-[1.75] mb-4">{para}</p>
                       ) : null,
                     )}
                     {/* Functional fade-mask over the tail of the preview */}
