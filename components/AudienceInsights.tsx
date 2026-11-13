@@ -154,9 +154,9 @@ function CohortRetention({ cohorts }: { cohorts: Cohorts }) {
     : null;
 
   const shade = (pct: number) => {
-    if (pct <= 0) return { bg: 'transparent', fg: 'var(--ink-3, #94a3b8)' };
+    if (pct <= 0) return { bg: 'transparent', fg: 'var(--ink-3, #a6a19a)' };
     const a = Math.min(0.08 + (pct / 100) * 0.62, 0.7);
-    return { bg: `rgb(84 87 221 / ${a})`, fg: pct > 45 ? '#ffffff' : 'inherit' };
+    return { bg: `rgb(107 104 99 / ${a})`, fg: pct > 45 ? '#ffffff' : 'inherit' };
   };
 
   return (

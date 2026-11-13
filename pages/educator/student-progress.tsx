@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import EducatorDashboardLayout from '../../components/EducatorDashboardLayout';
+import { parseDay } from '../../lib/dateOnly';
 
 interface StudentProfile {
   gpa: number | null;
@@ -571,7 +572,7 @@ function DetailView({
                     {app.deadline && (
                       <span>
                         Deadline:{' '}
-                        {new Date(app.deadline).toLocaleDateString('en-US', {
+                        {parseDay(app.deadline).toLocaleDateString('en-US', {
                           month: 'short',
                           day: 'numeric',
                           year: 'numeric',

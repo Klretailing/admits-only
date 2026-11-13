@@ -127,7 +127,8 @@ export default function ProgressSummary({ checklist }: { checklist?: ChecklistIt
   const week = lastSevenDays();
   const activeCount = week.filter((d) => activeDays.includes(d.key)).length;
 
-  const barTone = pct >= 80 ? 'bg-emerald-500' : pct >= 40 ? 'bg-accent' : 'bg-amber-500';
+  // Progress is ink in the notebook; the number beside it carries the level.
+  const barTone = 'bg-ink';
 
   return (
     <div className="bg-white rounded-2xl border border-slate-100 surface p-5 lg:p-6">

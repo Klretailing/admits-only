@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { useEffect, useState, useMemo } from 'react';
 import Head from 'next/head';
 import ParentLayout from '../../components/ParentLayout';
+import { daysUntilDay, parseDay } from '../../lib/dateOnly';
 
 const TYPE_COLORS: Record<string, string> = {
   EA: 'bg-blue-500', ED: 'bg-purple-500', ED2: 'bg-violet-500',
@@ -78,12 +79,12 @@ export default function ParentCalendar() {
 
   const upcoming = useMemo(() => {
     return apps
-      .filter(a => a.deadline && new Date(a.deadline) >= new Date(now.toDateString()))
+      .filter(a => a.deadline && (daysUntilDay(a.deadline, now) ?? -1) >= 0)
       .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())
       .slice(0, 10);
   }, [apps, now]);
 
-  const getDaysUntil = (d: string) => Math.ceil((new Date(d).getTime() - now.getTime()) / 86400000);
+  const getDaysUntil = (d: string) => daysUntilDay(d, now) ?? 0;
 
   if (status === 'loading' || loading) {
     return (
@@ -230,7 +231,7 @@ export default function ParentCalendar() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-primary truncate">{app.name}</p>
                       <p className="text-xs text-slate-400">
-                        {new Date(app.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        {parseDay(app.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </p>
                     </div>
                     <span className={`px-2 py-1 rounded-lg text-[10px] font-bold ${TYPE_BADGE[app.type] || 'bg-slate-50 text-slate-500'}`}>{app.type}</span>

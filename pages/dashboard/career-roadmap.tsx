@@ -18,13 +18,13 @@ function formatSalary(n: number): string {
 }
 
 const colorMap: Record<string, string> = {
-  red: '#ef4444',
-  blue: '#3b82f6',
-  green: '#22c55e',
-  purple: '#8b5cf6',
-  orange: '#f97316',
-  yellow: '#eab308',
-  brown: '#92400e',
+  red: '#de574e',
+  blue: '#88857f',
+  green: '#b0aba4',
+  purple: '#7d7b75',
+  orange: '#9e9a93',
+  yellow: '#bebbb4',
+  brown: '#5b5852',
 };
 
 /* ──────────────────────── STATE MACHINE ──────────────────────── */
@@ -500,7 +500,7 @@ function RoadmapView({
                   <div key={c.id} className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100 mb-1.5">
                     <div
                       className="w-2 h-2 rounded-full shrink-0"
-                      style={{ backgroundColor: colorMap[c.logoColor] || '#6366f1' }}
+                      style={{ backgroundColor: colorMap[c.logoColor] || '#7a7771' }}
                     />
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-primary truncate">{c.name}</p>

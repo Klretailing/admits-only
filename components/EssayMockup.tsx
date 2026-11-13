@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useInView } from '../hooks/useAnimations';
+import LogoMark from './LogoMark';
 
 const essayText = `The fluorescent lights of the community center hummed overhead as I unpacked boxes of donated textbooks. At fifteen, I had started a free tutoring program for immigrant families in my neighborhood — families like mine, who had arrived in the Bay Area speaking little English and knowing even less about the American education system.
 
@@ -62,11 +63,8 @@ export default function EssayMockup() {
         {/* Essay header */}
         <div className="px-8 pt-6 pb-2 border-b border-slate-100">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-purple-600 flex items-center justify-center">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L2 9L12 16L22 9L12 2Z" fill="white" opacity="0.9" />
-                <path d="M4 11V17L12 22L20 17V11" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-              </svg>
+            <div className="w-8 h-8 rounded-lg logo-tile flex items-center justify-center">
+              <LogoMark size={16} />
             </div>
             <div>
               <p className="text-xs font-semibold text-accent uppercase tracking-wider">AdmitsOnly Essay Coach</p>

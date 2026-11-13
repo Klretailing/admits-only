@@ -21,7 +21,7 @@ function MiniChart({ points, kind, max, unit }: { points: { label: string; value
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-32" preserveAspectRatio="none">
       {/* baseline */}
-      <line x1={padL} y1={padT + innerH} x2={W - padR} y2={padT + innerH} stroke="#e2e8f0" strokeWidth={1} />
+      <line x1={padL} y1={padT + innerH} x2={W - padR} y2={padT + innerH} stroke="#ebe7df" strokeWidth={1} />
       {kind === 'bar'
         ? points.map((p, i) => {
             const slot = innerW / n;
@@ -30,9 +30,9 @@ function MiniChart({ points, kind, max, unit }: { points: { label: string; value
             const h = (p.value / maxVal) * innerH;
             return (
               <g key={i}>
-                <rect x={x} y={padT + innerH - h} width={bw} height={Math.max(h, 1)} rx={3} fill="#10b981" opacity={0.85} />
-                <text x={x + bw / 2} y={padT + innerH - h - 3} textAnchor="middle" fontSize={9} fill="#475569">{p.value}</text>
-                <text x={x + bw / 2} y={H - 8} textAnchor="middle" fontSize={9} fill="#94a3b8">{short(p.label)}</text>
+                <rect x={x} y={padT + innerH - h} width={bw} height={Math.max(h, 1)} rx={3} fill="#a7a29b" opacity={0.85} />
+                <text x={x + bw / 2} y={padT + innerH - h - 3} textAnchor="middle" fontSize={9} fill="#555450">{p.value}</text>
+                <text x={x + bw / 2} y={H - 8} textAnchor="middle" fontSize={9} fill="#a6a19a">{short(p.label)}</text>
               </g>
             );
           })
@@ -41,12 +41,12 @@ function MiniChart({ points, kind, max, unit }: { points: { label: string; value
             const line = points.map((p, i) => `${px(i)},${y(p.value)}`).join(' ');
             return (
               <g>
-                <polyline points={line} fill="none" stroke="#10b981" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                <polyline points={line} fill="none" stroke="#a7a29b" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
                 {points.map((p, i) => (
                   <g key={i}>
-                    <circle cx={px(i)} cy={y(p.value)} r={3} fill="#10b981" />
-                    <text x={px(i)} y={y(p.value) - 6} textAnchor="middle" fontSize={9} fill="#475569">{p.value}</text>
-                    <text x={px(i)} y={H - 8} textAnchor="middle" fontSize={9} fill="#94a3b8">{short(p.label)}</text>
+                    <circle cx={px(i)} cy={y(p.value)} r={3} fill="#a7a29b" />
+                    <text x={px(i)} y={y(p.value) - 6} textAnchor="middle" fontSize={9} fill="#555450">{p.value}</text>
+                    <text x={px(i)} y={H - 8} textAnchor="middle" fontSize={9} fill="#a6a19a">{short(p.label)}</text>
                   </g>
                 ))}
               </g>

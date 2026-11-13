@@ -256,5 +256,14 @@ html.dark .bg-primary .text-slate-500, html.dark .bg-slate-900 .text-slate-500 {
 `;
 
 const out = header + '\n' + rules.join('\n') + '\n' + handTuned;
-fs.writeFileSync(path.join(__dirname, '..', 'styles', 'theme-dark.css'), out);
+/* The site is monochrome (design/ink.cjs): pass every generated colour
+   through inkify so a regeneration can never reintroduce hue. Luminance, and
+   so contrast, is unchanged by the conversion. */
+const { inkify } = require('../design/ink.cjs');
+const inked = out.replace(/#[0-9a-fA-F]{6}\b/g, (h) => inkify(h))
+  .replace(/rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})/g, (m, r, g, b) => {
+    const hex = inkify('#' + [r, g, b].map((v) => (+v).toString(16).padStart(2, '0')).join(''));
+    return m.slice(0, m.indexOf('(') + 1) + [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(', ');
+  });
+fs.writeFileSync(path.join(__dirname, '..', 'styles', 'theme-dark.css'), inked);
 console.log(`theme-dark.css written: ${rules.length} generated rules from ${used.size} used utilities`);

@@ -9,6 +9,7 @@ import ShareDecisions from '../../components/ShareDecisions';
 import DeadlineChips from '../../components/DeadlineChips';
 import { deadlinesForName } from '../../lib/deadlines';
 import { SCHOOLS, findSchoolByName, generateSmartTimeline, generateWeeklyDigest, type SchoolData } from '../../lib/schoolData';
+import { daysUntilDay, parseDay } from '../../lib/dateOnly';
 
 /* ══════════════════════════════════════════════════════════════════════
    TYPES
@@ -102,17 +103,17 @@ const typeColors: Record<string, string> = {
 };
 
 const typeTimelineColors: Record<string, string> = {
-  EA: '#3b82f6',
-  ED: '#ef4444',
-  ED2: '#f43f5e',
-  RD: '#22c55e',
-  REA: '#6366f1',
-  Rolling: '#f59e0b',
+  EA: '#88857f',
+  ED: '#de574e',
+  ED2: '#e05950',
+  RD: '#b0aba4',
+  REA: '#7a7771',
+  Rolling: '#b6b0a9',
 };
 
 function getDaysUntil(deadline: string): number | null {
   if (!deadline) return null;
-  return Math.ceil((new Date(deadline).getTime() - Date.now()) / 86400000);
+  return daysUntilDay(deadline);
 }
 
 function getTaskCompletion(tasks: ApplicationTask[]): number {
@@ -178,10 +179,10 @@ function ProgressRing({ pct, size = 36, stroke = 3 }: { pct: number; size?: numb
   return (
     <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <circle cx={center} cy={center} r={r} fill="none" stroke="#e2e8f0" strokeWidth={stroke} />
+        <circle cx={center} cy={center} r={r} fill="none" stroke="#ebe7df" strokeWidth={stroke} />
         <circle
           cx={center} cy={center} r={r} fill="none"
-          stroke="#6366f1" strokeWidth={stroke}
+          stroke="#7a7771" strokeWidth={stroke}
           strokeDasharray={circ} strokeDashoffset={offset}
           strokeLinecap="round"
           transform={`rotate(-90 ${center} ${center})`}
@@ -456,7 +457,7 @@ export default function Applications() {
     const byMonth = new Map<string, CollegeApp[]>();
     for (const app of apps) {
       if (!app.deadline) continue;
-      const d = new Date(app.deadline);
+      const d = parseDay(app.deadline);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       const list = byMonth.get(key) || [];
       list.push(app);
@@ -466,7 +467,7 @@ export default function Applications() {
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([key, appList]) => ({
         key,
-        label: new Date(key + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+        label: parseDay(key + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
         apps: appList.sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime()),
       }));
   }, [apps]);
@@ -701,7 +702,10 @@ export default function Applications() {
           </div>
         )}
 
-        {/* ═══ Board View ═══ */}
+        {/* ═══ Board View ═══
+            Columns never shrink below 168px: with no floor, six columns beside
+            the sidebar at 1024px left ~70px per card and every college name
+            broke mid-word. The board scrolls inside its own frame instead. */}
         {view === 'board' && apps.length > 0 && (
           <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2 snap-x snap-mandatory lg:snap-none">
             {BOARD_COLUMNS.map(col => {
@@ -710,7 +714,7 @@ export default function Applications() {
               // Empty columns swipe-order last on mobile so the first thing a
               // phone user sees is real content, not an empty tray.
               return (
-                <div key={col.status} className={`min-w-[280px] w-[280px] lg:min-w-0 lg:w-auto lg:flex-1 flex-shrink-0 snap-start ${colApps.length === 0 ? 'order-last lg:order-none' : ''}`}>
+                <div key={col.status} className={`min-w-[280px] w-[280px] lg:min-w-[168px] lg:w-auto lg:flex-1 flex-shrink-0 snap-start ${colApps.length === 0 ? 'order-last lg:order-none' : ''}`}>
                   <div className="flex items-center gap-2 mb-3">
                     <span className={`w-2.5 h-2.5 rounded-full ${statusInfo.color.split(' ')[0]}`} />
                     <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">{col.label}</h3>
@@ -748,7 +752,7 @@ export default function Applications() {
                   <div className="absolute left-2.5 top-0 bottom-0 w-px bg-slate-200" />
                   <div className="space-y-3">
                     {month.apps.map(app => {
-                      const d = new Date(app.deadline);
+                      const d = parseDay(app.deadline);
                       const dayStr = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
                       const pct = getTaskCompletion(app.tasks);
                       const days = getDaysUntil(app.deadline);
@@ -761,7 +765,7 @@ export default function Applications() {
                           {/* Dot on timeline */}
                           <div
                             className="absolute -left-6 top-5 w-3 h-3 rounded-full border-2 border-white shadow-sm"
-                            style={{ backgroundColor: typeTimelineColors[app.type] || '#6366f1' }}
+                            style={{ backgroundColor: typeTimelineColors[app.type] || '#7a7771' }}
                           />
                           <div className="flex items-center justify-between gap-3">
                             <div className="min-w-0 flex-1">
@@ -847,7 +851,7 @@ export default function Applications() {
                         <td className="px-4 py-3 text-slate-500">
                           {app.deadline ? (
                             <span>
-                              {new Date(app.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              {parseDay(app.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                               {days !== null && days >= 0 && (
                                 <span className={`ml-1.5 text-[10px] font-bold ${days <= 7 ? 'text-red-500' : days <= 30 ? 'text-amber-500' : 'text-slate-300'}`}>
                                   ({days}d)
@@ -907,26 +911,26 @@ function BoardCard({ app, onClick }: { app: CollegeApp; onClick: () => void }) {
       onClick={onClick}
       className="w-full text-left bg-white rounded-2xl border border-slate-100 surface surface-interactive p-4 group"
     >
-      {/* Name + Type */}
-      <div className="flex items-start justify-between gap-2">
-        <h4 className="min-w-0 text-sm font-bold text-primary group-hover:text-indigo-600 transition-colors leading-snug break-words">{app.name}</h4>
-        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border flex-shrink-0 ${typeColors[app.type]}`}>{app.type}</span>
-      </div>
+      {/* The name gets the card's full width. The application-type chip used to
+          share this row and left ~93px, so "Massachusetts" broke mid-word as
+          "Massachuset / ts" once the wider handwritten font arrived. */}
+      <h4 className="text-sm font-bold text-primary group-hover:text-indigo-600 transition-colors leading-snug break-words [hyphens:auto]">{app.name}</h4>
 
-      {/* Deadline */}
-      {app.deadline && (
-        <p className="text-xs text-slate-400 mt-1.5">
-          {new Date(app.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-          {days !== null && days >= 0 && (
+      {/* Deadline + type */}
+      <div className="mt-1.5 flex items-center justify-between gap-2">
+        <p className="min-w-0 text-xs text-slate-400">
+          {app.deadline && parseDay(app.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          {app.deadline && days !== null && days >= 0 && (
             <span className={`ml-1.5 font-semibold ${days <= 7 ? 'text-red-500' : days <= 30 ? 'text-amber-500' : 'text-slate-400'}`}>
               &middot; {days === 0 ? 'Today' : days === 1 ? '1 day left' : `${days}d left`}
             </span>
           )}
-          {days !== null && days < 0 && (
+          {app.deadline && days !== null && days < 0 && (
             <span className="ml-1.5 font-semibold text-slate-300">&middot; Past due</span>
           )}
         </p>
-      )}
+        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border flex-shrink-0 ${typeColors[app.type]}`}>{app.type}</span>
+      </div>
 
       {/* The school's own rounds, so a student can see at a glance whether the
           date they set matches the round they meant to apply in. */}

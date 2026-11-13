@@ -28,7 +28,7 @@ function BentoCard({
     const rotateY = ((x - centerX) / centerX) * 4;
 
     card.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
-    glow.style.background = `radial-gradient(300px circle at ${x}px ${y}px, rgba(99, 102, 241, 0.08), transparent 60%)`;
+    glow.style.background = `radial-gradient(300px circle at ${x}px ${y}px, rgba(122, 119, 113, 0.08), transparent 60%)`;
   };
 
   const handleMouseLeave = () => {

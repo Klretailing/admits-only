@@ -153,8 +153,8 @@ function ScoreLoopMotion() {
           >
             <defs>
               <linearGradient id="loopGrad" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#f59e0b" />
-                <stop offset="100%" stopColor="#ea580c" />
+                <stop offset="0%" stopColor="#b6b0a9" />
+                <stop offset="100%" stopColor="#8c8781" />
               </linearGradient>
             </defs>
             <circle
@@ -174,13 +174,13 @@ function ScoreLoopMotion() {
           <svg className="absolute inset-0" width="192" height="192" viewBox="0 0 192 192">
             <defs>
               <linearGradient id="scoreGrad" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#fbbf24" />
-                <stop offset="50%" stopColor="#f59e0b" />
-                <stop offset="100%" stopColor="#ea580c" />
+                <stop offset="0%" stopColor="#ccc8c0" />
+                <stop offset="50%" stopColor="#b6b0a9" />
+                <stop offset="100%" stopColor="#8c8781" />
               </linearGradient>
             </defs>
             {/* base ring */}
-            <circle cx="96" cy="96" r="70" fill="none" stroke="#f1f5f9" strokeWidth="10" />
+            <circle cx="96" cy="96" r="70" fill="none" stroke="#f9f4eb" strokeWidth="10" />
             {/* animated arc */}
             <circle
               cx="96"
@@ -264,8 +264,8 @@ function PathMotion() {
       >
         <defs>
           <linearGradient id="pathGrad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#10b981" />
-            <stop offset="100%" stopColor="#14b8a6" />
+            <stop offset="0%" stopColor="#a7a29b" />
+            <stop offset="100%" stopColor="#a7a49d" />
           </linearGradient>
           <filter id="dotGlow">
             <feGaussianBlur stdDeviation="3" result="b" />
@@ -281,7 +281,7 @@ function PathMotion() {
           id="careerPath"
           d="M 40 250 C 110 220, 120 120, 200 130 S 300 240, 360 100"
           fill="none"
-          stroke="#cbd5e1"
+          stroke="#d9d3cb"
           strokeWidth="2"
           strokeDasharray="4 6"
         />
@@ -304,19 +304,19 @@ function PathMotion() {
           { cx: 360, cy: 100 },
         ].map((p, i) => (
           <g key={i}>
-            <circle cx={p.cx} cy={p.cy} r="10" fill="#ffffff" stroke="#10b981" strokeWidth="2.5" />
+            <circle cx={p.cx} cy={p.cy} r="10" fill="#ffffff" stroke="#a7a29b" strokeWidth="2.5" />
             <circle
               cx={p.cx}
               cy={p.cy}
               r="4"
-              fill="#10b981"
+              fill="#a7a29b"
               style={{ animation: `sparkleTwinkle 2.2s ease-in-out ${i * 0.4}s infinite` }}
             />
           </g>
         ))}
 
         {/* travelling comet */}
-        <circle r="7" fill="#10b981" filter="url(#dotGlow)">
+        <circle r="7" fill="#a7a29b" filter="url(#dotGlow)">
           <animateMotion dur="6s" repeatCount="indefinite" rotate="auto">
             <mpath href="#careerPath" />
           </animateMotion>
@@ -326,9 +326,9 @@ function PathMotion() {
       {/* compass badge */}
       <div className="absolute bottom-5 right-5 w-12 h-12 rounded-full bg-white/90 backdrop-blur border border-emerald-500/20 shadow-md flex items-center justify-center">
         <div style={{ animation: 'compassSlowSpin 12s linear infinite' }}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a7a29b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10" />
-            <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill="#10b981" fillOpacity="0.25" />
+            <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill="#a7a29b" fillOpacity="0.25" />
           </svg>
         </div>
       </div>
@@ -367,8 +367,8 @@ function ConvergenceMotion() {
               }}
             >
               <div className="flex items-center gap-2.5">
-                <div className={`w-6 h-6 rounded-md bg-gradient-to-br ${l.color} flex items-center justify-center`}>
-                  <span className="text-[10px] font-bold text-white">0{i + 1}</span>
+                <div className="w-6 h-6 rounded-md bg-ink flex items-center justify-center">
+                  <span className="text-[10px] font-bold text-paper">0{i + 1}</span>
                 </div>
                 <span className="text-xs font-semibold text-primary">{l.label}</span>
               </div>
@@ -469,29 +469,26 @@ export default function Services() {
   return (
     <>
       <Head>
-        <title>Programs | AdmitsOnly — Writing, SAT/ACT, Career &amp; College Admissions</title>
+        <title>Programs | AdmitsOnly — Writing, SAT/ACT, Careers &amp; College Planning, Grades 9–12</title>
         <meta
           name="description"
-          content="Four focused programs from AdmitsOnly: Writing Curriculum, SAT/ACT Preparation, Career Guidance, and College Admissions. Expert-led, outcome-oriented, premium coaching."
+          content="Four mentor-led programs for high school students: writing, SAT/ACT preparation, career guidance and college admissions. Start in any grade, from ninth to twelfth."
         />
       </Head>
 
       <div className="bg-white">
         {/* ─── HERO ─── */}
-        <section className="relative overflow-hidden bg-primary">
-          <div className="absolute inset-0 bg-grid opacity-30" />
-          <div className="absolute top-20 -left-40 w-96 h-96 bg-accent/20 rounded-full blur-3xl animate-pulse-soft" />
-          <div className="absolute bottom-10 -right-40 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse-soft" style={{ animationDelay: '1.5s' }} />
+        <section className="relative">
 
           <div className="relative max-w-7xl mx-auto px-6 py-24 lg:py-32">
             <div className="max-w-3xl">
               <div className="section-label">Our Programs</div>
-              <h1 className="mt-6 text-4xl sm:text-5xl lg:text-6xl font-extrabold font-display text-white leading-[1.1] tracking-tight">
+              <h1 className="mt-6 text-4xl sm:text-5xl lg:text-6xl font-bold font-display text-primary leading-[1.1] tracking-tight">
                 Four programs.{' '}
                 <span className="gradient-text">One quiet obsession</span>{' '}
                 with the student in front of us.
               </h1>
-              <p className="mt-6 text-lg lg:text-xl text-slate-300 leading-relaxed max-w-2xl">
+              <p className="mt-6 text-lg lg:text-xl text-slate-700 leading-relaxed max-w-2xl">
                 Each program is crafted around a single idea: give students the strategies,
                 confidence, and mentorship to do their best work — and let outcomes follow.
               </p>
@@ -499,7 +496,7 @@ export default function Services() {
                 <Link href="/contact" className="btn-primary text-base">
                   Book a Free Strategy Call
                 </Link>
-                <Link href="#programs" className="btn-ghost text-base">
+                <Link href="#programs" className="btn-secondary text-base">
                   Explore Programs &darr;
                 </Link>
               </div>
@@ -513,7 +510,7 @@ export default function Services() {
             <RevealSection>
               <div className="text-center max-w-2xl mx-auto">
                 <div className="section-label">What We Teach</div>
-                <h2 className="section-title">A focused catalogue, built for depth over breadth</h2>
+                <h2 className="section-title">A focused catalog, built for depth over breadth</h2>
                 <p className="section-subtitle mx-auto">
                   Every program is designed and delivered by experienced educators —
                   small, intentional, and measured by real student growth.

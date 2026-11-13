@@ -12,7 +12,7 @@ const SEV_STYLE: Record<CraftSeverity, { dot: string; chip: string; ring: string
   praise: { dot: 'bg-emerald-400', chip: 'text-emerald-700 bg-emerald-50', ring: 'border-emerald-100' },
 };
 
-const METRIC_COLOR: Record<string, string> = { good: '#10b981', warn: '#f59e0b', bad: '#ef4444' };
+const METRIC_COLOR: Record<string, string> = { good: '#a7a29b', warn: '#b6b0a9', bad: '#de574e' };
 // Bright hues fill the bars; the numbers need darker (light) / lighter (dark) ink to be legible.
 const METRIC_INK: Record<string, string> = {
   good: 'text-emerald-700 dark:text-emerald-400',

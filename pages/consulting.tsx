@@ -6,6 +6,12 @@ import ServiceShowcase from '../components/ServiceShowcase';
 
 /* ──────────────────────── DATA ──────────────────────── */
 
+/* Schools a current AdmitsOnly student was actually admitted to, as
+   confirmed by the owner (Nov 2026). This is a factual claim about real
+   students: add a school only when an admit is confirmed, never as
+   aspiration or example. */
+const RECENT_ADMITS = ['Stanford', 'Northeastern', 'Georgia Tech', 'University of Michigan'];
+
 const journey = [
   {
     step: '01',
@@ -55,36 +61,45 @@ export default function Consulting() {
   return (
     <>
       <Head>
-        <title>Consulting &amp; Coaching | AdmitsOnly — Premium College Admissions Support</title>
-        <meta name="description" content="Work one-on-one with AdmitsOnly's expert consultants. Personalized college admissions strategy, essay coaching, SAT/ACT prep, and mentorship for ambitious students and families." />
+        <title>Tutoring &amp; Consulting | AdmitsOnly — One-on-One Mentors for High School</title>
+        <meta name="description" content="Work one-on-one with an AdmitsOnly mentor: writing, SAT/ACT prep, career exploration and college admissions strategy, for students in grades 9 through 12." />
       </Head>
 
       <div className="bg-white">
         {/* ─── HERO ─── */}
-        <section className="relative overflow-hidden bg-primary">
-          <div className="absolute inset-0 bg-grid opacity-30" />
-          <div className="absolute top-20 -left-40 w-96 h-96 bg-accent/20 rounded-full blur-3xl animate-pulse-soft" />
-          <div className="absolute bottom-10 -right-40 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse-soft" style={{ animationDelay: '1.5s' }} />
+        <section className="relative">
 
           <div className="relative max-w-7xl mx-auto px-6 py-24 lg:py-32">
             <div className="max-w-3xl">
               <div className="section-label">Premium College Admissions Consulting</div>
-              <h1 className="mt-6 text-4xl sm:text-5xl lg:text-6xl font-extrabold font-display text-white leading-[1.1] tracking-tight">
-                Your child&apos;s path to a{' '}
-                <span className="gradient-text">top university</span>{' '}
-                starts here
+              <h1 className="mt-6 text-4xl sm:text-5xl lg:text-6xl font-bold font-display text-primary leading-[1.1] tracking-tight">
+                A mentor for{' '}
+                <span className="gradient-text">every year</span>{' '}
+                of high school
               </h1>
-              <p className="mt-6 text-lg lg:text-xl text-slate-300 leading-relaxed max-w-2xl">
-                Personalized academic coaching, expert admissions strategy, and immersive programs
-                designed by educators who&apos;ve helped hundreds of students get into Stanford, MIT, Harvard, and 20+ elite institutions.
+              <p className="mt-6 text-lg lg:text-xl text-slate-700 leading-relaxed max-w-2xl">
+                Personalized academic coaching, expert admissions strategy, and immersive programs,
+                from educators whose students have been admitted to some of the best universities
+                in the world.
               </p>
               <div className="mt-10 flex flex-wrap gap-4">
                 <Link href="/contact" className="btn-primary text-base">
                   Book a Free Strategy Call
                 </Link>
-                <Link href="/services" className="btn-ghost text-base">
+                <Link href="/services" className="btn-secondary text-base">
                   Explore Programs &rarr;
                 </Link>
+              </div>
+
+              <div className="mt-10">
+                <p className="note text-xl text-slate-600">recent admits</p>
+                <ul className="mt-2 flex flex-wrap gap-2" aria-label="Schools our students were recently admitted to">
+                  {RECENT_ADMITS.map((school) => (
+                    <li key={school} className="px-3 py-1.5 rounded-lg border-[1.5px] border-ink bg-white text-sm font-semibold text-primary">
+                      {school}
+                    </li>
+                  ))}
+                </ul>
               </div>
             </div>
 
@@ -145,18 +160,16 @@ export default function Consulting() {
         <ServiceShowcase />
 
         {/* ─── LEARNING JOURNEY ─── */}
-        <section className="section-padding bg-primary relative overflow-hidden">
-          <div className="absolute inset-0 bg-grid opacity-20" />
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-accent/10 rounded-full blur-3xl" />
+        <section className="section-padding relative">
 
           <div className="relative max-w-7xl mx-auto px-6">
             <RevealSection>
               <div className="text-center">
-                <div className="badge bg-white/10 text-white border-white/20 mb-4">How It Works</div>
-                <h2 className="text-3xl lg:text-4xl font-bold font-display text-white tracking-tight">
+                <div className="badge bg-white/10 text-primary border-white/20 mb-4">How It Works</div>
+                <h2 className="text-3xl lg:text-4xl font-bold font-display text-primary tracking-tight">
                   Getting started is straightforward
                 </h2>
-                <p className="mt-4 text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed">
+                <p className="mt-4 text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
                   No pressure, no commitment upfront. We start with a conversation and build from there.
                 </p>
               </div>
@@ -165,10 +178,10 @@ export default function Consulting() {
             <div className="mt-14 grid gap-6 md:grid-cols-3">
               {journey.map((step, i) => (
                 <RevealSection key={step.step} delay={i * 150}>
-                  <div className="glass-card-dark rounded-2xl p-7 h-full">
-                    <div className="text-4xl font-extrabold font-display gradient-text">{step.step}</div>
-                    <h3 className="mt-3 text-xl font-bold text-white">{step.title}</h3>
-                    <p className="mt-3 text-slate-400 leading-relaxed">{step.description}</p>
+                  <div className="rounded-2xl border bg-white p-7 h-full">
+                    <div className="text-4xl font-bold font-display gradient-text">{step.step}</div>
+                    <h3 className="mt-3 text-xl font-bold text-primary">{step.title}</h3>
+                    <p className="mt-3 text-slate-600 leading-relaxed">{step.description}</p>
                   </div>
                 </RevealSection>
               ))}

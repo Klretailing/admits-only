@@ -10,6 +10,10 @@ const themeInitScript = `
     if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
       document.documentElement.classList.add('dark');
     }
+    // Signed-in hint for the header (see lib/authHint.ts).
+    if (localStorage.getItem('ao_auth') === 'in') {
+      document.documentElement.classList.add('ao-auth-in');
+    }
   } catch (e) {}
 })();
 `;
@@ -19,12 +23,8 @@ export default function Document() {
     <Html lang="en">
       <Head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&display=swap"
-          rel="stylesheet"
-        />
+        {/* Fonts are self-hosted via @fontsource (imported in _app.tsx). */}
+        <meta name="theme-color" content="#f7f3ea" />
       </Head>
       <body>
         <Main />

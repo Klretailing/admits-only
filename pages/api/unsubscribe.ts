@@ -25,7 +25,7 @@ function page(title: string, message: string): string {
   <meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title></head>
   <body style="margin:0;background:#faf8f5;font:400 15px/1.6 -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#1c1a17;">
     <div style="max-width:460px;margin:14vh auto;padding:30px;background:#fff;border:1px solid #eae5dd;border-radius:14px;">
-      <p style="margin:0 0 14px;font-weight:600;color:#5457dd;">AdmitsOnly</p>
+      <p style="margin:0 0 14px;font-weight:600;color:#6b6863;">AdmitsOnly</p>
       <h1 style="margin:0 0 10px;font-size:20px;">${title}</h1>
       <p style="margin:0;color:#4a4640;">${message}</p>
     </div>

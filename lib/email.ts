@@ -136,7 +136,7 @@ function shell(opts: {
     <tr><td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border:1px solid #eae5dd;border-radius:14px;overflow:hidden;">
         <tr><td style="padding:26px 30px 0;">
-          <p style="margin:0;font:600 15px/1.2 -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#5457dd;">AdmitsOnly</p>
+          <p style="margin:0;font:600 15px/1.2 -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#6b6863;">AdmitsOnly</p>
         </td></tr>
         <tr><td style="padding:18px 30px 0;">
           <h1 style="margin:0;font:700 21px/1.3 -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#1c1a17;">${heading}</h1>
@@ -146,14 +146,14 @@ function shell(opts: {
         </td></tr>
         ${ctaLabel && ctaHref ? `
         <tr><td style="padding:22px 30px 0;">
-          <a href="${ctaHref}" style="display:inline-block;background:#5457dd;color:#ffffff;text-decoration:none;font:600 15px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;padding:13px 22px;border-radius:10px;">${ctaLabel}</a>
+          <a href="${ctaHref}" style="display:inline-block;background:#6b6863;color:#ffffff;text-decoration:none;font:600 15px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;padding:13px 22px;border-radius:10px;">${ctaLabel}</a>
         </td></tr>` : ''}
         <tr><td style="padding:26px 30px 28px;">
-          <p style="margin:0;font:400 13px/1.6 -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#8a8279;">${footerNote}</p>
+          <p style="margin:0;font:400 13px/1.6 -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#86837c;">${footerNote}</p>
         </td></tr>
       </table>
-      <p style="margin:16px 0 0;font:400 12px/1.6 -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#a29a90;max-width:520px;">
-        ${unsubHref ? `<a href="${unsubHref}" style="color:#a29a90;text-decoration:underline;">Turn off these emails</a>
+      <p style="margin:16px 0 0;font:400 12px/1.6 -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#9d9b95;max-width:520px;">
+        ${unsubHref ? `<a href="${unsubHref}" style="color:#9d9b95;text-decoration:underline;">Turn off these emails</a>
         &nbsp;·&nbsp; ` : ''}You are getting this because you have an AdmitsOnly account.
       </p>
     </td></tr>

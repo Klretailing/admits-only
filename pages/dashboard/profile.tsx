@@ -34,13 +34,13 @@ interface ProfileData {
 /* ──────────────────────── EC BUCKET SYSTEM ──────────────────────── */
 
 const EC_BUCKETS = [
-  { key: 'Internship', label: 'Internship', gradient: 'from-blue-500 to-blue-600', light: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', badge: 'bg-blue-100 text-blue-700', ring: '#3b82f6' },
-  { key: 'Volunteering', label: 'Volunteering', gradient: 'from-emerald-500 to-emerald-600', light: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', badge: 'bg-emerald-100 text-emerald-700', ring: '#10b981' },
-  { key: 'Sport', label: 'Sport', gradient: 'from-orange-500 to-orange-600', light: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', badge: 'bg-orange-100 text-orange-700', ring: '#f97316' },
-  { key: 'Education Programs', label: 'Education Programs', gradient: 'from-purple-500 to-purple-600', light: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', badge: 'bg-purple-100 text-purple-700', ring: '#8b5cf6' },
-  { key: 'Recreational Programs', label: 'Recreational', gradient: 'from-pink-500 to-pink-600', light: 'bg-pink-50', text: 'text-pink-700', border: 'border-pink-200', badge: 'bg-pink-100 text-pink-700', ring: '#ec4899' },
-  { key: 'Research', label: 'Research', gradient: 'from-cyan-500 to-cyan-600', light: 'bg-cyan-50', text: 'text-cyan-700', border: 'border-cyan-200', badge: 'bg-cyan-100 text-cyan-700', ring: '#06b6d4' },
-  { key: 'Clubs', label: 'Clubs', gradient: 'from-amber-500 to-amber-600', light: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', badge: 'bg-amber-100 text-amber-700', ring: '#f59e0b' },
+  { key: 'Internship', label: 'Internship', gradient: 'from-blue-500 to-blue-600', light: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', badge: 'bg-blue-100 text-blue-700', ring: '#88857f' },
+  { key: 'Volunteering', label: 'Volunteering', gradient: 'from-emerald-500 to-emerald-600', light: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', badge: 'bg-emerald-100 text-emerald-700', ring: '#a7a29b' },
+  { key: 'Sport', label: 'Sport', gradient: 'from-orange-500 to-orange-600', light: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', badge: 'bg-orange-100 text-orange-700', ring: '#9e9a93' },
+  { key: 'Education Programs', label: 'Education Programs', gradient: 'from-purple-500 to-purple-600', light: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', badge: 'bg-purple-100 text-purple-700', ring: '#7d7b75' },
+  { key: 'Recreational Programs', label: 'Recreational', gradient: 'from-pink-500 to-pink-600', light: 'bg-pink-50', text: 'text-pink-700', border: 'border-pink-200', badge: 'bg-pink-100 text-pink-700', ring: '#e35d53' },
+  { key: 'Research', label: 'Research', gradient: 'from-cyan-500 to-cyan-600', light: 'bg-cyan-50', text: 'text-cyan-700', border: 'border-cyan-200', badge: 'bg-cyan-100 text-cyan-700', ring: '#a9a69f' },
+  { key: 'Clubs', label: 'Clubs', gradient: 'from-amber-500 to-amber-600', light: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', badge: 'bg-amber-100 text-amber-700', ring: '#b6b0a9' },
 ];
 
 function normalizeBucket(category: string): string {
@@ -331,17 +331,17 @@ function getTier(score: number): 'building' | 'developing' | 'competitive' | 'el
 }
 
 const tierColors = {
-  building: { fill: '#ef4444', solid: '#fca5a5' },
-  developing: { fill: '#f59e0b', solid: '#fcd34d' },
-  competitive: { fill: '#10b981', solid: '#6ee7b7' },
-  elite: { fill: '#8b5cf6', solid: '#c4b5fd' },
+  building: { fill: '#de574e', solid: '#fca69c' },
+  developing: { fill: '#b6b0a9', solid: '#dcd6ce' },
+  competitive: { fill: '#a7a29b', solid: '#d5d1c8' },
+  elite: { fill: '#7d7b75', solid: '#c3beb7' },
 };
 
 const SCATTER_TIERS = [
-  { key: 'elite', label: 'Elite', range: '85+', fill: '#8b5cf6' },
-  { key: 'competitive', label: 'Competitive', range: '65–84', fill: '#10b981' },
-  { key: 'developing', label: 'Developing', range: '40–64', fill: '#f59e0b' },
-  { key: 'building', label: 'Building', range: '<40', fill: '#ef4444' },
+  { key: 'elite', label: 'Elite', range: '85+', fill: '#7d7b75' },
+  { key: 'competitive', label: 'Competitive', range: '65–84', fill: '#a7a29b' },
+  { key: 'developing', label: 'Developing', range: '40–64', fill: '#b6b0a9' },
+  { key: 'building', label: 'Building', range: '<40', fill: '#de574e' },
 ] as const;
 
 function Scatterplot({ userGpa, userSat }: { userGpa: number; userSat: number }) {
@@ -368,29 +368,29 @@ function Scatterplot({ userGpa, userSat }: { userGpa: number; userSat: number })
       }}>
         <defs>
           <linearGradient id="chart-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#ffffff" /><stop offset="100%" stopColor="#f8fafc" /></linearGradient>
-          <radialGradient id="user-glow" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.2" /><stop offset="100%" stopColor="#8b5cf6" stopOpacity="0" /></radialGradient>
-          <radialGradient id="user-dot-grad" cx="30%" cy="30%" r="70%"><stop offset="0%" stopColor="#c4b5fd" /><stop offset="100%" stopColor="#7c3aed" /></radialGradient>
+          <radialGradient id="user-glow" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="#7d7b75" stopOpacity="0.2" /><stop offset="100%" stopColor="#7d7b75" stopOpacity="0" /></radialGradient>
+          <radialGradient id="user-dot-grad" cx="30%" cy="30%" r="70%"><stop offset="0%" stopColor="#c3beb7" /><stop offset="100%" stopColor="#6a6661" /></radialGradient>
         </defs>
         <rect x="0" y="0" width={W} height={H} rx="16" fill="url(#chart-bg)" />
 
         {/* Single, subtle "strong-profile" target zone in the top-right (high GPA
             + high SAT). One non-overlapping tint replaces the four muddy boxes. */}
-        <rect x={toX(3.6)} y={PAD.top} width={PAD.left + plotW - toX(3.6)} height={toY(1400) - PAD.top} fill="#8b5cf6" opacity="0.06" rx="8" />
-        <text x={PAD.left + plotW - 8} y={PAD.top + 15} textAnchor="end" className="text-[9px] font-bold tracking-wide" fill="#8b5cf6" opacity="0.6">TOP-TIER RANGE</text>
+        <rect x={toX(3.6)} y={PAD.top} width={PAD.left + plotW - toX(3.6)} height={toY(1400) - PAD.top} fill="#7d7b75" opacity="0.06" rx="8" />
+        <text x={PAD.left + plotW - 8} y={PAD.top + 15} textAnchor="end" className="text-[9px] font-bold tracking-wide" fill="#7d7b75" opacity="0.6">TOP-TIER RANGE</text>
 
         {/* Grid lines */}
-        {[2.5, 3.0, 3.5, 4.0].map((g) => (<line key={`gx-${g}`} x1={toX(g)} y1={PAD.top} x2={toX(g)} y2={PAD.top + plotH} stroke="#e2e8f0" strokeWidth="0.5" strokeDasharray="4 8" />))}
-        {[900, 1000, 1100, 1200, 1300, 1400, 1500].map((s) => (<line key={`gy-${s}`} x1={PAD.left} y1={toY(s)} x2={PAD.left + plotW} y2={toY(s)} stroke="#e2e8f0" strokeWidth="0.5" strokeDasharray="4 8" />))}
+        {[2.5, 3.0, 3.5, 4.0].map((g) => (<line key={`gx-${g}`} x1={toX(g)} y1={PAD.top} x2={toX(g)} y2={PAD.top + plotH} stroke="#ebe7df" strokeWidth="0.5" strokeDasharray="4 8" />))}
+        {[900, 1000, 1100, 1200, 1300, 1400, 1500].map((s) => (<line key={`gy-${s}`} x1={PAD.left} y1={toY(s)} x2={PAD.left + plotW} y2={toY(s)} stroke="#ebe7df" strokeWidth="0.5" strokeDasharray="4 8" />))}
 
         {/* Axes */}
-        <line x1={PAD.left} y1={PAD.top + plotH} x2={PAD.left + plotW} y2={PAD.top + plotH} stroke="#cbd5e1" strokeWidth="1" />
-        <line x1={PAD.left} y1={PAD.top} x2={PAD.left} y2={PAD.top + plotH} stroke="#cbd5e1" strokeWidth="1" />
+        <line x1={PAD.left} y1={PAD.top + plotH} x2={PAD.left + plotW} y2={PAD.top + plotH} stroke="#d9d3cb" strokeWidth="1" />
+        <line x1={PAD.left} y1={PAD.top} x2={PAD.left} y2={PAD.top + plotH} stroke="#d9d3cb" strokeWidth="1" />
 
         {/* Axis labels */}
-        {[2.5, 3.0, 3.5, 4.0].map((g) => (<text key={`xl-${g}`} x={toX(g)} y={PAD.top + plotH + 22} textAnchor="middle" className="text-[11px] font-medium" fill="#64748b">{g.toFixed(1)}</text>))}
-        <text x={PAD.left + plotW / 2} y={H - 8} textAnchor="middle" className="text-[12px] font-bold" fill="#7c3aed">GPA (weighted)</text>
-        {[800, 1000, 1200, 1400, 1600].map((s) => (<text key={`yl-${s}`} x={PAD.left - 10} y={toY(s) + 4} textAnchor="end" className="text-[11px] font-medium" fill="#64748b">{s}</text>))}
-        <text x={16} y={PAD.top + plotH / 2} textAnchor="middle" className="text-[12px] font-bold" fill="#7c3aed" transform={`rotate(-90, 16, ${PAD.top + plotH / 2})`}>SAT Score</text>
+        {[2.5, 3.0, 3.5, 4.0].map((g) => (<text key={`xl-${g}`} x={toX(g)} y={PAD.top + plotH + 22} textAnchor="middle" className="text-[11px] font-medium" fill="#77726d">{g.toFixed(1)}</text>))}
+        <text x={PAD.left + plotW / 2} y={H - 8} textAnchor="middle" className="text-[12px] font-bold" fill="#6a6661">GPA (weighted)</text>
+        {[800, 1000, 1200, 1400, 1600].map((s) => (<text key={`yl-${s}`} x={PAD.left - 10} y={toY(s) + 4} textAnchor="end" className="text-[11px] font-medium" fill="#77726d">{s}</text>))}
+        <text x={16} y={PAD.top + plotH / 2} textAnchor="middle" className="text-[12px] font-bold" fill="#6a6661" transform={`rotate(-90, 16, ${PAD.top + plotH / 2})`}>SAT Score</text>
 
         {/* Comparative dots — colored by tier. A white halo keeps overlapping
             dots visually separable. */}
@@ -425,7 +425,7 @@ function Scatterplot({ userGpa, userSat }: { userGpa: number; userSat: number })
             <circle cx={toX(userGpa)} cy={toY(userSat)} r="9" fill="url(#user-dot-grad)" />
             <circle cx={toX(userGpa)} cy={toY(userSat)} r="9" fill="none" stroke="white" strokeWidth="2" opacity="0.9" />
             <circle cx={toX(userGpa) - 2} cy={toY(userSat) - 2} r="2.5" fill="white" opacity="0.4" />
-            <rect x={toX(userGpa) + 13} y={toY(userSat) - 11} width="34" height="22" rx="6" fill="#7c3aed" opacity="0.95" />
+            <rect x={toX(userGpa) + 13} y={toY(userSat) - 11} width="34" height="22" rx="6" fill="#6a6661" opacity="0.95" />
             <text x={toX(userGpa) + 30} y={toY(userSat) + 4} textAnchor="middle" className="text-[10px] font-extrabold" fill="white">You</text>
           </g>
         )}
@@ -445,7 +445,7 @@ function Scatterplot({ userGpa, userSat }: { userGpa: number; userSat: number })
             <g>
               <rect x={bx} y={by} width="112" height="50" rx="8" fill="rgba(255,255,255,0.97)" stroke={color.fill} strokeWidth="1" />
               <text x={bx + 8} y={by + 16} className="text-[10px] font-bold" fill={color.fill}>Score: {d.score}</text>
-              <text x={bx + 8} y={by + 30} className="text-[9px] font-medium" fill="#64748b">GPA {d.gpa.toFixed(1)} · SAT {d.sat}</text>
+              <text x={bx + 8} y={by + 30} className="text-[9px] font-medium" fill="#77726d">GPA {d.gpa.toFixed(1)} · SAT {d.sat}</text>
               <text x={bx + 8} y={by + 43} className="text-[9px] font-semibold" fill={color.fill} style={{ textTransform: 'capitalize' }}>{tier}</text>
             </g>
           );
@@ -462,7 +462,7 @@ function Scatterplot({ userGpa, userSat }: { userGpa: number; userSat: number })
         ))}
         {hasUser && (
           <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-violet-600">
-            <span className="w-2.5 h-2.5 rounded-full ring-2 ring-white" style={{ backgroundColor: '#7c3aed' }} />
+            <span className="w-2.5 h-2.5 rounded-full ring-2 ring-white" style={{ backgroundColor: '#6a6661' }} />
             You
           </span>
         )}
@@ -480,13 +480,13 @@ function Scatterplot({ userGpa, userSat }: { userGpa: number; userSat: number })
 
 /* ──────────────────────── SCORE RING ──────────────────────── */
 
-function ScoreRing({ score, label, size = 100, color = '#6366f1', glowColor }: { score: number; label: string; size?: number; color?: string; glowColor?: string }) {
+function ScoreRing({ score, label, size = 100, color = '#7a7771', glowColor }: { score: number; label: string; size?: number; color?: string; glowColor?: string }) {
   const r = (size - 14) / 2;
   const c = Math.PI * 2 * r;
   const offset = c - (score / 100) * c;
   const glow = glowColor || color;
   const tier = score >= 80 ? 'Excellent' : score >= 60 ? 'Strong' : score >= 40 ? 'Building' : 'Start Here';
-  const tierColor = score >= 80 ? '#34d399' : score >= 60 ? '#a78bfa' : score >= 40 ? '#fbbf24' : '#94a3b8';
+  const tierColor = score >= 80 ? '#c0bab3' : score >= 60 ? '#a19c96' : score >= 40 ? '#ccc8c0' : '#a6a19a';
   return (
     <div className="flex flex-col items-center gap-2">
       <div className="relative" style={{ width: size, height: size }}>
@@ -497,7 +497,7 @@ function ScoreRing({ score, label, size = 100, color = '#6366f1', glowColor }: {
               <stop offset="100%" stopColor={glow} />
             </linearGradient>
           </defs>
-          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#e2e8f0" strokeWidth="6" opacity="1" />
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#ebe7df" strokeWidth="6" opacity="1" />
           <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={`url(#ring-grad-${label.replace(/\s/g, '')})`} strokeWidth="7" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset} className="transition-all duration-1000" />
         </svg>
         {/* The ring keeps its vivid brand color (a graphic, exempt from text
@@ -1054,9 +1054,9 @@ export default function StudentProfile() {
                 <h3 className="relative text-lg font-bold font-display text-slate-800 mb-5">Activity Scoreboard</h3>
 
                 <div className="relative flex items-center justify-around gap-4 mb-6">
-                  <ScoreRing score={diversity.score} label="Breadth" size={95} color="#a78bfa" glowColor="#c4b5fd" />
-                  <ScoreRing score={depth.score} label="Depth" size={95} color="#22d3ee" glowColor="#67e8f9" />
-                  <ScoreRing score={results.ecScore} label="Overall EC" size={95} color="#34d399" glowColor="#6ee7b7" />
+                  <ScoreRing score={diversity.score} label="Breadth" size={95} color="#a19c96" glowColor="#c3beb7" />
+                  <ScoreRing score={depth.score} label="Depth" size={95} color="#c5c0b9" glowColor="#dad6ce" />
+                  <ScoreRing score={results.ecScore} label="Overall EC" size={95} color="#c0bab3" glowColor="#d5d1c8" />
                 </div>
 
                 {/* Category coverage bar */}
@@ -1154,8 +1154,8 @@ export default function StudentProfile() {
                 <div className="relative overflow-hidden bg-white border border-slate-200 rounded-2xl p-6">
                   <h3 className="relative text-lg font-bold font-display text-slate-800 mb-5">Holistic Evaluation</h3>
                   <div className="relative flex items-center justify-around gap-4">
-                    <ScoreRing score={results.holistic} label="Overall Score" size={115} color="#a78bfa" glowColor="#c4b5fd" />
-                    <ScoreRing score={results.percentile} label="Percentile" size={115} color="#34d399" glowColor="#6ee7b7" />
+                    <ScoreRing score={results.holistic} label="Overall Score" size={115} color="#a19c96" glowColor="#c3beb7" />
+                    <ScoreRing score={results.percentile} label="Percentile" size={115} color="#c0bab3" glowColor="#d5d1c8" />
                   </div>
 
                   <div className="relative mt-6 p-4 rounded-xl bg-slate-50 border border-slate-200">

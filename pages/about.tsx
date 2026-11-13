@@ -44,24 +44,22 @@ export default function About() {
   return (
     <>
       <Head>
-        <title>About AdmitsOnly | Our Story, Mission &amp; Values in College Admissions Consulting</title>
-        <meta name="description" content="Learn about AdmitsOnly's mission to democratize premium college admissions consulting. Founded in 2012, we've helped 500+ families navigate admissions to top universities with personalized coaching." />
+        <title>About AdmitsOnly | The Team Behind the High School Notebook</title>
+        <meta name="description" content="AdmitsOnly helps students through all four years of high school, with free tools for planning, writing and college prep and one-on-one mentors when they want them. Meet the people behind it." />
       </Head>
 
       <div className="bg-white">
         {/* Hero */}
-        <section className="relative overflow-hidden bg-primary">
-          <div className="absolute inset-0 bg-grid opacity-30" />
-          <div className="absolute top-20 -right-40 w-96 h-96 bg-accent/20 rounded-full blur-3xl animate-pulse-soft" />
+        <section className="relative">
 
           <div className="relative max-w-7xl mx-auto px-6 py-24 lg:py-28">
             <div className="max-w-3xl">
               <div className="section-label">Our Story</div>
-              <h1 className="mt-6 text-4xl sm:text-5xl lg:text-6xl font-extrabold font-display text-white leading-[1.1] tracking-tight">
+              <h1 className="mt-6 text-4xl sm:text-5xl lg:text-6xl font-bold font-display text-primary leading-[1.1] tracking-tight">
                 Mentorship that makes the{' '}
                 <span className="gradient-text">difference</span>
               </h1>
-              <p className="mt-6 text-lg lg:text-xl text-slate-300 leading-relaxed max-w-2xl">
+              <p className="mt-6 text-lg lg:text-xl text-slate-700 leading-relaxed max-w-2xl">
                 College admissions is more complex than ever. AdmitsOnly was founded on a simple conviction:
                 every student deserves a dedicated team that understands their potential and knows how to unlock it.
               </p>

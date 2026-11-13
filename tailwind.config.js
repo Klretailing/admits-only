@@ -1,23 +1,52 @@
+const twColors = require('tailwindcss/colors');
+const { INK, inkPalette } = require('./design/ink.cjs');
+
+/* Every Tailwind palette, rebuilt through inkify (see design/ink.cjs): same
+   luminance per shade, hue replaced by graphite — or red pencil for the red
+   family. Contrast ratios are preserved exactly, so the thousands of existing
+   color classes become monochrome without any of them losing legibility. */
+const FAMILIES = ['slate', 'gray', 'zinc', 'neutral', 'stone', 'red', 'orange', 'amber', 'yellow', 'lime',
+  'green', 'emerald', 'teal', 'cyan', 'sky', 'blue', 'indigo', 'violet', 'purple', 'fuchsia', 'pink', 'rose'];
+const inked = Object.fromEntries(FAMILIES.map((f) => [f, inkPalette(twColors[f])]));
+
+/* Hard "pencil" shadows: a solid offset, no blur — paper cards lifted off
+   the page, the 3D feel without the soft glow every AI-generated UI uses.
+   The colour is a CSS variable so dark mode can swap it (theme-tokens.css). */
+const sh = (x, a) => `${x}px ${x}px 0 0 rgb(var(--shadow-ink) / ${a})`;
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: 'class',
   content: [
     './pages/**/*.{js,ts,jsx,tsx}',
     './components/**/*.{js,ts,jsx,tsx}',
+    './app/**/*.{js,ts,jsx,tsx}',
   ],
   theme: {
     extend: {
       colors: {
-        primary: '#0f172a',
-        accent: '#6366f1',
-        'accent-warm': '#f59e0b',
-        surface: '#f8fafc',
+        ...inked,
+        white: INK.card,
+        primary: INK.ink,
+        accent: INK.ink,
+        'accent-warm': inkPalette({ x: '#f59e0b' }).x,
+        surface: INK.paper,
+        /* Theme-aware: these read CSS variables (styles/notebook.css), so
+           border-ink / bg-card / text-paper flip on the chalkboard theme. */
+        ink: 'rgb(var(--ink) / <alpha-value>)',
+        paper: 'rgb(var(--paper) / <alpha-value>)',
+        card: 'rgb(var(--card) / <alpha-value>)',
+        'red-pencil': INK.redPencil,
       },
-      /* Single-typeface system (like Notion/Stripe/Linear): Inter everywhere,
-         differentiated by weight + tracking instead of a second family. */
+      /* One handwritten family, two voices (see styles/notebook.css):
+         body text at zero informality so data stays crisp, headings at full
+         informality with a little bounce so they read hand-lettered.
+         Caveat is the margin-note voice; Literata is the student's own page. */
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        display: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['"Shantell Sans Variable"', 'ui-rounded', 'system-ui', 'sans-serif'],
+        display: ['"Shantell Sans Variable"', 'ui-rounded', 'system-ui', 'sans-serif'],
+        hand: ['"Caveat Variable"', 'cursive'],
+        serif: ['"Literata Variable"', 'Georgia', 'serif'],
       },
       /* Sharper, less bubbly radii — Notion/Claude proportions. Existing
          rounded-xl/2xl usage across the site tightens automatically. */
@@ -27,16 +56,14 @@ module.exports = {
         '2xl': '0.75rem',
         '3xl': '1rem',
       },
-      /* Layered, Stripe-style elevation: every shadow includes a hairline
-         ring so cards read as crisp physical surfaces, not soft blobs.
-         Existing shadow-sm/md/lg usage across the site upgrades automatically. */
       boxShadow: {
-        sm: '0 0 0 1px rgb(15 23 42 / 0.03), 0 1px 2px rgb(15 23 42 / 0.04), 0 2px 6px -1px rgb(15 23 42 / 0.05)',
-        DEFAULT: '0 0 0 1px rgb(15 23 42 / 0.03), 0 1px 3px rgb(15 23 42 / 0.05), 0 4px 10px -2px rgb(15 23 42 / 0.07)',
-        md: '0 0 0 1px rgb(15 23 42 / 0.04), 0 2px 4px rgb(15 23 42 / 0.05), 0 8px 18px -4px rgb(15 23 42 / 0.09)',
-        lg: '0 0 0 1px rgb(15 23 42 / 0.04), 0 4px 8px rgb(15 23 42 / 0.05), 0 16px 32px -8px rgb(15 23 42 / 0.12)',
-        xl: '0 0 0 1px rgb(15 23 42 / 0.04), 0 6px 12px rgb(15 23 42 / 0.06), 0 24px 48px -12px rgb(15 23 42 / 0.16)',
-        '2xl': '0 0 0 1px rgb(15 23 42 / 0.05), 0 10px 20px -5px rgb(15 23 42 / 0.1), 0 32px 64px -16px rgb(15 23 42 / 0.22)',
+        sm: sh(1.5, 0.14),
+        DEFAULT: sh(2, 0.18),
+        md: sh(3, 0.9),
+        lg: sh(4, 0.9),
+        xl: sh(5, 0.9),
+        '2xl': sh(7, 0.9),
+        none: 'none',
       },
       animation: {
         'marquee': 'marquee 40s linear infinite',
@@ -74,8 +101,8 @@ module.exports = {
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'hero-pattern': 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
-        'accent-gradient': 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%)',
+        'hero-pattern': `linear-gradient(${INK.paper}, ${INK.paper})`,
+        'accent-gradient': `linear-gradient(${INK.ink}, ${INK.ink})`,
       },
     },
   },

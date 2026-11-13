@@ -1,8 +1,10 @@
 import Link from 'next/link';
+import { signOutAndForget } from '../lib/authHint';
 import { useRouter } from 'next/router';
-import { signOut, useSession } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import { useState, type ReactNode } from 'react';
 import { useTheme } from '../lib/themeContext';
+import LogoMark from './LogoMark';
 
 const sidebarLinks = [
   {
@@ -93,17 +95,14 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
       <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-slate-100">
         <div className="p-5 border-b border-slate-100">
           <Link href="/parent" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 rounded-xl bg-teal-500 flex items-center justify-center shadow-sm transition-shadow">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L2 9L12 16L22 9L12 2Z" fill="white" opacity="0.9" />
-                <path d="M4 11V17L12 22L20 17V11" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-              </svg>
+            <div className="w-9 h-9 rounded-xl logo-tile flex items-center justify-center">
+              <LogoMark size={18} />
             </div>
             <div className="flex flex-col">
               <span className="text-lg font-bold font-display tracking-tight text-primary leading-tight">
-                Admits<span className="text-teal-600">Only</span>
+                Admits<span className="gradient-text">Only</span>
               </span>
-              <span className="text-[10px] font-medium text-teal-600 tracking-wide uppercase leading-tight">Parent</span>
+              <span className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wider leading-tight">Parent</span>
             </div>
           </Link>
         </div>
@@ -147,7 +146,7 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
             {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
           </button>
           <button
-            onClick={() => signOut({ callbackUrl: '/' })}
+            onClick={() => signOutAndForget({ callbackUrl: '/' })}
             className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-500 hover:text-red-600 hover:bg-red-50 transition-all mt-1"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -165,17 +164,14 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
           <aside className="absolute left-0 top-0 bottom-0 w-72 bg-white shadow-sm flex flex-col animate-fade-in">
             <div className="p-5 border-b border-slate-100 flex items-center justify-between">
               <Link href="/parent" className="flex items-center gap-2.5" onClick={() => setMobileMenuOpen(false)}>
-                <div className="w-9 h-9 rounded-xl bg-teal-500 flex items-center justify-center">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 2L2 9L12 16L22 9L12 2Z" fill="white" opacity="0.9" />
-                    <path d="M4 11V17L12 22L20 17V11" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-                  </svg>
+                <div className="w-9 h-9 rounded-xl logo-tile flex items-center justify-center">
+                  <LogoMark size={18} />
                 </div>
                 <div className="flex flex-col">
                   <span className="text-lg font-bold font-display tracking-tight text-primary leading-tight">
-                    Admits<span className="text-teal-600">Only</span>
+                    Admits<span className="gradient-text">Only</span>
                   </span>
-                  <span className="text-[10px] font-medium text-teal-600 tracking-wide uppercase leading-tight">Parent</span>
+                  <span className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wider leading-tight">Parent</span>
                 </div>
               </Link>
               <button onClick={() => setMobileMenuOpen(false)} className="p-2 rounded-lg text-slate-400 hover:text-primary hover:bg-slate-50">
@@ -207,7 +203,7 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-primary">{session?.user?.name || 'Parent'}</p>
-                  <p className="text-xs text-slate-400">{(session?.user as any)?.role || 'parent'}</p>
+                  <p className="text-xs text-slate-400">Parent</p>
                 </div>
               </div>
               <button
@@ -226,7 +222,7 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
                 {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
               </button>
               <button
-                onClick={() => { setMobileMenuOpen(false); signOut({ callbackUrl: '/' }); }}
+                onClick={() => { setMobileMenuOpen(false); signOutAndForget({ callbackUrl: '/' }); }}
                 className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-500 hover:text-red-600 hover:bg-red-50 transition-all"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -257,7 +253,7 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
             </button>
             <div className="lg:hidden">
               <span className="text-base font-bold font-display text-primary">
-                Admits<span className="text-teal-600">Only</span>
+                Admits<span className="gradient-text">Only</span>
               </span>
             </div>
             <div className="hidden lg:flex items-center gap-3">
@@ -295,7 +291,7 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
             </button>
             <div className="text-right hidden sm:block">
               <p className="text-sm font-semibold text-primary">{session?.user?.name || 'Parent'}</p>
-              <p className="text-xs text-slate-400">{(session?.user as any)?.role || 'parent'}</p>
+              <p className="text-xs text-slate-400">Parent</p>
             </div>
             <div className="w-9 h-9 rounded-full bg-teal-500 flex items-center justify-center text-white font-bold text-sm">
               {(session?.user?.name || 'P')[0].toUpperCase()}

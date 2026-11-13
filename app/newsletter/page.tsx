@@ -224,19 +224,19 @@ function NewsletterForm() {
 
           <div className={s.socialProof}>
             <div className={s.spAvatars}>
-              <div className={s.spAvatar} style={{ background: "#1a9e8f" }}>
+              <div className={s.spAvatar} style={{ background: "#8f8d87" }}>
                 M
               </div>
-              <div className={s.spAvatar} style={{ background: "#6b48a0" }}>
+              <div className={s.spAvatar} style={{ background: "#5d5a55" }}>
                 K
               </div>
               <div
                 className={s.spAvatar}
-                style={{ background: "#e8a838", color: "#1a1a2e" }}
+                style={{ background: "#b8b3ac", color: "#1d1c18" }}
               >
                 J
               </div>
-              <div className={s.spAvatar} style={{ background: "#e05c3a" }}>
+              <div className={s.spAvatar} style={{ background: "#88867f" }}>
                 R
               </div>
             </div>

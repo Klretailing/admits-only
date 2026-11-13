@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { signIn } from 'next-auth/react';
+import { safeNext } from '../../lib/authHint';
 import Head from 'next/head';
 import Link from 'next/link';
+import LogoMark from '../../components/LogoMark';
 
 export default function Register() {
   const router = useRouter();
@@ -56,10 +58,12 @@ export default function Register() {
       const signed = await signIn('credentials', { email: form.email, password: form.password, redirect: false });
       if (signed && !signed.error) {
         const role = data.user?.role || form.role;
-        router.push(role === 'parent' ? '/parent' : role === 'educator' ? '/educator' : '/dashboard');
+        const next = role === 'student' ? safeNext(router.query.next) : null;
+        router.push(next || (role === 'parent' ? '/parent' : role === 'educator' ? '/educator' : '/dashboard'));
         return;
       }
-      router.push('/auth/login?registered=true');
+      const nextQ = safeNext(router.query.next);
+      router.push('/auth/login?registered=true' + (nextQ ? `&next=${encodeURIComponent(nextQ)}` : ''));
     } catch {
       setError('Something went wrong. Please try again.');
       setLoading(false);
@@ -76,20 +80,15 @@ export default function Register() {
         <div className="w-full max-w-md mx-auto px-6">
           <div className="text-center mb-8">
             <Link href="/" className="inline-flex items-center gap-2.5 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent to-purple-600 flex items-center justify-center shadow-lg shadow-accent/20">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 2L2 9L12 16L22 9L12 2Z" fill="white" opacity="0.9" />
-                  <path d="M4 11V17L12 22L20 17V11" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-                  <line x1="20" y1="9" x2="20" y2="18" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
-                  <circle cx="20" cy="19.5" r="1.2" fill="white" />
-                </svg>
+              <div className="w-10 h-10 rounded-xl logo-tile flex items-center justify-center">
+                <LogoMark size={20} />
               </div>
               <span className="text-xl font-bold font-display tracking-tight text-primary">
                 Admits<span className="gradient-text">Only</span>
               </span>
             </Link>
             <h1 className="text-2xl font-bold font-display text-primary">Create your account</h1>
-            <p className="mt-2 text-slate-500">Join 500+ families on their admissions journey</p>
+            <p className="mt-2 text-slate-500">Start your notebook. Free, in any grade.</p>
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-100 shadow-xl shadow-slate-200/50 p-8">
@@ -199,7 +198,7 @@ export default function Register() {
 
           <p className="mt-6 text-center text-sm text-slate-500">
             Already have an account?{' '}
-            <Link href="/auth/login" className="text-accent font-semibold hover:underline">
+            <Link href={safeNext(router.query.next) ? `/auth/login?next=${encodeURIComponent(safeNext(router.query.next)!)}` : '/auth/login'} className="text-accent font-semibold hover:underline">
               Sign in
             </Link>
           </p>

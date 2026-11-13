@@ -862,7 +862,7 @@ function ClientProfileScorer() {
               <div className="flex flex-col items-center justify-center">
                 <div className="relative w-48 h-48">
                   <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
-                    <circle cx="60" cy="60" r="52" fill="none" stroke="#f1f5f9" strokeWidth="10" />
+                    <circle cx="60" cy="60" r="52" fill="none" stroke="#f9f4eb" strokeWidth="10" />
                     <circle cx="60" cy="60" r="52" fill="none" stroke="url(#scoreGrad)" strokeWidth="10"
                       strokeDasharray={`${2 * Math.PI * 52}`}
                       strokeDashoffset={`${2 * Math.PI * 52 * (1 - 0.82)}`}
@@ -870,8 +870,8 @@ function ClientProfileScorer() {
                     />
                     <defs>
                       <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="#10b981" />
-                        <stop offset="100%" stopColor="#6366f1" />
+                        <stop offset="0%" stopColor="#a7a29b" />
+                        <stop offset="100%" stopColor="#7a7771" />
                       </linearGradient>
                     </defs>
                   </svg>
@@ -924,18 +924,18 @@ function ClientProfileScorer() {
             <div className="mt-8 bg-surface rounded-xl p-5">
               <h4 className="text-sm font-bold text-primary mb-3">Where You Stand (vs. Peer Applicants)</h4>
               <svg viewBox="0 0 500 200" className="w-full">
-                <rect x="300" y="10" width="190" height="90" fill="#ecfdf5" rx="4" />
-                <rect x="120" y="50" width="180" height="100" fill="#fffbeb" rx="4" />
-                <rect x="10" y="100" width="110" height="90" fill="#fef2f2" rx="4" />
+                <rect x="300" y="10" width="190" height="90" fill="#fff8ef" rx="4" />
+                <rect x="120" y="50" width="180" height="100" fill="#fffaf4" rx="4" />
+                <rect x="10" y="100" width="110" height="90" fill="#f9f4ec" rx="4" />
                 <text x="395" y="30" textAnchor="middle" className="text-[9px] fill-emerald-600 font-semibold">Competitive</text>
                 <text x="210" y="70" textAnchor="middle" className="text-[9px] fill-amber-600 font-semibold">Developing</text>
                 <text x="65" y="120" textAnchor="middle" className="text-[9px] fill-red-500 font-semibold">Needs Work</text>
                 {/* Peer dots */}
                 {[[350,40],[380,55],[420,35],[340,65],[400,50],[200,80],[230,95],[180,110],[160,100],[60,140],[80,155],[250,75],[320,60],[370,45],[280,85]].map(([cx,cy], i) => (
-                  <circle key={i} cx={cx} cy={cy} r="4" fill="#94a3b8" opacity="0.4" />
+                  <circle key={i} cx={cx} cy={cy} r="4" fill="#a6a19a" opacity="0.4" />
                 ))}
                 {/* User dot */}
-                <circle cx="365" cy="48" r="7" fill="#6366f1" stroke="white" strokeWidth="2" />
+                <circle cx="365" cy="48" r="7" fill="#7a7771" stroke="white" strokeWidth="2" />
                 <text x="365" y="42" textAnchor="middle" className="text-[8px] fill-accent font-bold" dy="-4">You</text>
                 <text x="250" y="195" textAnchor="middle" className="text-[10px] fill-slate-400">SAT Score →</text>
                 <text x="12" y="100" className="text-[10px] fill-slate-400" transform="rotate(-90, 12, 100)">GPA →</text>

@@ -1,12 +1,20 @@
 import '../styles/globals.css'
 import '../styles/theme-tokens.css'
 import '../styles/theme-dark.css'
+// Self-hosted type (no request to Google at runtime). Shantell's "full" build
+// carries the informality and bounce axes the headings use.
+import '@fontsource-variable/shantell-sans/full.css'
+import '@fontsource-variable/caveat'
+import '@fontsource-variable/literata'
+// Last, so the notebook design layer is the final word (see the file header).
+import '../styles/notebook.css'
 import type { AppProps } from 'next/app'
 import Head from 'next/head'
 import { SessionProvider, useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import { useEffect, Component as ReactComponent, type ErrorInfo, type ReactNode } from 'react'
 import Layout from '../components/Layout'
+import { setAuthHint } from '../lib/authHint'
 import { tracker } from '../lib/analytics'
 import { ThemeProvider } from '../lib/themeContext'
 
@@ -32,16 +40,16 @@ class ErrorBoundary extends ReactComponent<{ children: ReactNode }, { error: Err
       return (
         <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, background: '#f8fafc', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
           <div style={{ maxWidth: 440, textAlign: 'center' }}>
-            <div style={{ width: 56, height: 56, borderRadius: 16, background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: 26 }}>⚠️</div>
-            <h1 style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', margin: '0 0 8px' }}>This page hit a snag</h1>
-            <p style={{ fontSize: 14, color: '#64748b', margin: '0 0 20px', lineHeight: 1.5 }}>
+            <div style={{ width: 56, height: 56, borderRadius: 16, background: '#f9f4ec', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: 26 }}>⚠️</div>
+            <h1 style={{ fontSize: 18, fontWeight: 700, color: '#1a1714', margin: '0 0 8px' }}>This page hit a snag</h1>
+            <p style={{ fontSize: 14, color: '#77726d', margin: '0 0 20px', lineHeight: 1.5 }}>
               Sorry about that — something didn&rsquo;t load correctly. Reloading the page usually fixes it, and your data is safe.
             </p>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-              <button onClick={() => { if (typeof window !== 'undefined') window.location.reload(); }} style={{ padding: '10px 18px', background: '#4f46e5', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 14 }}>
+              <button onClick={() => { if (typeof window !== 'undefined') window.location.reload(); }} style={{ padding: '10px 18px', background: '#62605a', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 14 }}>
                 Reload page
               </button>
-              <a href="/dashboard" style={{ padding: '10px 18px', background: '#fff', color: '#334155', border: '1px solid #e2e8f0', borderRadius: 10, fontWeight: 600, textDecoration: 'none', fontSize: 14 }}>
+              <a href="/dashboard" style={{ padding: '10px 18px', background: '#fff', color: '#42403b', border: '1px solid #ebe7df', borderRadius: 10, fontWeight: 600, textDecoration: 'none', fontSize: 14 }}>
                 Back to dashboard
               </a>
             </div>
@@ -70,6 +78,12 @@ function AnalyticsInit() {
   useEffect(() => {
     tracker.setUserId((session?.user as any)?.id || undefined);
   }, [session]);
+
+  // Keep the signed-in hint true to the real session (lib/authHint.ts).
+  const { status } = useSession();
+  useEffect(() => {
+    if (status !== 'loading') setAuthHint(status === 'authenticated');
+  }, [status]);
 
   return null;
 }

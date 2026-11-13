@@ -367,17 +367,17 @@ export default function Dashboard() {
               change={stats.essayStatus || 'none yet'}
               positive={parseInt(stats.essayCount || '0') > 0}
               href="/dashboard/essays"
-              accentColor="#6366f1"
+              accentColor="#7a7771"
               delay={0}
             />
           </div>
         ) : (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'SAT Score', value: stats?.satScore || '—', change: stats?.satScore && stats.satScore !== '—' ? 'from profile' : 'optional', positive: !!stats?.satScore && stats.satScore !== '—', accentColor: '#d97706', href: '/dashboard/profile' },
-            { label: 'Essays', value: stats?.essayCount || '0', change: stats?.essayStatus || 'none yet', positive: (parseInt(stats?.essayCount || '0') > 0), accentColor: '#6366f1', href: '/dashboard/essays' },
-            { label: 'Holistic Score', value: stats?.holisticScore || '—', change: hasProfile ? '/100' : 'evaluate profile', positive: !!hasProfile, accentColor: '#059669', href: '/dashboard/profile' },
-            { label: 'GPA', value: stats?.gpa || '—', change: hasProfile ? 'unweighted' : 'add in profile', positive: !!hasProfile, accentColor: '#2563eb', href: '/dashboard/profile' },
+            { label: 'SAT Score', value: stats?.satScore || '—', change: stats?.satScore && stats.satScore !== '—' ? 'from profile' : 'optional', positive: !!stats?.satScore && stats.satScore !== '—', accentColor: '#93908a', href: '/dashboard/profile' },
+            { label: 'Essays', value: stats?.essayCount || '0', change: stats?.essayStatus || 'none yet', positive: (parseInt(stats?.essayCount || '0') > 0), accentColor: '#7a7771', href: '/dashboard/essays' },
+            { label: 'Holistic Score', value: stats?.holisticScore || '—', change: hasProfile ? '/100' : 'evaluate profile', positive: !!hasProfile, accentColor: '#87837d', href: '/dashboard/profile' },
+            { label: 'GPA', value: stats?.gpa || '—', change: hasProfile ? 'unweighted' : 'add in profile', positive: !!hasProfile, accentColor: '#6f6d68', href: '/dashboard/profile' },
           ].map((stat, i) => (
             <AnimatedStatCard
               key={stat.label}

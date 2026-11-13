@@ -26,24 +26,22 @@ export default function Contact() {
   return (
     <>
       <Head>
-        <title>Contact AdmitsOnly | Book a Free College Admissions Strategy Call</title>
-        <meta name="description" content="Schedule a free strategy call with AdmitsOnly's college admissions consultants. Get personalized guidance on SAT/ACT prep, essay coaching, and university admissions strategy. Response within one business day." />
+        <title>Contact AdmitsOnly | Book a Free Call with a Mentor</title>
+        <meta name="description" content="Book a free call with an AdmitsOnly mentor about writing, SAT/ACT prep, careers or college planning, for any grade from 9 to 12. We reply within one business day." />
       </Head>
 
       <div className="bg-white">
         {/* Hero */}
-        <section className="relative overflow-hidden bg-primary">
-          <div className="absolute inset-0 bg-grid opacity-30" />
-          <div className="absolute top-0 -right-40 w-96 h-96 bg-accent/20 rounded-full blur-3xl animate-pulse-soft" />
+        <section className="relative">
 
           <div className="relative max-w-7xl mx-auto px-6 py-24 lg:py-28">
             <div className="max-w-3xl">
               <div className="section-label">Get in Touch</div>
-              <h1 className="mt-6 text-4xl sm:text-5xl lg:text-6xl font-extrabold font-display text-white leading-[1.1] tracking-tight">
+              <h1 className="mt-6 text-4xl sm:text-5xl lg:text-6xl font-bold font-display text-primary leading-[1.1] tracking-tight">
                 Let&apos;s start the{' '}
                 <span className="gradient-text">conversation</span>
               </h1>
-              <p className="mt-6 text-lg lg:text-xl text-slate-300 leading-relaxed max-w-2xl">
+              <p className="mt-6 text-lg lg:text-xl text-slate-700 leading-relaxed max-w-2xl">
                 Book your free college admissions strategy call or send us a message.
                 We&apos;ll get back to you within one business day.
               </p>
