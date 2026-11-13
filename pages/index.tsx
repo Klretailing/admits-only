@@ -6,8 +6,8 @@ import type { ReactNode } from 'react';
    HOME — "the notebook for all four years of high school"
 
    Positioning: AdmitsOnly is not a college-admissions tool that happens to
-   have extras; it is where a student keeps high school organised, and
-   college is the senior-year chapter. The page is organised the same way a
+   have extras; it is where a student keeps high school organized, and
+   college is the senior-year chapter. The page is organized the same way a
    student lives it — by grade — and the tools are grouped by four plain
    verbs (Write, Plan, Explore, Together) instead of a feature grid.
 
@@ -29,7 +29,7 @@ const GRADES: { grade: string; title: string; body: string; tools: string[] }[] 
   {
     grade: '10th',
     title: 'Find your thing',
-    body: 'Try things on. Explore careers by major, go deeper in the activities you love, and practise the kind of writing colleges ask for later.',
+    body: 'Try things on. Explore careers by major, go deeper in the activities you love, and practice the kind of writing colleges ask for later.',
     tools: ['Career roadmap', 'Essay coach', 'Activity tracker'],
   },
   {
@@ -55,7 +55,7 @@ const SECTIONS: { verb: string; line: string; icon: ReactNode; tools: Tool[] }[]
     tools: [
       { name: 'Essay coach', body: 'Live notes on structure, rhythm, tone and word choice while you write.', href: '/dashboard/essays' },
       { name: 'Essay checker', body: 'Paste a draft, get feedback in seconds. No account needed.', href: '/essay-checker', tag: 'free' },
-      { name: 'Essay samples', body: 'Real essays, organised by the school and prompt they answered.', href: '/dashboard/essay-library' },
+      { name: 'Essay samples', body: 'Real essays, organized by the school and prompt they answered.', href: '/dashboard/essay-library' },
       { name: 'Story builder', body: 'Stuck on a topic? Find the stories only you can tell.', href: '/dashboard/story-builder' },
     ],
   },

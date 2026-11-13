@@ -510,7 +510,7 @@ export default function Services() {
             <RevealSection>
               <div className="text-center max-w-2xl mx-auto">
                 <div className="section-label">What We Teach</div>
-                <h2 className="section-title">A focused catalogue, built for depth over breadth</h2>
+                <h2 className="section-title">A focused catalog, built for depth over breadth</h2>
                 <p className="section-subtitle mx-auto">
                   Every program is designed and delivered by experienced educators —
                   small, intentional, and measured by real student growth.
