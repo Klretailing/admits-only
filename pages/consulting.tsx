@@ -6,6 +6,12 @@ import ServiceShowcase from '../components/ServiceShowcase';
 
 /* ──────────────────────── DATA ──────────────────────── */
 
+/* Schools a current AdmitsOnly student was actually admitted to, as
+   confirmed by the owner (Nov 2026). This is a factual claim about real
+   students: add a school only when an admit is confirmed, never as
+   aspiration or example. */
+const RECENT_ADMITS = ['Stanford', 'Northeastern', 'Georgia Tech', 'University of Michigan'];
+
 const journey = [
   {
     step: '01',
@@ -72,8 +78,9 @@ export default function Consulting() {
                 of high school
               </h1>
               <p className="mt-6 text-lg lg:text-xl text-slate-700 leading-relaxed max-w-2xl">
-                Personalized academic coaching, expert admissions strategy, and immersive programs
-                designed by educators who&apos;ve helped hundreds of students get into Stanford, MIT, Harvard, and 20+ elite institutions.
+                Personalized academic coaching, expert admissions strategy, and immersive programs,
+                from educators whose students have been admitted to some of the best universities
+                in the world.
               </p>
               <div className="mt-10 flex flex-wrap gap-4">
                 <Link href="/contact" className="btn-primary text-base">
@@ -82,6 +89,17 @@ export default function Consulting() {
                 <Link href="/services" className="btn-secondary text-base">
                   Explore Programs &rarr;
                 </Link>
+              </div>
+
+              <div className="mt-10">
+                <p className="note text-xl text-slate-600">recent admits</p>
+                <ul className="mt-2 flex flex-wrap gap-2" aria-label="Schools our students were recently admitted to">
+                  {RECENT_ADMITS.map((school) => (
+                    <li key={school} className="px-3 py-1.5 rounded-lg border-[1.5px] border-ink bg-white text-sm font-semibold text-primary">
+                      {school}
+                    </li>
+                  ))}
+                </ul>
               </div>
             </div>
 
