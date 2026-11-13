@@ -67,7 +67,7 @@
 
 .leftTitle {
   font-family: 'Shantell Sans Variable', ui-rounded, system-ui, sans-serif;
-  font-variation-settings: 'INFM' 100, 'BNCE' 45;
+  font-variation-settings: 'INFM' 50, 'BNCE' 0;
   font-size: 36px;
   font-weight: 800;
   color: #ffffff;
@@ -190,7 +190,7 @@
 
 .formTitle {
   font-family: 'Shantell Sans Variable', ui-rounded, system-ui, sans-serif;
-  font-variation-settings: 'INFM' 100, 'BNCE' 45;
+  font-variation-settings: 'INFM' 50, 'BNCE' 0;
   font-size: 24px;
   font-weight: 700;
   color: #1d1c18;
@@ -448,7 +448,7 @@
 
 .successTitle {
   font-family: 'Shantell Sans Variable', ui-rounded, system-ui, sans-serif;
-  font-variation-settings: 'INFM' 100, 'BNCE' 45;
+  font-variation-settings: 'INFM' 50, 'BNCE' 0;
   font-size: 22px;
   font-weight: 700;
   color: #1d1c18;

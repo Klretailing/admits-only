@@ -701,7 +701,10 @@ export default function Applications() {
           </div>
         )}
 
-        {/* ═══ Board View ═══ */}
+        {/* ═══ Board View ═══
+            Columns never shrink below 168px: with no floor, six columns beside
+            the sidebar at 1024px left ~70px per card and every college name
+            broke mid-word. The board scrolls inside its own frame instead. */}
         {view === 'board' && apps.length > 0 && (
           <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2 snap-x snap-mandatory lg:snap-none">
             {BOARD_COLUMNS.map(col => {
@@ -710,7 +713,7 @@ export default function Applications() {
               // Empty columns swipe-order last on mobile so the first thing a
               // phone user sees is real content, not an empty tray.
               return (
-                <div key={col.status} className={`min-w-[280px] w-[280px] lg:min-w-0 lg:w-auto lg:flex-1 flex-shrink-0 snap-start ${colApps.length === 0 ? 'order-last lg:order-none' : ''}`}>
+                <div key={col.status} className={`min-w-[280px] w-[280px] lg:min-w-[168px] lg:w-auto lg:flex-1 flex-shrink-0 snap-start ${colApps.length === 0 ? 'order-last lg:order-none' : ''}`}>
                   <div className="flex items-center gap-2 mb-3">
                     <span className={`w-2.5 h-2.5 rounded-full ${statusInfo.color.split(' ')[0]}`} />
                     <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">{col.label}</h3>
@@ -907,26 +910,26 @@ function BoardCard({ app, onClick }: { app: CollegeApp; onClick: () => void }) {
       onClick={onClick}
       className="w-full text-left bg-white rounded-2xl border border-slate-100 surface surface-interactive p-4 group"
     >
-      {/* Name + Type */}
-      <div className="flex items-start justify-between gap-2">
-        <h4 className="min-w-0 text-sm font-bold text-primary group-hover:text-indigo-600 transition-colors leading-snug break-words">{app.name}</h4>
-        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border flex-shrink-0 ${typeColors[app.type]}`}>{app.type}</span>
-      </div>
+      {/* The name gets the card's full width. The application-type chip used to
+          share this row and left ~93px, so "Massachusetts" broke mid-word as
+          "Massachuset / ts" once the wider handwritten font arrived. */}
+      <h4 className="text-sm font-bold text-primary group-hover:text-indigo-600 transition-colors leading-snug break-words [hyphens:auto]">{app.name}</h4>
 
-      {/* Deadline */}
-      {app.deadline && (
-        <p className="text-xs text-slate-400 mt-1.5">
-          {new Date(app.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-          {days !== null && days >= 0 && (
+      {/* Deadline + type */}
+      <div className="mt-1.5 flex items-center justify-between gap-2">
+        <p className="min-w-0 text-xs text-slate-400">
+          {app.deadline && new Date(app.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          {app.deadline && days !== null && days >= 0 && (
             <span className={`ml-1.5 font-semibold ${days <= 7 ? 'text-red-500' : days <= 30 ? 'text-amber-500' : 'text-slate-400'}`}>
               &middot; {days === 0 ? 'Today' : days === 1 ? '1 day left' : `${days}d left`}
             </span>
           )}
-          {days !== null && days < 0 && (
+          {app.deadline && days !== null && days < 0 && (
             <span className="ml-1.5 font-semibold text-slate-300">&middot; Past due</span>
           )}
         </p>
-      )}
+        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border flex-shrink-0 ${typeColors[app.type]}`}>{app.type}</span>
+      </div>
 
       {/* The school's own rounds, so a student can see at a glance whether the
           date they set matches the round they meant to apply in. */}

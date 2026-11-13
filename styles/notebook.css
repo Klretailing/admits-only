@@ -57,12 +57,20 @@ body {
 }
 html.dark body { background-image: radial-gradient(rgb(var(--dot) / 0.06) 1px, transparent 1.2px); }
 
-/* Headings are lettered by hand: the same family at full informality with a
-   little bounce. Body text stays tidy so numbers and deadlines are crisp. */
+/* Headings are lettered by hand, but sit level. Measured on real words at
+   80px, each letter's baseline varied by:
+     informality 100 + bounce 45 (first version) .. 10px — read as uneven
+     informality 100, no bounce ..................  7px
+     informality 50,  no bounce ..................  4px  ← here
+     informality 0 (body text) ...................  0px
+   Bounce is off entirely: it moves letters up and down on purpose, which is
+   charming once on a poster and tiring on a page used every day. Half
+   informality keeps the hand-lettered character. Body text stays at zero so
+   numbers and deadlines are crisp. */
 h1, h2, h3, .font-display {
   letter-spacing: 0;
   font-feature-settings: normal;
-  font-variation-settings: 'INFM' 100, 'BNCE' 45;
+  font-variation-settings: 'INFM' 50, 'BNCE' 0;
 }
 h4, h5, h6 { letter-spacing: 0; font-feature-settings: normal; }
 
