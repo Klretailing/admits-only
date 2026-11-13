@@ -167,18 +167,25 @@ export async function seedDemoStudent() {
     const uid = ids[STUDENT];
     if (!uid) return;
 
-    // Idempotency: if the profile already exists, the demo is seeded.
-    const existing = await prisma.studentProfile.findUnique({ where: { userId: uid } });
-    if (existing) return;
+    // Idempotency: Adam's memory row is written LAST, so its presence means
+    // every step below finished. (The old guard checked the profile, which is
+    // written FIRST — so when a later insert failed, the demo stayed
+    // half-seeded forever: profile and tracker, but no essays, pod or Adam.)
+    // Every insert below is conflict-safe, so re-running heals a partial seed.
+    const done: any[] = await prisma.$queryRaw`SELECT 1 FROM "adam_memory" WHERE "userId" = ${uid} LIMIT 1`;
+    if (done.length > 0) return;
 
     // 1. Profile + stats
-    await prisma.studentProfile.create({
-      data: {
-        userId: uid, gpa: 3.98, gpaScale: '4.0', gpaWeighted: 4.15, satMath: 780, satRW: 700,
-        extracurriculars: EXTRACURRICULARS as any,
-        holisticScore: 96, percentile: 95, gpaScore: 99, satScore: 90, ecScore: 100,
-      },
-    });
+    const existing = await prisma.studentProfile.findUnique({ where: { userId: uid } });
+    if (!existing) {
+      await prisma.studentProfile.create({
+        data: {
+          userId: uid, gpa: 3.98, gpaScale: '4.0', gpaWeighted: 4.15, satMath: 780, satRW: 700,
+          extracurriculars: EXTRACURRICULARS as any,
+          holisticScore: 96, percentile: 95, gpaScore: 99, satScore: 90, ecScore: 100,
+        },
+      });
+    }
 
     // 2. Application tracker
     await prisma.$executeRaw`
@@ -186,19 +193,20 @@ export async function seedDemoStudent() {
       VALUES (${'sa_demo_ethan'}, ${uid}, ${JSON.stringify(COLLEGES)}::jsonb, NOW())
       ON CONFLICT ("userId") DO NOTHING`;
 
-    // 3. Essays
+    // 3. Essays — "updatedAt" is Prisma-managed (@updatedAt) and has no DB
+    // default, so raw inserts must supply it or Postgres rejects the row.
     for (let i = 0; i < ESSAYS.length; i++) {
       const e = ESSAYS[i];
       await prisma.$executeRaw`
-        INSERT INTO "essays" ("id", "userId", "title", "prompt", "content", "status", "aiScore", "vocabScore", "grammarScore", "originalityScore", "overallScore")
-        VALUES (${'es_demo_' + i}, ${uid}, ${e.title}, ${e.prompt}, ${e.content}, ${e.status}, ${e.aiScore}, ${e.vocabScore}, ${e.grammarScore}, ${e.originalityScore}, ${e.overallScore})
+        INSERT INTO "essays" ("id", "userId", "title", "prompt", "content", "status", "aiScore", "vocabScore", "grammarScore", "originalityScore", "overallScore", "updatedAt")
+        VALUES (${'es_demo_' + i}, ${uid}, ${e.title}, ${e.prompt}, ${e.content}, ${e.status}, ${e.aiScore}, ${e.vocabScore}, ${e.grammarScore}, ${e.originalityScore}, ${e.overallScore}, NOW())
         ON CONFLICT ("id") DO NOTHING`;
     }
 
     // 4. Study Pod + members + conversation
     await prisma.$executeRaw`
-      INSERT INTO "study_pods" ("id", "name", "description", "inviteCode")
-      VALUES (${'pod_demo_cs'}, ${"Bay Area CS Applicants '26"}, ${'Seniors grinding through CS apps — essay swaps, deadline reminders, and moral support.'}, ${'CS26BAY'})
+      INSERT INTO "study_pods" ("id", "name", "description", "inviteCode", "updatedAt")
+      VALUES (${'pod_demo_cs'}, ${"Bay Area CS Applicants '26"}, ${'Seniors grinding through CS apps — essay swaps, deadline reminders, and moral support.'}, ${'CS26BAY'}, NOW())
       ON CONFLICT ("id") DO NOTHING`;
     const memberEmails = [STUDENT, ...PODMATES];
     for (let i = 0; i < memberEmails.length; i++) {

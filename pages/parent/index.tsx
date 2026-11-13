@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import ParentLayout from '../../components/ParentLayout';
+import { parseDay } from '../../lib/dateOnly';
 
 interface Milestone { type: string; label: string; date: string | null; }
 interface Deadline { school: string; type: string; deadline: string; daysLeft: number; }
@@ -193,7 +194,7 @@ export default function ParentDashboard() {
                           <span className="text-slate-600">{m.label.replace(/^Finished /, 'finished ').replace(/^Accepted /, 'was accepted ').replace(/^Submitted /, 'submitted ').replace(/^Worked on /, 'worked on ')}</span>
                         </p>
                         {m.date && (
-                          <p className="text-[11px] text-slate-400 mt-0.5">{new Date(m.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">{parseDay(m.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
                         )}
                       </div>
                     </div>

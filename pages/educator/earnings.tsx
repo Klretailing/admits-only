@@ -76,21 +76,24 @@ function BarChart({ data, valueKey, gradientFrom, gradientTo }: {
             {data.map((d, i) => {
               const value = d[valueKey];
               const height = max > 0 ? (value / max) * 100 : 0;
+              // The column is h-full of the fixed-height row, so the bar's
+              // percentage height resolves against a definite 260px. (Before,
+              // the bar sat in an auto-height wrapper, where a % height
+              // computes to 0 and every bar silently collapsed.)
               return (
-                <div key={d.month} className="flex-1 flex flex-col items-center group">
-                  <div className="relative w-full flex justify-center mb-1">
-                    <div className="absolute -top-7 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 text-white text-[10px] font-semibold px-2 py-1 rounded-lg whitespace-nowrap z-10">
+                <div key={d.month} className="flex-1 h-full flex items-end justify-center group">
+                  <div
+                    className="relative w-full max-w-[36px] rounded-t-lg transition-all duration-500 ease-out"
+                    style={{
+                      height: `${Math.max(height, 2)}%`,
+                      backgroundColor: gradientFrom,
+                      opacity: 0.85 + (i / data.length) * 0.15,
+                      animationDelay: `${i * 50}ms`,
+                    }}
+                  >
+                    <div className="absolute -top-7 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 text-white text-[10px] font-semibold px-2 py-1 rounded-lg whitespace-nowrap z-10">
                       {formatCurrency(value)}
                     </div>
-                    <div
-                      className="w-full max-w-[36px] rounded-t-lg transition-all duration-500 ease-out"
-                      style={{
-                        height: `${Math.max(height, 2)}%`,
-                        backgroundColor: gradientFrom,
-                        opacity: 0.85 + (i / data.length) * 0.15,
-                        animationDelay: `${i * 50}ms`,
-                      }}
-                    />
                   </div>
                 </div>
               );

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import EducatorDashboardLayout from '../../../components/EducatorDashboardLayout';
+import { daysUntilDay, parseDay } from '../../../lib/dateOnly';
 
 interface StudentNote {
   id: string;
@@ -136,7 +137,7 @@ function formatStatus(status: string): string {
 
 function fmtDate(d: string | null | undefined): string {
   if (!d) return '--';
-  const date = new Date(d);
+  const date = parseDay(d);
   if (isNaN(date.getTime())) return '--';
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
@@ -149,10 +150,7 @@ function satComposite(p: Profile | null): number | null {
 
 function daysLeft(deadline: string | null): number | null {
   if (!deadline) return null;
-  const d = new Date(deadline);
-  if (isNaN(d.getTime())) return null;
-  const ms = d.getTime() - Date.now();
-  return Math.ceil(ms / (1000 * 60 * 60 * 24));
+  return daysUntilDay(deadline);
 }
 
 export default function StudentWorkspace() {

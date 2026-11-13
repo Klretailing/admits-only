@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import Head from 'next/head';
 import ParentLayout from '../../components/ParentLayout';
+import { daysUntilDay, parseDay } from '../../lib/dateOnly';
 
 interface ParentTask {
   id: string;
@@ -143,7 +144,7 @@ export default function ParentActionItems() {
 
     const urgent = active.filter(t => {
       if (!t.dueDate) return false;
-      const days = Math.ceil((new Date(t.dueDate).getTime() - now.getTime()) / 86400000);
+      const days = daysUntilDay(t.dueDate, now) ?? -1;
       return days >= 0 && days <= 14;
     });
     const urgentIds = new Set(urgent.map(t => t.id));
@@ -151,7 +152,7 @@ export default function ParentActionItems() {
     const thisMonth = active.filter(t => {
       if (urgentIds.has(t.id)) return false;
       if (!t.dueDate) return false;
-      const d = new Date(t.dueDate);
+      const d = parseDay(t.dueDate);
       return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
     });
     const thisMonthIds = new Set(thisMonth.map(t => t.id));

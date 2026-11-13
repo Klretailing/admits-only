@@ -1,3 +1,4 @@
+import { daysUntilDay } from './dateOnly';
 /* ══════════════════════════════════════════════════════════════════════
    SCHOOL DATA — Prompt Database, Research Data, Categorization Engine
    ══════════════════════════════════════════════════════════════════════
@@ -1258,8 +1259,7 @@ export function generateSmartTimeline(
   for (const school of schools) {
     if (!school.deadline || school.status === 'submitted' || school.status === 'accepted') continue;
 
-    const deadlineDate = new Date(school.deadline).getTime();
-    const daysUntil = Math.ceil((deadlineDate - now) / 86400000);
+    const daysUntil = daysUntilDay(school.deadline, new Date(now)) ?? 0;
     if (daysUntil < -30) continue; // skip very old deadlines
 
     // Generate smart tasks based on days remaining

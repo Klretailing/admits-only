@@ -336,7 +336,6 @@ const ALIASES: Record<string, string> = {
   'cal poly': 'calpolyslo',
   'san diego state university': 'sdsu',
   'arizona state university': 'asu',
-  'university illinois urbana champaign': 'uiuc',
   'penn state': 'psu',
   'pennsylvania state university': 'psu',
   'ohio state university': 'osu',

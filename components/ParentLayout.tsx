@@ -100,9 +100,9 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
             </div>
             <div className="flex flex-col">
               <span className="text-lg font-bold font-display tracking-tight text-primary leading-tight">
-                Admits<span className="text-teal-600">Only</span>
+                Admits<span className="gradient-text">Only</span>
               </span>
-              <span className="text-[10px] font-medium text-teal-600 tracking-wide uppercase leading-tight">Parent</span>
+              <span className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wider leading-tight">Parent</span>
             </div>
           </Link>
         </div>
@@ -169,9 +169,9 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
                 </div>
                 <div className="flex flex-col">
                   <span className="text-lg font-bold font-display tracking-tight text-primary leading-tight">
-                    Admits<span className="text-teal-600">Only</span>
+                    Admits<span className="gradient-text">Only</span>
                   </span>
-                  <span className="text-[10px] font-medium text-teal-600 tracking-wide uppercase leading-tight">Parent</span>
+                  <span className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wider leading-tight">Parent</span>
                 </div>
               </Link>
               <button onClick={() => setMobileMenuOpen(false)} className="p-2 rounded-lg text-slate-400 hover:text-primary hover:bg-slate-50">
@@ -203,7 +203,7 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-primary">{session?.user?.name || 'Parent'}</p>
-                  <p className="text-xs text-slate-400">{(session?.user as any)?.role || 'parent'}</p>
+                  <p className="text-xs text-slate-400">Parent</p>
                 </div>
               </div>
               <button
@@ -253,7 +253,7 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
             </button>
             <div className="lg:hidden">
               <span className="text-base font-bold font-display text-primary">
-                Admits<span className="text-teal-600">Only</span>
+                Admits<span className="gradient-text">Only</span>
               </span>
             </div>
             <div className="hidden lg:flex items-center gap-3">
@@ -291,7 +291,7 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
             </button>
             <div className="text-right hidden sm:block">
               <p className="text-sm font-semibold text-primary">{session?.user?.name || 'Parent'}</p>
-              <p className="text-xs text-slate-400">{(session?.user as any)?.role || 'parent'}</p>
+              <p className="text-xs text-slate-400">Parent</p>
             </div>
             <div className="w-9 h-9 rounded-full bg-teal-500 flex items-center justify-center text-white font-bold text-sm">
               {(session?.user?.name || 'P')[0].toUpperCase()}

@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import ParentLayout from '../../components/ParentLayout';
+import { daysUntilDay, parseDay } from '../../lib/dateOnly';
 
 const STATUS_INFO: Record<string, { label: string; color: string }> = {
   not_started: { label: 'Not Started', color: 'bg-slate-100 text-slate-500' },
@@ -63,7 +64,7 @@ export default function ParentProgress() {
 
   const getDaysUntil = (d: string) => {
     if (!d) return null;
-    return Math.ceil((new Date(d).getTime() - Date.now()) / 86400000);
+    return daysUntilDay(d);
   };
 
   if (status === 'loading' || loading) {
@@ -176,13 +177,13 @@ export default function ParentProgress() {
                       </div>
                       {app.deadline && (
                         <p className="text-xs text-slate-400 mt-0.5">
-                          {new Date(app.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                          {days !== null && days >= 0 && (
+                          {parseDay(app.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          {days !== null && days >= 0 && !['submitted', 'accepted', 'rejected', 'waitlisted', 'deferred'].includes(app.status) && (
                             <span className={`ml-2 font-semibold ${days <= 7 ? 'text-red-500' : days <= 30 ? 'text-amber-500' : 'text-slate-400'}`}>
                               {days === 0 ? 'Due today' : `${days} day${days !== 1 ? 's' : ''} left`}
                             </span>
                           )}
-                          {days !== null && days < 0 && <span className="ml-2 font-semibold text-slate-300">Past due</span>}
+                          {days !== null && days < 0 && !['submitted', 'accepted', 'rejected', 'waitlisted', 'deferred'].includes(app.status) && <span className="ml-2 font-semibold text-slate-500">Past due</span>}
                         </p>
                       )}
                     </div>

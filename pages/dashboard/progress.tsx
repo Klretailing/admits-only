@@ -9,6 +9,7 @@ import ShareDecisions from '../../components/ShareDecisions';
 import DeadlineChips from '../../components/DeadlineChips';
 import { deadlinesForName } from '../../lib/deadlines';
 import { SCHOOLS, findSchoolByName, generateSmartTimeline, generateWeeklyDigest, type SchoolData } from '../../lib/schoolData';
+import { daysUntilDay, parseDay } from '../../lib/dateOnly';
 
 /* ══════════════════════════════════════════════════════════════════════
    TYPES
@@ -112,7 +113,7 @@ const typeTimelineColors: Record<string, string> = {
 
 function getDaysUntil(deadline: string): number | null {
   if (!deadline) return null;
-  return Math.ceil((new Date(deadline).getTime() - Date.now()) / 86400000);
+  return daysUntilDay(deadline);
 }
 
 function getTaskCompletion(tasks: ApplicationTask[]): number {
@@ -456,7 +457,7 @@ export default function Applications() {
     const byMonth = new Map<string, CollegeApp[]>();
     for (const app of apps) {
       if (!app.deadline) continue;
-      const d = new Date(app.deadline);
+      const d = parseDay(app.deadline);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       const list = byMonth.get(key) || [];
       list.push(app);
@@ -466,7 +467,7 @@ export default function Applications() {
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([key, appList]) => ({
         key,
-        label: new Date(key + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+        label: parseDay(key + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
         apps: appList.sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime()),
       }));
   }, [apps]);
@@ -751,7 +752,7 @@ export default function Applications() {
                   <div className="absolute left-2.5 top-0 bottom-0 w-px bg-slate-200" />
                   <div className="space-y-3">
                     {month.apps.map(app => {
-                      const d = new Date(app.deadline);
+                      const d = parseDay(app.deadline);
                       const dayStr = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
                       const pct = getTaskCompletion(app.tasks);
                       const days = getDaysUntil(app.deadline);
@@ -850,7 +851,7 @@ export default function Applications() {
                         <td className="px-4 py-3 text-slate-500">
                           {app.deadline ? (
                             <span>
-                              {new Date(app.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              {parseDay(app.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                               {days !== null && days >= 0 && (
                                 <span className={`ml-1.5 text-[10px] font-bold ${days <= 7 ? 'text-red-500' : days <= 30 ? 'text-amber-500' : 'text-slate-300'}`}>
                                   ({days}d)
@@ -918,7 +919,7 @@ function BoardCard({ app, onClick }: { app: CollegeApp; onClick: () => void }) {
       {/* Deadline + type */}
       <div className="mt-1.5 flex items-center justify-between gap-2">
         <p className="min-w-0 text-xs text-slate-400">
-          {app.deadline && new Date(app.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          {app.deadline && parseDay(app.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
           {app.deadline && days !== null && days >= 0 && (
             <span className={`ml-1.5 font-semibold ${days <= 7 ? 'text-red-500' : days <= 30 ? 'text-amber-500' : 'text-slate-400'}`}>
               &middot; {days === 0 ? 'Today' : days === 1 ? '1 day left' : `${days}d left`}
