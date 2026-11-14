@@ -59,27 +59,44 @@ async function seedAccounts() {
 
 async function seedDemoConnections() {
   try {
-    const student = await prisma.user.findUnique({ where: { email: 'maya@beta.admitsonly.com' } });
+    // The parent and tutor demos follow Ethan, the fully-populated demo
+    // student (see seedDemoStudent). They used to follow Maya, a beta account
+    // with no applications, so both dashboards opened empty.
+    const student = await prisma.user.findUnique({ where: { email: 'demo.student@admitsonly.com' } });
     const parent = await prisma.user.findUnique({ where: { email: 'parent@demo.admitsonly.com' } });
     const tutor = await prisma.user.findUnique({ where: { email: 'tutor@demo.admitsonly.com' } });
-    if (!student || !parent || !tutor) return;
+    const educator = await prisma.user.findUnique({ where: { email: 'demo.educator@admitsonly.com' } });
+    if (!student) return;
 
-    // Create connection code for the student if missing
-    const existingCode: any[] = await prisma.$queryRaw`SELECT * FROM "connection_codes" WHERE "userId" = ${student.id}`;
-    if (existingCode.length === 0) {
-      await prisma.$executeRaw`INSERT INTO "connection_codes" ("id", "userId", "code") VALUES (${`cc_demo_maya`}, ${student.id}, ${'DEMO-MAYA'})`;
+    // Existing databases: move the old Maya links over to Ethan.
+    await prisma.$executeRaw`
+      UPDATE "account_connections" SET "studentId" = ${student.id}
+      WHERE "id" IN ('ac_demo_parent', 'ac_demo_tutor') AND "studentId" <> ${student.id}`;
+
+    const links: [string, { id: string } | null, string][] = [
+      ['ac_demo_parent', parent, 'parent'],
+      ['ac_demo_tutor', tutor, 'tutor'],
+      ['ac_demo_educator', educator, 'tutor'],
+    ];
+    for (const [id, user, role] of links) {
+      if (!user) continue;
+      const existing: any[] = await prisma.$queryRaw`
+        SELECT 1 FROM "account_connections" WHERE "studentId" = ${student.id} AND "connectedUserId" = ${user.id}`;
+      if (existing.length === 0) {
+        await prisma.$executeRaw`
+          INSERT INTO "account_connections" ("id", "studentId", "connectedUserId", "role")
+          VALUES (${id}, ${student.id}, ${user.id}, ${role})
+          ON CONFLICT ("id") DO NOTHING`;
+      }
     }
 
-    // Connect parent → student
-    const existingParent: any[] = await prisma.$queryRaw`SELECT * FROM "account_connections" WHERE "studentId" = ${student.id} AND "connectedUserId" = ${parent.id}`;
-    if (existingParent.length === 0) {
-      await prisma.$executeRaw`INSERT INTO "account_connections" ("id", "studentId", "connectedUserId", "role") VALUES (${`ac_demo_parent`}, ${student.id}, ${parent.id}, ${'parent'})`;
-    }
-
-    // Connect tutor → student
-    const existingTutor: any[] = await prisma.$queryRaw`SELECT * FROM "account_connections" WHERE "studentId" = ${student.id} AND "connectedUserId" = ${tutor.id}`;
-    if (existingTutor.length === 0) {
-      await prisma.$executeRaw`INSERT INTO "account_connections" ("id", "studentId", "connectedUserId", "role") VALUES (${`ac_demo_tutor`}, ${student.id}, ${tutor.id}, ${'tutor'})`;
+    // Ethan on each demo tutor's roster ("My Students"), already linked.
+    for (const [rosterId, edu] of [['es_demo_ethan', educator], ['es_demo_ethan_t', tutor]] as const) {
+      if (!edu) continue;
+      await prisma.$executeRaw`
+        INSERT INTO "educator_students" ("id", "educatorId", "studentName", "studentEmail", "tags", "status", "updatedAt", "inviteStatus", "linkedUserId")
+        VALUES (${rosterId}, ${edu.id}, ${'Ethan Nakamura'}, ${'demo.student@admitsonly.com'}, ${'["Senior","CS"]'}::jsonb, ${'active'}, NOW(), ${'active'}, ${student.id})
+        ON CONFLICT ("id") DO NOTHING`;
     }
   } catch (e) {
     console.error('Demo connections seed (non-fatal):', (e as Error).message);

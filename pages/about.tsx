@@ -88,7 +88,7 @@ export default function About() {
               <div className="grid grid-cols-2 gap-4">
                 {stats.map((stat) => (
                   <div key={stat.label} className="card-flat text-center">
-                    <div className="stat-number gradient-text">{stat.value}</div>
+                    <div className="stat-number text-primary">{stat.value}</div>
                     <p className="mt-2 text-sm text-slate-500 font-medium">{stat.label}</p>
                   </div>
                 ))}

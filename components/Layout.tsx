@@ -29,17 +29,27 @@ function Logo() {
   );
 }
 
-const navLinks = [
+/* The site is two things: the notebook app (free, self-serve) and 1-on-1
+   consulting (a paid, human service). The nav keeps them apart: app pages
+   first, then a divider, then Consulting as its own tab. Programs and
+   Contact (book a call) live inside the consulting section. */
+const appLinks = [
   // First, because it is the one thing a visitor can use right now, free,
   // without an account.
   { href: '/essay-checker', label: 'Essay Checker' },
-  { href: '/services', label: 'Programs' },
-  { href: '/consulting', label: 'Consulting' },
-  { href: '/about', label: 'About' },
+  { href: '/#inside', label: 'What\'s inside' },
   { href: '/faq', label: 'FAQ' },
-  { href: '/newsletter', label: 'Newsletter' },
-  { href: '/contact', label: 'Contact' },
+  { href: '/about', label: 'About' },
 ];
+const consultingLink = { href: '/consulting', label: 'Consulting' };
+const CONSULTING_SECTION = ['/consulting', '/services', '/contact'];
+
+const navItemClass = (active: boolean) =>
+  `px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+    active
+      ? 'text-primary underline underline-offset-[6px] decoration-[1.5px]'
+      : 'text-slate-600 hover:text-primary hover:bg-slate-50'
+  }`;
 
 function ScrollToTop() {
   const [visible, setVisible] = useState(false);
@@ -101,6 +111,9 @@ export default function Layout({ children }: LayoutProps) {
   const isLoggedIn = status === 'authenticated' && !!session;
   const userRole = (session?.user as any)?.role;
   const dashboardHref = userRole === 'parent' ? '/parent' : userRole === 'educator' ? '/educator' : '/dashboard';
+  const isActive = (href: string) => router.pathname === href;
+  const inConsulting = CONSULTING_SECTION.includes(router.pathname);
+  const onHome = router.pathname === '/';
 
   /* Until the session check answers, render BOTH button sets and let the
      pre-paint hint (lib/authHint.ts) show the right one. Treating "loading"
@@ -161,16 +174,25 @@ export default function Layout({ children }: LayoutProps) {
             {/* Desktop nav. From lg (1024px), not md: seven links plus two buttons
                 need ~1000px, and at tablet widths the row overflowed and the whole
                 page scrolled sideways. Tablets use the menu button instead. */}
-            <nav className="hidden lg:flex items-center gap-1">
-              {navLinks.map((link) => (
+            <nav className="hidden lg:flex items-center gap-1" aria-label="Main">
+              {appLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
+                  aria-current={isActive(link.href) ? 'page' : undefined}
+                  className={navItemClass(isActive(link.href))}
                 >
                   {link.label}
                 </Link>
               ))}
+              <span className="mx-2 h-5 w-px bg-slate-300" aria-hidden />
+              <Link
+                href={consultingLink.href}
+                aria-current={inConsulting ? 'page' : undefined}
+                className={navItemClass(inConsulting)}
+              >
+                {consultingLink.label}
+              </Link>
               {authSwitch(
                 <Link href={dashboardHref} className="ml-2 btn-primary text-sm !py-2.5 !px-5">
                   Dashboard
@@ -224,16 +246,27 @@ export default function Layout({ children }: LayoutProps) {
           {/* Mobile menu */}
           {mobileOpen && (
             <div className="lg:hidden border-t border-slate-100 bg-white px-6 py-4 space-y-1">
-              {navLinks.map((link) => (
+              {appLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
                   onClick={() => setMobileOpen(false)}
-                  className="block px-4 py-3 text-sm font-medium text-slate-600 hover:text-primary rounded-lg hover:bg-slate-50 transition-colors"
+                  aria-current={isActive(link.href) ? 'page' : undefined}
+                  className={`block ${navItemClass(isActive(link.href))} !py-3`}
                 >
                   {link.label}
                 </Link>
               ))}
+              <div className="!my-2 border-t border-dashed border-slate-200" aria-hidden />
+              <Link
+                href={consultingLink.href}
+                onClick={() => setMobileOpen(false)}
+                aria-current={inConsulting ? 'page' : undefined}
+                className={`block ${navItemClass(inConsulting)} !py-3`}
+              >
+                {consultingLink.label}
+                <span className="ml-2 inline-block text-xs text-slate-500">1-on-1 mentors</span>
+              </Link>
               {authSwitch(
                 <Link
                   href={dashboardHref}
@@ -280,16 +313,32 @@ export default function Layout({ children }: LayoutProps) {
                   The notebook for all four years of high school. Activities and grades, writing feedback, study
                   groups, careers and college planning, kept in one place.
                 </p>
+                {/* The homepage has its own newsletter card a scroll above;
+                    two sign-up forms on one screen is one too many. */}
+                {!onHome && (
+                  <div className="mt-6 max-w-xs">
+                    <p className="text-sm text-slate-400 leading-relaxed mb-3">Opportunities and study tips for families, once a week.</p>
+                    <FooterNewsletter />
+                  </div>
+                )}
               </div>
 
               <div>
-                <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-4">Platform</h4>
+                <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-4">The notebook</h4>
                 <ul className="space-y-3 text-sm text-slate-300">
                   <li><Link href="/auth/register" className="hover:text-white transition-colors">Start your notebook</Link></li>
                   <li><Link href="/essay-checker" className="hover:text-white transition-colors">Free essay checker</Link></li>
-                  <li><Link href="/services" className="hover:text-white transition-colors">Programs</Link></li>
-                  <li><Link href="/consulting" className="hover:text-white transition-colors">Consulting</Link></li>
+                  <li><Link href="/#inside" className="hover:text-white transition-colors">What&apos;s inside</Link></li>
                   <li><Link href="/auth/login" className="hover:text-white transition-colors">Sign In</Link></li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-4">Consulting</h4>
+                <ul className="space-y-3 text-sm text-slate-300">
+                  <li><Link href="/consulting" className="hover:text-white transition-colors">1-on-1 mentors</Link></li>
+                  <li><Link href="/services" className="hover:text-white transition-colors">Programs</Link></li>
+                  <li><Link href="/contact" className="hover:text-white transition-colors">Book a free call</Link></li>
                 </ul>
               </div>
 
@@ -298,15 +347,9 @@ export default function Layout({ children }: LayoutProps) {
                 <ul className="space-y-3 text-sm text-slate-300">
                   <li><Link href="/about" className="hover:text-white transition-colors">About Us</Link></li>
                   <li><Link href="/faq" className="hover:text-white transition-colors">FAQ</Link></li>
-                  <li><Link href="/contact" className="hover:text-white transition-colors">Contact</Link></li>
+                  <li><Link href="/newsletter" className="hover:text-white transition-colors">Newsletter</Link></li>
                   <li><a href="mailto:info@admitsonly.com" className="hover:text-white transition-colors">info@admitsonly.com</a></li>
                 </ul>
-              </div>
-
-              <div>
-                <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-4">Newsletter</h4>
-                <p className="text-sm text-slate-400 leading-relaxed mb-4">Opportunities and study tips for families, once a week.</p>
-                <FooterNewsletter />
               </div>
             </div>
 

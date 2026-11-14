@@ -77,28 +77,6 @@ function computeMatch(
   };
 }
 
-/* ──────────────────────── COLOR HELPERS ──────────────────────── */
-
-/* Pick white or dark ink for text sitting on an arbitrary swatch from the
-   temperature ramp. The mid-ramp ambers/oranges are far too light for white
-   text (they measured 3.6:1), so the numeral flips to near-black there. */
-const INK_DARK = '#1a1714';
-
-function relLuminance(r: number, g: number, b: number): number {
-  const f = (v: number) => { const s = v / 255; return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); };
-  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
-}
-
-function readableOn(bg: string): string {
-  const m = bg.match(/\d+/g);
-  if (!m || m.length < 3) return '#ffffff';
-  const [r, g, b] = m.slice(0, 3).map(Number);
-  const L = relLuminance(r, g, b);
-  const LDark = relLuminance(15, 23, 42); // INK_DARK
-  const vsWhite = 1.05 / (L + 0.05);
-  const vsDark = (L + 0.05) / (LDark + 0.05);
-  return vsWhite >= vsDark ? '#ffffff' : INK_DARK;
-}
 
 /* ─── one scale, one vocabulary ───
    This page used to describe the same thing two ways. The rings, list and
@@ -109,19 +87,23 @@ function readableOn(bg: string): string {
    "Warm". Colour and label now both derive from the tier, using the same
    rose / amber / emerald the list view already used, so they cannot disagree.
    `solid` backs white text (all ≥ 4.5:1); `rgb` is for text-free map dots. */
-/* Monochrome tiers, read like pencil shading: the surer the fit, the darker
-   the mark. Safety is inked in, match is shaded graphite, reach is a light
-   sketch with an ink outline. Red is deliberately not used — a reach school
-   is ambitious, not an error, and red pencil means "wrong" in this notebook.
-   `solid` fills tiles; text on them is chosen by readableOn(). `rgb` is the
-   radar dot colour. */
-const TIER_STYLE: Record<'reach' | 'match' | 'safety', { label: string; solid: string; rgb: [number, number, number] }> = {
-  reach:  { label: 'Reach',  solid: 'rgb(233,228,217)', rgb: [150, 145, 136] },
-  match:  { label: 'Match',  solid: 'rgb(107,104,99)',  rgb: [107, 104, 99] },
-  safety: { label: 'Safety', solid: 'rgb(28,27,25)',    rgb: [28, 27, 25] },
+/* Monochrome tiers: ink marks what needs attention. Reach is inked in, match
+   is shaded graphite, safety is a plain card with an ink outline. (It used to
+   be the other way round, which turned a strong student's grid into a wall
+   of black and left the reaches, the schools to think hard about, faintest.)
+   Red is deliberately not used: a reach is ambitious, not an error, and red
+   pencil means "wrong" in this notebook. `bg`/`fg` are CSS and follow the
+   theme; `rgb`/`rgbDark` are the radar's canvas colours. */
+const TIER_STYLE: Record<'reach' | 'match' | 'safety', {
+  label: string; bg: string; fg: string; rgb: [number, number, number]; rgbDark: [number, number, number];
+}> = {
+  reach:  { label: 'Reach',  bg: 'rgb(var(--ink))',  fg: 'rgb(var(--paper))', rgb: [28, 27, 25],    rgbDark: [240, 236, 227] },
+  match:  { label: 'Match',  bg: 'rgb(107 104 99)',  fg: '#ffffff',           rgb: [107, 104, 99],  rgbDark: [150, 145, 136] },
+  safety: { label: 'Safety', bg: 'rgb(var(--card))', fg: 'rgb(var(--ink))',   rgb: [255, 253, 248], rgbDark: [33, 32, 29] },
 };
-const tierColor = (t: HeatmapTile['tier']) => TIER_STYLE[t].solid;
-const tierRGB = (t: HeatmapTile['tier']) => TIER_STYLE[t].rgb;
+/** Inline style for anything filled with a tier: tiles, score squares, legend keys. */
+const tierPaint = (t: HeatmapTile['tier']) => ({ backgroundColor: TIER_STYLE[t].bg, color: TIER_STYLE[t].fg });
+const tierRGB = (t: HeatmapTile['tier'], dark = false) => (dark ? TIER_STYLE[t].rgbDark : TIER_STYLE[t].rgb);
 const tierLabel = (t: HeatmapTile['tier']) => TIER_STYLE[t].label;
 
 /* ──────────────────────── ADVICE ──────────────────────── */
@@ -339,14 +321,14 @@ function RadarView({
       // Zone bands — filled circles outer to inner
       const zones = isDark
         ? [
-            { r: 345, fill: 'rgba(224,89,80,0.07)', stroke: 'rgba(251,116,104,0.25)', label: 'Reach', labelColor: '#fb7468' },
+            { r: 345, fill: 'rgba(240,236,227,0.04)', stroke: 'rgba(240,236,227,0.22)', label: 'Reach', labelColor: '#ccc8c0' },
             { r: 255, fill: 'rgba(182,176,169,0.08)', stroke: 'rgba(204,200,192,0.25)', label: 'Match', labelColor: '#ccc8c0' },
             { r: 155, fill: 'rgba(167,162,155,0.09)', stroke: 'rgba(192,186,179,0.25)', label: 'Safety', labelColor: '#c0bab3' },
           ]
         : [
-            { r: 345, fill: 'rgba(224,89,80,0.05)', stroke: 'rgba(224,89,80,0.2)', label: 'Reach', labelColor: '#cc4440' },
-            { r: 255, fill: 'rgba(182,176,169,0.06)', stroke: 'rgba(182,176,169,0.2)', label: 'Match', labelColor: '#93908a' },
-            { r: 155, fill: 'rgba(167,162,155,0.07)', stroke: 'rgba(167,162,155,0.2)', label: 'Safety', labelColor: '#87837d' },
+            { r: 345, fill: 'rgba(28,27,25,0.03)', stroke: 'rgba(28,27,25,0.2)', label: 'Reach', labelColor: '#6b6863' },
+            { r: 255, fill: 'rgba(182,176,169,0.06)', stroke: 'rgba(182,176,169,0.2)', label: 'Match', labelColor: '#6b6863' },
+            { r: 155, fill: 'rgba(167,162,155,0.07)', stroke: 'rgba(167,162,155,0.2)', label: 'Safety', labelColor: '#6b6863' },
           ];
 
       for (const z of zones) {
@@ -434,7 +416,7 @@ function RadarView({
 
         if (sx < -30 || sx > w + 30 || sy < -30 || sy > h + 30) continue;
 
-        const [r, g, b] = tierRGB(node.tile.tier);
+        const [r, g, b] = tierRGB(node.tile.tier, isDark);
         const radius = screenRadius(node.baseRadius) * eased;
         const fitNorm = node.tile.overallFit / 100;
 
@@ -458,6 +440,9 @@ function RadarView({
         ctx.arc(sx, sy, finalRadius, 0, Math.PI * 2);
         ctx.fillStyle = `rgb(${r},${g},${b})`;
         ctx.fill();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = isDark ? 'rgba(240,236,227,0.55)' : 'rgba(28,27,25,0.7)';
+        ctx.stroke();
 
         // Tiny specular
         if (finalRadius > 3) {
@@ -723,8 +708,8 @@ function RadarView({
           <div className="bg-white rounded-xl px-3.5 py-2.5 border border-slate-100 shadow-sm">
             <div className="flex items-center gap-2.5">
               <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-xs shrink-0"
-                style={{ backgroundColor: tierColor(hoveredTile.tier) }}
+                className="w-8 h-8 rounded-lg border-[1.5px] border-ink flex items-center justify-center font-bold text-xs shrink-0"
+                style={tierPaint(hoveredTile.tier)}
               >
                 {hoveredTile.overallFit}
               </div>
@@ -732,7 +717,7 @@ function RadarView({
                 <p className="text-sm font-semibold text-slate-900">{hoveredTile.college.name}</p>
                 <p className="text-[10px] text-slate-400">
                   {hoveredTile.college.acceptanceRate}% accept &middot; {hoveredTile.college.satRange[0]}-{hoveredTile.college.satRange[1]} SAT
-                  &middot; <span style={{ color: tierColor(hoveredTile.tier) }}>{tierLabel(hoveredTile.tier)}</span>
+                  &middot; <span className="font-semibold text-primary">{tierLabel(hoveredTile.tier)}</span>
                 </p>
               </div>
             </div>
@@ -744,15 +729,15 @@ function RadarView({
       <div className="absolute bottom-4 left-4 flex flex-col gap-1.5 pointer-events-none">
         <div className="bg-white rounded-lg px-2.5 py-2 border border-slate-100 shadow-sm">
           <div className="flex items-center gap-2 text-[10px] mb-1">
-            <div className="w-2 h-2 rounded-full bg-emerald-500" />
+            <div className="w-2.5 h-2.5 rounded-full border border-ink" style={{ backgroundColor: TIER_STYLE.safety.bg }} />
             <span className="text-slate-500">Safety (inner)</span>
           </div>
           <div className="flex items-center gap-2 text-[10px] mb-1">
-            <div className="w-2 h-2 rounded-full bg-amber-500" />
+            <div className="w-2.5 h-2.5 rounded-full border border-ink" style={{ backgroundColor: TIER_STYLE.match.bg }} />
             <span className="text-slate-500">Match (middle)</span>
           </div>
           <div className="flex items-center gap-2 text-[10px]">
-            <div className="w-2 h-2 rounded-full bg-rose-500" />
+            <div className="w-2.5 h-2.5 rounded-full border border-ink" style={{ backgroundColor: TIER_STYLE.reach.bg }} />
             <span className="text-slate-500">Reach (outer)</span>
           </div>
         </div>
@@ -1473,7 +1458,7 @@ export default function CollegeHeatmapPage() {
           <div className="flex items-center gap-3 mr-4">
             {(['reach', 'match', 'safety'] as const).map(t => (
               <div key={t} className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: tierColor(t) }} />
+                <div className="w-3 h-3 rounded-sm border border-ink" style={{ backgroundColor: TIER_STYLE[t].bg }} />
                 <span className="text-[10px] text-slate-500">{tierLabel(t)}</span>
               </div>
             ))}
@@ -1522,14 +1507,12 @@ export default function CollegeHeatmapPage() {
         {viewMode === 'grid' && (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5">
             {visibleTiles.map(tile => {
-              const color = tierColor(tile.tier);
-              const ink = readableOn(color);
               return (
                 <button
                   key={tile.college.id}
                   onClick={() => setSelectedTile(tile)}
                   className="relative group text-left rounded-xl border-[1.5px] border-ink overflow-hidden surface-interactive"
-                  style={{ backgroundColor: color, color: ink, boxShadow: '2px 2px 0 0 rgb(var(--shadow-ink) / 0.9)' }}
+                  style={{ ...tierPaint(tile.tier), boxShadow: '2px 2px 0 0 rgb(var(--shadow-ink) / 0.9)' }}
                 >
                   <div className="p-3 min-h-[90px] flex flex-col justify-between">
                     <div>
@@ -1563,7 +1546,7 @@ export default function CollegeHeatmapPage() {
             {/* Tier summary cards */}
             <div className="grid grid-cols-3 gap-3">
               {(['reach', 'match', 'safety'] as const).map(tier => {
-                const cfg = { reach: { label: 'Reach', color: 'text-slate-700', bg: 'bg-white', border: 'border-slate-400 border-dashed', ring: 'ring-slate-400/30', desc: 'Ambitious — your stats are below their typical admits' }, match: { label: 'Match', color: 'text-slate-800', bg: 'bg-slate-100', border: 'border-slate-500', ring: 'ring-slate-500/30', desc: 'Competitive — your stats align with their typical admits' }, safety: { label: 'Safety', color: 'text-ink', bg: 'bg-slate-200', border: 'border-ink', ring: 'ring-slate-700/30', desc: 'Strong fit — your stats exceed their typical admits' } }[tier];
+                const cfg = { reach: { label: 'Reach', color: 'text-paper', bg: 'bg-ink', border: 'border-ink', ring: 'ring-ink/30', desc: 'Ambitious — your stats are below their typical admits' }, match: { label: 'Match', color: 'text-slate-800', bg: 'bg-slate-100', border: 'border-slate-500', ring: 'ring-slate-500/30', desc: 'Competitive — your stats align with their typical admits' }, safety: { label: 'Safety', color: 'text-slate-700', bg: 'bg-white', border: 'border-slate-400', ring: 'ring-slate-400/30', desc: 'Strong fit — your stats exceed their typical admits' } }[tier];
                 const count = tierCounts[tier];
                 const isActive = filterTier === tier;
                 return (
@@ -1644,7 +1627,7 @@ export default function CollegeHeatmapPage() {
                   </div>
                 </div>
                 {listTiles.map(tile => {
-                  const tierCfg = { reach: { label: 'Reach', color: 'text-slate-700', bg: 'bg-white', border: 'border-slate-400 border-dashed' }, match: { label: 'Match', color: 'text-slate-800', bg: 'bg-slate-100', border: 'border-slate-500' }, safety: { label: 'Safety', color: 'text-paper', bg: 'bg-ink', border: 'border-ink' } }[tile.tier];
+                  const tierCfg = { reach: { label: 'Reach', color: 'text-paper', bg: 'bg-ink', border: 'border-ink' }, match: { label: 'Match', color: 'text-slate-800', bg: 'bg-slate-100', border: 'border-slate-500' }, safety: { label: 'Safety', color: 'text-slate-700', bg: 'bg-white', border: 'border-slate-400' } }[tile.tier];
                   const isExpanded = expandedId === tile.college.id;
                   return (
                     <div key={tile.college.id} className="bg-white rounded-2xl border border-slate-100 surface surface-interactive overflow-hidden">
@@ -1779,7 +1762,7 @@ export default function CollegeHeatmapPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {discoveries.map(tile => (
                 <div key={tile.college.id} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/30 transition-all cursor-pointer group" onClick={() => setSelectedTile(tile)}>
-                  <div className="shrink-0 w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm" style={{ backgroundColor: tierColor(tile.tier), color: readableOn(tierColor(tile.tier)) }}>{tile.overallFit}</div>
+                  <div className="shrink-0 w-10 h-10 rounded-lg border-[1.5px] border-ink flex items-center justify-center font-bold text-sm" style={tierPaint(tile.tier)}>{tile.overallFit}</div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-primary truncate">{tile.college.name}</p>
                     <p className="text-xs text-slate-400">{tile.college.acceptanceRate}% accept &middot; {tile.college.satRange[0]}-{tile.college.satRange[1]} SAT</p>
@@ -1800,7 +1783,7 @@ export default function CollegeHeatmapPage() {
             <div className="p-5 pb-0">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="shrink-0 w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg shadow-sm" style={{ backgroundColor: tierColor(selectedTile.tier), color: readableOn(tierColor(selectedTile.tier)) }}>{selectedTile.overallFit}</div>
+                  <div className="shrink-0 w-12 h-12 rounded-xl border-[1.5px] border-ink flex items-center justify-center font-bold text-lg shadow-sm" style={tierPaint(selectedTile.tier)}>{selectedTile.overallFit}</div>
                   <div>
                     <h2 className="text-lg font-bold font-display text-primary">{selectedTile.college.name}</h2>
                     <p className="text-xs text-slate-400">{selectedTile.college.location} &middot; {selectedTile.college.type} &middot; {selectedTile.college.size}</p>
@@ -1813,11 +1796,11 @@ export default function CollegeHeatmapPage() {
               <div className="mt-4 mb-2">
                 <div className="flex items-center justify-between text-xs mb-1">
                   <span className="text-slate-400">Fit score</span>
-                  <span className="font-bold" style={{ color: tierColor(selectedTile.tier) }}>{tierLabel(selectedTile.tier)}</span>
+                  <span className="font-bold text-primary">{tierLabel(selectedTile.tier)}</span>
                 </div>
-                <div className="h-3 rounded-full overflow-hidden" style={{ background: 'linear-gradient(to right, rgb(224,89,80), rgb(182,176,169), rgb(167,162,155))' }}>
+                <div className="h-3 rounded-full overflow-hidden" style={{ background: 'linear-gradient(to right, rgb(var(--ink)), rgb(107 104 99), rgb(var(--card)))', boxShadow: 'inset 0 0 0 1px rgb(var(--ink) / 0.6)' }}>
                   <div className="relative h-full">
-                    <div className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white border-2 shadow-md transition-all" style={{ left: `calc(${selectedTile.overallFit}% - 8px)`, borderColor: tierColor(selectedTile.tier) }} />
+                    <div className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white border-2 shadow-md transition-all" style={{ left: `calc(${selectedTile.overallFit}% - 8px)`, borderColor: 'rgb(var(--ink))' }} />
                   </div>
                 </div>
               </div>
@@ -1954,7 +1937,7 @@ function SimilarHotSchools({ currentCollege, tiles, onSelect, onAdd }: { current
       <div className="space-y-2">
         {similar.map(s => (
           <div key={s.college.id} className="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100 hover:border-accent/20 hover:bg-accent/5 transition-all cursor-pointer" onClick={() => onSelect(s)}>
-            <div className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center font-bold text-xs" style={{ backgroundColor: tierColor(s.tier), color: readableOn(tierColor(s.tier)) }}>{s.overallFit}</div>
+            <div className="shrink-0 w-9 h-9 rounded-lg border-[1.5px] border-ink flex items-center justify-center font-bold text-xs" style={tierPaint(s.tier)}>{s.overallFit}</div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-primary truncate">{s.college.name}</p>
               <p className="text-[10px] text-slate-400">{s.overlap} shared program{s.overlap > 1 ? 's' : ''} &middot; {s.college.acceptanceRate}% accept</p>

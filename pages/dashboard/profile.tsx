@@ -1274,7 +1274,7 @@ function ConnectionCodeSection() {
   if (!loaded) return null;
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 p-5">
+    <div id="share" className="bg-white rounded-2xl border border-slate-100 p-5 scroll-mt-24">
       <div className="flex items-center gap-3 mb-4">
         <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center">
           <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">

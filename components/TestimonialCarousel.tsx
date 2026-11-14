@@ -4,6 +4,8 @@ interface Testimonial {
   quote: string;
   name: string;
   role: string;
+  /** Only an outcome this person actually had. Admission tags were removed
+      (Nov 2026) until each is matched to the right family. */
   highlight?: string;
 }
 
@@ -12,7 +14,6 @@ const testimonials: Testimonial[] = [
     quote: 'The mentorship plan felt like a premium concierge service. My daughter gained confidence and a standout portfolio that got her into her dream school.',
     name: 'Jasmine R.',
     role: 'Parent, Bay Area',
-    highlight: 'Admitted to Stanford',
   },
   {
     quote: 'Their hybrid model blends rigorous instruction with genuine community. It is the future of supplemental education and we saw results within weeks.',
@@ -24,13 +25,11 @@ const testimonials: Testimonial[] = [
     quote: 'The research lab and storytelling workshops made me feel prepared for both college applications and real leadership opportunities beyond the classroom.',
     name: 'Elena T.',
     role: 'Student, Grade 11',
-    highlight: 'Admitted to MIT',
   },
   {
     quote: 'We explored three consulting services before finding AdmitsOnly. The difference was night and day — they truly understood our son as an individual.',
     name: 'Robert & Lisa K.',
     role: 'Parents, New York',
-    highlight: 'Admitted to Columbia',
   },
   {
     quote: 'The SAT prep wasn\'t just drilling questions. They taught me how to think about problems differently. My score jumped 210 points in three months.',
@@ -42,7 +41,6 @@ const testimonials: Testimonial[] = [
     quote: 'As a single mom, I worried I couldn\'t give my daughter the same advantages. AdmitsOnly leveled the playing field completely.',
     name: 'Patricia D.',
     role: 'Parent, Chicago',
-    highlight: 'Admitted to Northwestern',
   },
 ];
 

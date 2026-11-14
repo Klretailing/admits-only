@@ -48,8 +48,8 @@ function RevealSection({ children, className = '', delay = 0 }: { children: Reac
 function AnimatedStat({ end, suffix, label }: { end: number; suffix: string; label: string }) {
   const { count, ref } = useCountUp(end, 1800);
   return (
-    <div ref={ref} className="glass-card-dark rounded-2xl p-5 text-center">
-      <div className="stat-number gradient-text">{count}{suffix}</div>
+    <div ref={ref} className="p-5 text-center">
+      <div className="stat-number text-primary">{count}{suffix}</div>
       <p className="mt-1 text-sm text-slate-400 font-medium">{label}</p>
     </div>
   );
@@ -179,7 +179,7 @@ export default function Consulting() {
               {journey.map((step, i) => (
                 <RevealSection key={step.step} delay={i * 150}>
                   <div className="rounded-2xl border bg-white p-7 h-full">
-                    <div className="text-4xl font-bold font-display gradient-text">{step.step}</div>
+                    <div className="text-4xl font-bold font-display text-primary">{step.step}</div>
                     <h3 className="mt-3 text-xl font-bold text-primary">{step.title}</h3>
                     <p className="mt-3 text-slate-600 leading-relaxed">{step.description}</p>
                   </div>
