@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../lib/auth';
 import { prisma, ensureSchema } from '../../../lib/db';
-import { isPaypalConfigured, captureOrder, getEssayTier, tierByAmount } from '../../../lib/paypal';
+import { isPaypalConfigured, captureOrder, getOrder, getEssayTier, tierByAmount } from '../../../lib/paypal';
 
 /*
  * Capture PayPal order — POST  [SECURITY-CRITICAL]
@@ -52,8 +52,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     capture = await captureOrder(orderID);
   } catch (e) {
-    console.error('PayPal capture-order error:', (e as Error).message);
-    return res.status(502).json({ ok: false, error: 'capture_failed' });
+    // A retry after a failed save reaches here: PayPal refuses to capture an
+    // order twice. If the order is already COMPLETED, the customer has paid,
+    // so read it back and grant access instead of failing forever.
+    try {
+      const existing = await getOrder(orderID);
+      if (existing?.status !== 'COMPLETED') throw e;
+      capture = existing;
+    } catch {
+      console.error('PayPal capture-order error:', (e as Error).message);
+      return res.status(502).json({ ok: false, error: 'capture_failed' });
+    }
   }
 
   // The order-level status AND the individual capture status must both be

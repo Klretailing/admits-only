@@ -94,6 +94,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // Get or create conversation
   let convId = conversationId;
+  // A conversation id from the client must belong to this user. Without the
+  // check, another student's history loaded into the model's context (where
+  // it could be asked to repeat it) and new messages were written into it.
+  if (convId) {
+    const owned = (await prisma.$queryRawUnsafe(
+      `SELECT 1 FROM agent_conversations WHERE id = $1 AND "userId" = $2 LIMIT 1`,
+      String(convId), userId
+    )) as any[];
+    if (owned.length === 0) convId = undefined;
+  }
   if (!convId) {
     convId = genId('conv');
     await prisma.$executeRawUnsafe(

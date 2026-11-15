@@ -38,7 +38,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           },
         },
       });
-      if (!s) return res.status(404).json({ error: 'Session not found' });
+      // The session must belong to the pod whose membership was just checked.
+      if (!s || s.podId !== podId) return res.status(404).json({ error: 'Session not found' });
       return res.json({ session: s });
     }
 
@@ -170,6 +171,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const s = await (prisma as any).podStudySession.findUnique({ where: { id: sessionId } });
       if (!s) return res.status(404).json({ error: 'Session not found' });
+      // Only members of the session's pod can move it along (anyone could).
+      const member = await (prisma as any).podMember.findUnique({
+        where: { podId_userId: { podId: s.podId, userId: user.id } },
+      });
+      if (!member) return res.status(403).json({ error: 'Not a member of this pod' });
 
       const now = new Date();
 

@@ -1,10 +1,55 @@
 import type { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { compare, hash } from 'bcryptjs';
+import { createHash } from 'crypto';
 import { prisma, ensureSchema } from './db';
 import { seedDemoStudent } from './seedDemoStudent';
 
 export type UserRole = 'student' | 'parent' | 'educator' | 'admin';
+
+/* ─── Admin account ───
+   The admin used to be created with a password written in this file, in a
+   public repository, so anyone could sign in as admin. Now:
+     • the admin password comes only from the ADMIN_PASSWORD environment
+       variable (set it in Vercel → Settings → Environment Variables);
+     • an admin whose stored password is still the old published one is
+       rotated to ADMIN_PASSWORD on the next server start;
+     • the old published password is refused for admin sign-in, always. */
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || 'admin@admitsonly.com').toLowerCase();
+const LEAKED_ADMIN_PASSWORDS = ['Admin@2024'];
+
+async function ensureAdminAccount() {
+  const password = process.env.ADMIN_PASSWORD;
+  const existing = await prisma.user.findUnique({ where: { email: ADMIN_EMAIL } });
+  if (!existing) {
+    if (password && password.length >= 12) {
+      await prisma.user.create({ data: { name: 'Admin', email: ADMIN_EMAIL, password: await hash(password, 12), role: 'admin' } });
+    }
+    return;
+  }
+  if (!password || password.length < 12) return;
+  for (const leaked of LEAKED_ADMIN_PASSWORDS) {
+    if (await compare(leaked, existing.password)) {
+      await prisma.user.update({ where: { id: existing.id }, data: { password: await hash(password, 12) } });
+      console.warn('Admin password rotated from the published default to ADMIN_PASSWORD.');
+      return;
+    }
+  }
+}
+
+/** The session signing key. Without NEXTAUTH_SECRET this used to fall back
+ *  to a phrase that is public in this file, which lets anyone forge a
+ *  session, including an admin one. The fallback is now derived from the
+ *  database URL, which holds the database password and is never public.
+ *  Set NEXTAUTH_SECRET anyway; it is the supported configuration. */
+function sessionSecret(): string {
+  if (process.env.NEXTAUTH_SECRET) return process.env.NEXTAUTH_SECRET;
+  const basis = process.env.DATABASE_URL || process.env.POSTGRES_URL || '';
+  if (!basis && process.env.NODE_ENV === 'production') {
+    throw new Error('NEXTAUTH_SECRET is not set');
+  }
+  return createHash('sha256').update(`admitsonly-session:${basis || 'local-dev'}`).digest('hex');
+}
 
 // Seed default accounts (admin + beta testers) — runs once per server start
 let seeded = false;
@@ -16,7 +61,6 @@ async function seedAccounts() {
     await ensureSchema();
 
     const accounts = [
-      { name: 'Admin', email: 'admin@admitsonly.com', password: 'Admin@2024', role: 'admin' },
       { name: 'Maya Johnson', email: 'maya@beta.admitsonly.com', password: 'Beta@2026', role: 'student' },
       { name: 'Aisha Patel', email: 'aisha@beta.admitsonly.com', password: 'Beta@2026', role: 'student' },
       { name: 'James Williams', email: 'james@beta.admitsonly.com', password: 'Beta@2026', role: 'student' },
@@ -31,6 +75,8 @@ async function seedAccounts() {
       { name: 'Daniel Kim', email: 'daniel@demo.admitsonly.com', password: 'Student@2026', role: 'student' },
       { name: 'Sofia Alvarez', email: 'sofia@demo.admitsonly.com', password: 'Student@2026', role: 'student' },
     ];
+
+    await ensureAdminAccount();
 
     for (const acct of accounts) {
       const exists = await prisma.user.findUnique({ where: { email: acct.email } });
@@ -136,7 +182,7 @@ export async function createUser(name: string, email: string, password: string, 
 }
 
 export const authOptions: NextAuthOptions = {
-  secret: process.env.NEXTAUTH_SECRET || 'dev-secret-change-in-production',
+  secret: sessionSecret(),
   session: { strategy: 'jwt', maxAge: 30 * 24 * 60 * 60 },  // 30 days
   pages: {
     signIn: '/auth/login',
@@ -158,6 +204,9 @@ export const authOptions: NextAuthOptions = {
             where: { email: credentials.email },
           });
           if (!user) return null;
+          // The admin password that was published in this repository never
+          // works again, whatever the database still holds.
+          if (user.role === 'admin' && LEAKED_ADMIN_PASSWORDS.includes(credentials.password)) return null;
 
           const valid = await compare(credentials.password, user.password);
           if (!valid) return null;

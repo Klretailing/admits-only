@@ -127,10 +127,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
      mixed in, since they measured something different. */
   const studentVisits = Prisma.sql`
     SELECT "sessionId",
-           MAX((meta->>'engagedSeconds')::int)  AS engaged,
-           MAX((meta->>'pageviewCount')::int)   AS pv,
-           MAX((meta->>'clickCount')::int)      AS clicks,
-           MAX((meta->>'featureUseCount')::int) AS features
+           -- Guarded casts: meta comes from the public analytics endpoint.
+           MAX(CASE WHEN meta->>'engagedSeconds' ~ '^[0-9]{1,9}$' THEN (meta->>'engagedSeconds')::int END)  AS engaged,
+           MAX(CASE WHEN meta->>'pageviewCount' ~ '^[0-9]{1,9}$' THEN (meta->>'pageviewCount')::int END)   AS pv,
+           MAX(CASE WHEN meta->>'clickCount' ~ '^[0-9]{1,9}$' THEN (meta->>'clickCount')::int END)      AS clicks,
+           MAX(CASE WHEN meta->>'featureUseCount' ~ '^[0-9]{1,9}$' THEN (meta->>'featureUseCount')::int END) AS features
       FROM "analytics_events"
      WHERE "type" = 'session' AND "createdAt" >= ${since}
        AND meta->>'v' = '2' AND "sessionId" IS NOT NULL
@@ -164,7 +165,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // Scroll depth averages by page
   const scrollDepthRaw: Array<{ path: string; avg_depth: number; count: bigint }> = await prisma.$queryRaw`
-    SELECT "path", ROUND(AVG((meta->>'maxDepthPercent')::numeric))::int as avg_depth, COUNT(*)::bigint as count
+    SELECT "path", ROUND(AVG(CASE WHEN meta->>'maxDepthPercent' ~ '^[0-9]{1,3}(\.[0-9]+)?$' THEN (meta->>'maxDepthPercent')::numeric END))::int as avg_depth, COUNT(*)::bigint as count
     FROM "analytics_events"
     WHERE "type" = 'scroll' AND "createdAt" >= ${since} AND meta->>'maxDepthPercent' IS NOT NULL
     GROUP BY "path"

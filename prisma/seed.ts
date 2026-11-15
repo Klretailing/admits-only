@@ -8,7 +8,7 @@ async function main() {
 
   // ─── User accounts ───
   const accounts = [
-    { name: 'Admin', email: 'admin@admitsonly.com', password: 'Admin@2024', role: 'admin', plan: null },
+    // The admin account is created from ADMIN_PASSWORD by lib/auth.ts, never from a password in code.
     { name: 'Maya Johnson', email: 'maya@beta.admitsonly.com', password: 'Beta@2026', role: 'student', plan: 'scholarship' },
     { name: 'Aisha Patel', email: 'aisha@beta.admitsonly.com', password: 'Beta@2026', role: 'student', plan: 'stem' },
     { name: 'James Williams', email: 'james@beta.admitsonly.com', password: 'Beta@2026', role: 'student', plan: 'foundations' },

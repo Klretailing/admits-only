@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../lib/auth';
 import { prisma, ensureSchema } from '../../lib/db';
+import { getEntitlements, previewOf } from '../../lib/essayAccess';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getServerSession(req, res, authOptions);
@@ -36,7 +37,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
       if (!doc) return res.status(404).json({ error: 'Document not found' });
 
-      // For now all are free; later check payment status
+      // Documents an admin marks paid were served in full to everyone. A paid
+      // document now needs the all-access pass (or admin); others get the
+      // same preview the sample-essay vault shows.
+      if (!doc.isFree) {
+        const role = (session.user as any).role;
+        const ent = await getEntitlements((session.user as any).id);
+        if (role !== 'admin' && !ent.all) {
+          return res.json({ document: { ...doc, content: previewOf(doc.content || ''), fileData: null, locked: true } });
+        }
+      }
       return res.json({ document: doc });
     }
 

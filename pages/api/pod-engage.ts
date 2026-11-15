@@ -197,6 +197,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (action === 'toggle-reaction') {
       const { messageId, emoji } = req.body;
       if (!messageId || !emoji) return res.status(400).json({ error: 'messageId and emoji are required' });
+      // The message must be in the pod whose membership was checked.
+      const msg = await (prisma as any).podMessage.findUnique({ where: { id: String(messageId) }, select: { podId: true } });
+      if (!msg || msg.podId !== podId) return res.status(404).json({ error: 'Message not found' });
 
       const existing = await (prisma as any).podMessageReaction.findUnique({
         where: { messageId_userId_emoji: { messageId, userId: user.id, emoji } },
@@ -255,6 +258,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (action === 'vote-poll') {
       const { pollId, optionIdx } = req.body;
       if (!pollId || optionIdx === undefined) return res.status(400).json({ error: 'pollId and optionIdx required' });
+      // Same pod, and a real option.
+      const targetPoll = await (prisma as any).podPoll.findUnique({ where: { id: String(pollId) } });
+      let optionCount = 0;
+      try { const o = typeof targetPoll?.options === 'string' ? JSON.parse(targetPoll.options) : targetPoll?.options; optionCount = Array.isArray(o) ? o.length : 0; } catch { optionCount = 0; }
+      if (!targetPoll || targetPoll.podId !== podId) return res.status(404).json({ error: 'Poll not found' });
+      if (!Number.isInteger(optionIdx) || optionIdx < 0 || optionIdx >= optionCount) return res.status(400).json({ error: 'Invalid option' });
 
       // Check if already voted
       const existing = await (prisma as any).podPollVote.findUnique({

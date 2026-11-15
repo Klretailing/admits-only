@@ -59,7 +59,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Admin registration requires a secret key to prevent unauthorized admin accounts
   if (role === 'admin') {
     const adminKey = req.body.adminKey || req.headers['x-admin-key'];
-    if (adminKey !== process.env.ADMIN_SECRET_KEY) {
+    // Fail closed: with ADMIN_SECRET_KEY unset, a request with no key used to
+    // match `undefined === undefined` and create an admin.
+    if (!process.env.ADMIN_SECRET_KEY || typeof adminKey !== 'string' || adminKey !== process.env.ADMIN_SECRET_KEY) {
       return res.status(403).json({ error: 'Unauthorized: invalid admin key' });
     }
   }

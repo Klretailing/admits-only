@@ -42,7 +42,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { id } = req.body;
     if (!id) return res.status(400).json({ error: 'ID is required' });
     try {
-      await prisma.manualEarning.delete({ where: { id } });
+      // Scoped to this educator: deleting by id alone let any tutor delete
+      // another tutor's entries.
+      const { count } = await prisma.manualEarning.deleteMany({ where: { id, educatorId: (session.user as any).id } });
+      if (count === 0) return res.status(404).json({ error: 'Entry not found' });
       return res.json({ ok: true });
     } catch (e) {
       console.error('Delete earning error:', (e as Error).message);

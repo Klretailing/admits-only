@@ -293,7 +293,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // so a small community is not dependent on an admin being awake.
     if (action === 'report') {
       const { messageId, reason } = req.body;
-      if (!messageId) return res.status(400).json({ error: 'messageId is required' });
+      if (!messageId || typeof messageId !== 'string') return res.status(400).json({ error: 'messageId is required' });
+      // Only someone who can see the message can report it; otherwise two
+      // throwaway accounts could hide any message in any private pod.
+      const target = await (prisma as any).podMessage.findUnique({ where: { id: messageId }, select: { podId: true } });
+      if (!target || !(await canRead(target.podId, user.id))) return res.status(404).json({ error: 'Message not found' });
       try {
         await prisma.$executeRaw`
           INSERT INTO "pod_message_reports" ("id", "messageId", "userId", "reason")
@@ -371,17 +375,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   /* ─── DELETE: Leave pod ─── */
   if (method === 'DELETE') {
-    const { podId } = req.body;
-    if (!podId) return res.status(400).json({ error: 'Pod ID is required' });
+    const { podId } = req.body || {};
+    if (!podId || typeof podId !== 'string') return res.status(400).json({ error: 'Pod ID is required' });
 
-    await (prisma as any).podMember.deleteMany({
+    // Community channels have no member rows; "leaving" one used to find zero
+    // members left and delete the channel, cascading away every message.
+    if (podId.startsWith('community_')) {
+      return res.status(400).json({ error: 'Community channels are open to every student and cannot be left.' });
+    }
+
+    const { count: left } = await (prisma as any).podMember.deleteMany({
       where: { podId, userId: user.id },
     });
+    if (left === 0) return res.status(404).json({ error: 'You are not a member of this pod.' });
 
-    // If no members left, delete the pod
+    // The last member out closes the pod.
     const remaining = await (prisma as any).podMember.count({ where: { podId } });
     if (remaining === 0) {
-      await (prisma as any).studyPod.delete({ where: { id: podId } });
+      await (prisma as any).studyPod.deleteMany({ where: { id: podId } });
     }
 
     return res.json({ success: true });
