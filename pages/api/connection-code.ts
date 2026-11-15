@@ -24,12 +24,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Get or create code
     let codeRow: any[] = await prisma.$queryRaw`SELECT * FROM "connection_codes" WHERE "userId" = ${userId}`;
     if (codeRow.length === 0) {
-      const id = `cc_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-      const code = generateCode();
-      // Two first visits at once could both try to insert; the loser reads
-      // the winner's row instead of failing with a 500.
-      await prisma.$executeRaw`INSERT INTO "connection_codes" ("id", "userId", "code") VALUES (${id}, ${userId}, ${code}) ON CONFLICT DO NOTHING`;
-      codeRow = await prisma.$queryRaw`SELECT * FROM "connection_codes" WHERE "userId" = ${userId}`;
+      // Two first visits at once: the loser's insert is a no-op on "userId"
+      // and it reads the winner's row. A random code already taken by another
+      // student raises a unique violation, so try a fresh one.
+      for (let attempt = 0; attempt < 5 && codeRow.length === 0; attempt++) {
+        const id = `cc_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+        try {
+          await prisma.$executeRaw`INSERT INTO "connection_codes" ("id", "userId", "code") VALUES (${id}, ${userId}, ${generateCode()}) ON CONFLICT ("userId") DO NOTHING`;
+        } catch { /* code collision: retry with a new code */ }
+        codeRow = await prisma.$queryRaw`SELECT * FROM "connection_codes" WHERE "userId" = ${userId}`;
+      }
+      if (codeRow.length === 0) return res.status(500).json({ error: 'Could not create a connection code. Please try again.' });
     }
 
     // Get connections where I'm the student

@@ -1272,11 +1272,16 @@ function ConnectionCodeSection() {
   };
 
   const handleRemove = async (id: string) => {
-    await fetch('/api/connection-code', {
+    // Removing a parent or tutor was instant and unconfirmed, and the row
+    // disappeared even if the server refused.
+    const who = connections.find(c => c.id === id);
+    if (!window.confirm(`Remove ${who?.connectedName || 'this connection'}? They will no longer see your progress.`)) return;
+    const res = await fetch('/api/connection-code', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ connectionId: id }),
-    });
+    }).catch(() => null);
+    if (!res || !res.ok) { window.alert('Could not remove the connection. Please try again.'); return; }
     setConnections(prev => prev.filter(c => c.id !== id));
   };
 

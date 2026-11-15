@@ -44,7 +44,8 @@ async function ensureAdminAccount() {
  *  Set NEXTAUTH_SECRET anyway; it is the supported configuration. */
 function sessionSecret(): string {
   if (process.env.NEXTAUTH_SECRET) return process.env.NEXTAUTH_SECRET;
-  const basis = process.env.DATABASE_URL || process.env.POSTGRES_URL || '';
+  // Same variables lib/db.ts connects with, so a working site always has one.
+  const basis = process.env.POSTGRES_PRISMA_URL || process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_URL_NON_POOLING || '';
   if (!basis && process.env.NODE_ENV === 'production') {
     throw new Error('NEXTAUTH_SECRET is not set');
   }

@@ -116,6 +116,25 @@ function inspectPage({ phone }) {
     offenders.slice(0, 3).forEach((el) => add('high', 'layout:off-screen', `right edge at ${Math.round(el.getBoundingClientRect().right)}px`, el));
   }
 
+  // 1b. Content cut off by a clipping container, with no page scroll to give
+  //     it away. This is how the essay editor hid its own feedback panel
+  //     off the right edge for months: the page itself never scrolled.
+  {
+    const clippedOff = [...document.querySelectorAll('body *')].filter((el) => {
+      if (el.children.length > 0 || !(el.textContent || '').trim()) return false;
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.left >= vw || r.right <= vw + 1) return false;
+      if (el.closest('[class*="overflow-x-auto"],[class*="overflow-auto"],[class*="overflow-x-scroll"],[class*="snap-x"],[aria-hidden="true"],.sr-only')) return false;
+      const cs = getComputedStyle(el);
+      // Slides in a carousel track sit off-screen by design.
+      for (let n = el.parentElement; n && n !== document.body; n = n.parentElement) {
+        if (getComputedStyle(n).transform !== 'none') return false;
+      }
+      return cs.position !== 'fixed' && visible(el);
+    });
+    clippedOff.slice(0, 3).forEach((el) => add('high', 'layout:cut-off-at-edge', `text runs past the right edge (${Math.round(el.getBoundingClientRect().right)}px of ${vw}px): "${textOf(el).slice(0, 50)}"`, el));
+  }
+
   // 2. Broken values shown to the user.
   const bodyText = document.body.innerText;
   for (const bad of ['undefined', 'NaN', 'Invalid Date', '[object Object]', 'null%', 'Infinity']) {
@@ -170,6 +189,8 @@ function inspectPage({ phone }) {
     const cs = getComputedStyle(el);
     const hides = cs.overflow === 'hidden' || cs.overflowX === 'hidden';
     if (!hides || cs.textOverflow === 'ellipsis' || cs.webkitLineClamp !== 'none') return;
+    // Visually hidden on purpose (skip links, sr-only labels, Next's route announcer).
+    if (el.closest('.sr-only, #__next-route-announcer__') || (parseFloat(cs.width) <= 1 && parseFloat(cs.height) <= 1)) return;
     if (el.scrollWidth > el.clientWidth + 2 && textOf(el).length > 3 && visible(el)) {
       clipped++;
       add('medium', 'layout:text-cut-off', `"${textOf(el).slice(0, 60)}"`, el);
