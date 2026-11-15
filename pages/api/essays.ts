@@ -259,18 +259,6 @@ function analyzeVoice(text: string, sentences: string[], wordCount: number): num
 
 /* ──── 2. LANGUAGE & PRECISION ──── */
 
-const ADVANCED_VOCAB = [
-  'ambivalent','ephemeral','juxtapose','nuance','quintessential','ubiquitous',
-  'vicarious','anomaly','dichotomy','eloquent','fervent','gregarious',
-  'idiosyncratic','meticulous','nonchalant','pragmatic','resilient','tenacious',
-  'vivacious','zealous','ameliorate','benevolent','cacophony','diligent',
-  'ebullient','fortuitous','galvanize','harbinger','impervious','lucid',
-  'magnanimous','nascent','penchant','sanguine','tangential','venerate',
-  'whimsical','acumen','brevity','candor','equanimity','fastidious',
-  'hubris','innate','judicious','lament','opaque','pervasive','succinct',
-  'trepidation','unequivocal','melancholy','catharsis','sublime','visceral',
-  'evocative','poignant','compelling','nuanced','profound','intricate',
-];
 
 // Overused weak words that should be replaced
 const WEAK_WORDS = [
@@ -286,10 +274,17 @@ function analyzeLanguage(words: string[], wordCount: number, text: string): numb
   const uniqueWords = new Set(lowerWords);
   const lexicalDiversity = uniqueWords.size / Math.max(wordCount, 1);
 
-  // Advanced vocabulary
-  let advancedCount = 0;
-  for (const w of lowerWords) { if (ADVANCED_VOCAB.includes(w)) advancedCount++; }
-  score += Math.min(advancedCount * 6, 25);
+  // Specificity. Precision in a personal essay means concrete detail: a
+  // number, a name, a line somebody actually said. This used to award up to
+  // 25 points for "advanced vocabulary" (ameliorate, quintessential,
+  // harbinger...), the very thesaurus words the readability check asks
+  // students to trade for plain ones, so the two scores pulled against each
+  // other. Now the points follow the detail, not the dictionary.
+  const numbers = (text.match(/\b\d[\d,.:]*\b/g) || []).length;
+  const properNouns = (text.match(/(?<![.!?]\s|^)\b[A-Z][a-z]{2,}\b/gm) || []).length;
+  const quotes = (text.match(/["\u201C][^"\u201D]{3,}["\u201D]/g) || []).length;
+  const specificsPer100 = (numbers + properNouns * 0.5 + quotes) / Math.max(wordCount / 100, 1);
+  score += Math.min(Math.round(specificsPer100 * 5), 25);
 
   // Lexical diversity
   if (lexicalDiversity > 0.6) score += 12;
@@ -770,7 +765,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'POST') {
-    const { title, prompt, content } = req.body;
+    const { title } = req.body || {};
+    // Non-string fields used to reach .trim() and crash with a 500.
+    const prompt = typeof req.body?.prompt === 'string' ? req.body.prompt : '';
+    const content = typeof req.body?.content === 'string' ? req.body.content : '';
     if (!title || typeof title !== 'string' || title.trim().length === 0) {
       return res.status(400).json({ error: 'Title is required' });
     }
@@ -798,8 +796,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'PUT') {
-    const { id, title, prompt, content, status } = req.body;
-    if (!id) return res.status(400).json({ error: 'Essay ID is required' });
+    const { id, status } = req.body || {};
+    const str = (v: unknown) => (typeof v === 'string' ? v : v == null ? undefined : String(v));
+    const title = str(req.body?.title), prompt = str(req.body?.prompt), content = str(req.body?.content);
+    if (!id || typeof id !== 'string') return res.status(400).json({ error: 'Essay ID is required' });
 
     const existing = await prisma.essay.findFirst({ where: { id, userId } });
     if (!existing) return res.status(404).json({ error: 'Essay not found' });

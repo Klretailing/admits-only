@@ -1,172 +1,192 @@
 import { useState } from 'react';
-import type { CraftReport, CraftSuggestion, CraftSeverity } from '../lib/essayCraft';
+import type { CraftReport, CraftSuggestion } from '../lib/essayCraft';
 import { craftCategoryLabel } from '../lib/essayCraft';
 
-/* Craft Studio — renders the deep writing-craft analysis (rhythm, readability,
-   tone, structure, line edits, and originality angles) as a compact,
-   scannable coaching panel inside the essay editor sidebar. */
+/* ──────────────────────────────────────────────────────────────────────
+   Writing feedback: what to work on, in the order a student should use it.
 
-const SEV_STYLE: Record<CraftSeverity, { dot: string; chip: string; ring: string }> = {
-  caution: { dot: 'bg-rose-400', chip: 'text-rose-700 bg-rose-50', ring: 'border-rose-100' },
-  tip: { dot: 'bg-amber-400', chip: 'text-amber-700 bg-amber-50', ring: 'border-amber-100' },
-  praise: { dot: 'bg-emerald-400', chip: 'text-emerald-700 bg-emerald-50', ring: 'border-emerald-100' },
-};
+   Students told us the old panel was hard to read and hard to start with:
+   8–11px type, a grid of four dials before any advice, and every
+   suggestion collapsed to a one-line title. Now:
 
-const METRIC_COLOR: Record<string, string> = { good: '#a7a29b', warn: '#b6b0a9', bad: '#de574e' };
-// Bright hues fill the bars; the numbers need darker (light) / lighter (dark) ink to be legible.
-const METRIC_INK: Record<string, string> = {
-  good: 'text-emerald-700 dark:text-emerald-400',
-  warn: 'text-amber-700 dark:text-amber-400',
-  bad: 'text-red-700 dark:text-red-400',
-};
+     1. Start here  — the few changes most worth making, opened up, with
+                      the student's own sentence and a before/after.
+     2. Also worth a look — the rest, one tap away.
+     3. What's working — so feedback isn't only a list of faults.
+     4. Words to look at — plainer swaps for words a reader may trip on.
+     5. The numbers — the craft dials, folded away for those who want them.
 
-function SuggestionCard({ s }: { s: CraftSuggestion }) {
-  const [open, setOpen] = useState(false);
-  const sev = SEV_STYLE[s.severity];
+   Body text is 14px and nothing is smaller than 12px.
+   ────────────────────────────────────────────────────────────────────── */
+
+const TOP_N = 3;
+
+const STATUS_WORD: Record<string, string> = { good: 'Strong', warn: 'Could be stronger', bad: 'Needs work' };
+
+function Suggestion({ s, defaultOpen }: { s: CraftSuggestion; defaultOpen: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className={`rounded-xl border ${sev.ring} bg-white`}>
+    <li className="rounded-xl border-[1.5px] border-slate-200 bg-white">
       <button
+        type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-start gap-2 px-3 py-2.5 text-left"
+        aria-expanded={open}
+        className="w-full flex items-start gap-3 px-3.5 py-3 text-left"
       >
-        <span className={`w-1.5 h-1.5 rounded-full ${sev.dot} mt-1.5 flex-shrink-0`} />
         <span className="flex-1 min-w-0">
-          <span className="flex items-center gap-1.5 flex-wrap">
-            <span className={`text-[8.5px] font-bold uppercase tracking-wider rounded px-1.5 py-0.5 ${sev.chip}`}>{craftCategoryLabel(s.category)}</span>
-            {s.learned && (
-              <span
-                className="text-[8.5px] font-bold uppercase tracking-wider rounded px-1.5 py-0.5 text-indigo-700 bg-indigo-50"
-                title="Derived from patterns in essays our tutors reviewed"
-              >
-                From reviewed essays
-              </span>
-            )}
-            <span className="text-[11px] font-semibold text-primary leading-snug">{s.title}</span>
+          <span className="block text-xs font-semibold text-slate-500">
+            {craftCategoryLabel(s.category)}
+            {s.learned && <span title="Learned from essays our tutors reviewed"> · from tutor-reviewed essays</span>}
           </span>
+          <span className="block mt-0.5 text-[15px] font-semibold text-primary leading-snug">{s.title}</span>
         </span>
-        <svg className={`w-3 h-3 text-slate-300 mt-1 flex-shrink-0 transition-transform ${open ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+        <svg className={`w-4 h-4 mt-1 text-slate-500 flex-shrink-0 transition-transform ${open ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
       </button>
       {open && (
-        <div className="px-3 pb-3 pt-0.5 ml-3.5 space-y-2">
-          <p className="text-[11px] text-slate-600 leading-relaxed">{s.detail}</p>
+        <div className="px-3.5 pb-3.5 space-y-2.5">
+          <p className="text-sm text-slate-700 leading-relaxed">{s.detail}</p>
           {s.excerpt && (
-            <div className="text-[10.5px] text-slate-500 italic border-l-2 border-slate-200 pl-2.5 leading-relaxed">
-              “{s.excerpt}”
-            </div>
+            <blockquote className="student-page text-sm text-slate-700 border-l-[3px] border-slate-300 pl-3 leading-relaxed">
+              &ldquo;{s.excerpt}&rdquo;
+            </blockquote>
           )}
           {s.example && (
-            <div className="rounded-lg bg-slate-50 border border-slate-100 p-2.5 space-y-1.5">
-              <div className="flex items-start gap-1.5">
-                <span className="text-[8.5px] font-bold uppercase tracking-wider text-rose-500 mt-0.5 w-10 flex-shrink-0">Before</span>
-                <span className="text-[10.5px] text-slate-500 leading-relaxed">{s.example.before}</span>
-              </div>
-              <div className="flex items-start gap-1.5">
-                <span className="text-[8.5px] font-bold uppercase tracking-wider text-emerald-600 mt-0.5 w-10 flex-shrink-0">After</span>
-                <span className="text-[10.5px] text-slate-700 leading-relaxed font-medium">{s.example.after}</span>
-              </div>
+            <div className="rounded-lg bg-paper border border-slate-200 p-3 space-y-2 text-sm leading-relaxed">
+              <p><span className="block text-xs font-semibold text-slate-500">Instead of</span><span className="text-slate-600">{s.example.before}</span></p>
+              <p><span className="block text-xs font-semibold text-slate-500">Try</span><span className="text-primary font-medium">{s.example.after}</span></p>
             </div>
           )}
         </div>
       )}
-    </div>
+    </li>
   );
 }
 
 export default function CraftStudio({ report }: { report: CraftReport }) {
+  const [showMore, setShowMore] = useState(false);
+  const [showNumbers, setShowNumbers] = useState(false);
+
   if (!report.ready) {
+    const pct = Math.min(100, Math.round((report.wordCount / 40) * 100));
     return (
-      <div className="bg-white rounded-xl border border-slate-100 p-4">
-        <div className="flex items-center gap-1.5 mb-1.5">
-          <span className="text-sm">✍️</span>
-          <h4 className="text-[11px] font-bold text-primary uppercase tracking-wider">Craft Studio</h4>
+      <section className="bg-white rounded-2xl border p-4">
+        <h3 className="text-base font-bold text-primary">Writing feedback</h3>
+        <p className="mt-1 text-sm text-slate-700 leading-relaxed">
+          Write about 40 words and your feedback appears here: the few changes most worth making, with an example of each.
+        </p>
+        <div className="mt-3 h-2 rounded-full bg-slate-100 overflow-hidden" role="progressbar" aria-valuenow={report.wordCount} aria-valuemin={0} aria-valuemax={40} aria-label="Words written toward feedback">
+          <div className="h-full bg-ink rounded-full transition-[width] duration-500" style={{ width: `${pct}%` }} />
         </div>
-        <p className="text-[10.5px] text-slate-400 leading-relaxed">Keep writing — once you have about 40 words, you&apos;ll get live coaching on rhythm, readability, tone, structure, and originality.</p>
-      </div>
+        <p className="mt-1.5 text-xs text-slate-600">{report.wordCount} of 40 words</p>
+      </section>
     );
   }
 
+  const fixes = report.suggestions
+    .filter((s) => s.severity !== 'praise')
+    .sort((a, b) => (a.severity === b.severity ? 0 : a.severity === 'caution' ? -1 : 1));
+  const praise = report.suggestions.filter((s) => s.severity === 'praise');
+  const top = fixes.slice(0, TOP_N);
+  const rest = fixes.slice(TOP_N);
+  const flags = report.vocab?.ready ? report.vocab.flags : [];
+
   return (
-    <div className="bg-white rounded-xl border border-indigo-100 p-4">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-1.5">
-          <span className="text-sm">✍️</span>
-          <h4 className="text-[11px] font-bold text-primary uppercase tracking-wider">Craft Studio</h4>
-        </div>
-        {report.theme && (
-          <span className="text-[9px] font-semibold text-indigo-600 bg-indigo-50 rounded-full px-2 py-0.5 capitalize">{report.theme}</span>
+    <section className="bg-white rounded-2xl border p-4 space-y-5" aria-label="Writing feedback">
+      {/* 1. Start here */}
+      <div>
+        <h3 className="text-base font-bold text-primary">{top.length ? 'Start here' : 'Writing feedback'}</h3>
+        {top.length ? (
+          <>
+            <p className="mt-0.5 text-sm text-slate-600">The {top.length === 1 ? 'change' : `${top.length} changes`} most worth making in this draft.</p>
+            <ol className="mt-3 space-y-2">
+              {top.map((s, i) => <Suggestion key={s.id} s={s} defaultOpen={i === 0} />)}
+            </ol>
+          </>
+        ) : (
+          <p className="mt-1 text-sm text-slate-700 leading-relaxed">
+            Nothing stands out to fix. The rhythm, tone and clarity all read well; now it&apos;s worth a second pair of human eyes.
+          </p>
+        )}
+        {rest.length > 0 && (
+          <div className="mt-2">
+            <button type="button" onClick={() => setShowMore((v) => !v)} aria-expanded={showMore} className="text-sm font-semibold underline underline-offset-4 decoration-[1.5px]">
+              {showMore ? 'Show fewer' : `Also worth a look (${rest.length})`}
+            </button>
+            {showMore && (
+              <ul className="mt-2 space-y-2">
+                {rest.map((s) => <Suggestion key={s.id} s={s} defaultOpen={false} />)}
+              </ul>
+            )}
+          </div>
         )}
       </div>
 
-      {/* Metric dials (2×2) */}
-      <div className="grid grid-cols-2 gap-2 mb-3">
-        {report.metrics.map((m) => (
-          <div key={m.key} className="rounded-lg bg-slate-50 border border-slate-100 px-2.5 py-2">
-            <div className="flex items-baseline justify-between">
-              <span className="text-[9.5px] font-semibold text-slate-500 uppercase tracking-wide">{m.label}</span>
-              <span className={`text-[13px] font-bold ${METRIC_INK[m.status]}`}>{m.value}</span>
-            </div>
-            <div className="mt-1 h-1 rounded-full bg-slate-200 overflow-hidden">
-              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${m.value}%`, backgroundColor: METRIC_COLOR[m.status] }} />
-            </div>
-          </div>
-        ))}
-      </div>
-      <p className="text-[9.5px] text-slate-400 mb-3 leading-relaxed">
-        {report.metrics.map((m) => `${m.label}: ${m.hint}`).join(' · ')}
-      </p>
+      {/* 2. What's working */}
+      {praise.length > 0 && (
+        <div>
+          <h4 className="text-sm font-bold text-primary">What&apos;s working</h4>
+          <ul className="mt-1.5 space-y-1.5">
+            {praise.map((s) => (
+              <li key={s.id} className="flex gap-2 text-sm text-slate-700 leading-snug">
+                <svg className="w-4 h-4 mt-0.5 flex-shrink-0 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                <span><span className="font-semibold text-primary">{s.title}.</span> {s.detail}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
-      {/* Word check — the specific words a reader may trip on. Every word here
-          comes from a curated list, never from "absent from our dictionary",
-          so a student is only ever shown a word somebody meant to flag. */}
-      {report.vocab?.ready && report.vocab.flags.length > 0 && (
-        <div className="mb-3 rounded-lg border border-amber-100 bg-amber-50/60 px-2.5 py-2">
-          <div className="flex items-center gap-1.5 mb-1.5">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">Word check</span>
-            {/* Solid colours, not alpha tints — a translucent amber on the
-                amber panel measured 3.07:1, under the 4.5:1 floor. */}
-            <span className="text-[9px] text-amber-800 dark:text-amber-300">
-              {report.vocab.flags.length} to look at
-            </span>
-          </div>
-          <div className="flex flex-wrap gap-1">
-            {report.vocab.flags.map((f) => (
-              <span
-                key={f.word}
-                title={f.simpler ? `Plainer: ${f.simpler}` : 'Uncommon — keep it only if it is the most precise word you have'}
-                className={`inline-flex items-baseline whitespace-nowrap rounded px-1.5 py-0.5 text-[9.5px] font-medium leading-tight border ${
-                  f.kind === 'swap'
-                    ? 'bg-white border-amber-200 text-amber-800'
-                    : 'bg-white border-slate-200 text-slate-600'
-                }`}
-              >
-                {f.word}
+      {/* 3. Words to look at. Every word here comes from a curated list,
+            never "absent from our dictionary", so a student is only shown
+            a word somebody meant to flag. */}
+      {flags.length > 0 && (
+        <div>
+          <h4 className="text-sm font-bold text-primary">Words to look at <span className="font-normal text-slate-600">({flags.length})</span></h4>
+          <p className="mt-0.5 text-sm text-slate-600 leading-snug">A busy reader may slow down on these. Keep one only if it&apos;s the most exact word you have.</p>
+          <ul className="mt-2 flex flex-wrap gap-1.5">
+            {flags.map((f) => (
+              <li key={f.word} className="inline-flex items-baseline whitespace-nowrap rounded-lg border-[1.5px] border-slate-200 bg-white px-2 py-1 text-sm">
+                <span className="text-slate-700">{f.word}</span>
                 {f.simpler && (
                   <>
-                    <span className="mx-1 text-amber-400">→</span>
-                    <span className="font-semibold">{f.simpler}</span>
+                    <span className="mx-1.5 text-slate-400" aria-hidden>→</span>
+                    <span className="sr-only">plainer: </span>
+                    <span className="font-semibold text-primary">{f.simpler}</span>
                   </>
                 )}
-              </span>
+              </li>
             ))}
-          </div>
-          <p className="text-[8.5px] text-amber-800 dark:text-amber-300 mt-1.5 leading-relaxed">
-            Arrows show a plainer swap. Plain words aren&apos;t a downgrade — uncommon ones are fine when they&apos;re the most precise choice.
-          </p>
+          </ul>
         </div>
       )}
 
-      {/* Suggestions */}
-      {report.suggestions.length > 0 ? (
-        <div className="space-y-1.5">
-          {report.suggestions.map((s) => <SuggestionCard key={s.id} s={s} />)}
-        </div>
-      ) : (
-        <div className="flex items-center gap-2 text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2.5">
-          <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          Clean pass — rhythm, tone, and clarity all look strong.
-        </div>
-      )}
-      <p className="text-[9px] text-slate-300 mt-2.5 text-center">Tap a suggestion to expand · guidance, not grading</p>
-    </div>
+      {/* 4. The numbers, for those who want them */}
+      <div className="pt-1 border-t border-dashed border-slate-200">
+        <button type="button" onClick={() => setShowNumbers((v) => !v)} aria-expanded={showNumbers} className="mt-2 text-sm font-semibold underline underline-offset-4 decoration-[1.5px]">
+          {showNumbers ? 'Hide the craft scores' : 'See the craft scores'}
+        </button>
+        {showNumbers && (
+          <dl className="mt-3 space-y-3">
+            {report.metrics.map((m) => (
+              <div key={m.key}>
+                <div className="flex items-baseline justify-between gap-2">
+                  <dt className="text-sm font-semibold text-primary">{m.label}</dt>
+                  <dd className="text-sm text-slate-700"><span className="font-bold text-primary tabular-nums">{m.value}</span> · {STATUS_WORD[m.status]}</dd>
+                </div>
+                <div className="mt-1 h-1.5 rounded-full bg-slate-100 overflow-hidden" aria-hidden>
+                  <div className="h-full rounded-full bg-ink" style={{ width: `${m.value}%` }} />
+                </div>
+                <p className="mt-1 text-xs text-slate-600 leading-snug">{m.hint}</p>
+              </div>
+            ))}
+            {report.readingGrade > 0 && (
+              <p className="text-xs text-slate-600">Reads at about a grade {Math.round(report.readingGrade)} level.</p>
+            )}
+          </dl>
+        )}
+      </div>
+
+      <p className="text-xs text-slate-600">This is guidance, not a grade. A tutor&apos;s read is the best second opinion.</p>
+    </section>
   );
 }
