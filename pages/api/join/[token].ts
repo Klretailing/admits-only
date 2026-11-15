@@ -1,14 +1,29 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { getServerSession } from 'next-auth';
 import { prisma, ensureSchema } from '../../../lib/db';
+import { authOptions } from '../../../lib/auth';
+import { linkInvite } from '../../../lib/invites';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'GET') {
+  if (req.method !== 'GET' && req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const { token } = req.query;
   if (!token || typeof token !== 'string') {
     return res.status(400).json({ error: 'Invalid invite link' });
+  }
+
+  // POST: a signed-in student accepts the invite with their existing account.
+  if (req.method === 'POST') {
+    const session = await getServerSession(req, res, authOptions);
+    const user = session?.user as any;
+    if (!user?.id) return res.status(401).json({ error: 'Please sign in first' });
+    if (user.role !== 'student') return res.status(403).json({ error: 'Invites are for student accounts' });
+    await ensureSchema();
+    const ok = await linkInvite(token, user.id, user.name || '', user.email || '');
+    if (!ok) return res.status(410).json({ error: 'This invite has already been used or is no longer valid' });
+    return res.json({ ok: true });
   }
 
   try {

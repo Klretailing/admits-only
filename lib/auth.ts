@@ -165,7 +165,11 @@ export async function getUsers() {
 export async function createUser(name: string, email: string, password: string, role: UserRole) {
   await seedAccounts();
 
-  const exists = await prisma.user.findUnique({ where: { email } });
+  // Emails are compared without regard to case: "Jane@x.com" and
+  // "jane@x.com" are the same inbox, and signing in with the other casing
+  // used to fail. New accounts are stored lower-cased.
+  email = email.trim().toLowerCase();
+  const exists = await prisma.user.findFirst({ where: { email: { equals: email, mode: 'insensitive' } } });
   if (exists) throw new Error('User already exists');
 
   const user = await prisma.user.create({
@@ -200,9 +204,9 @@ export const authOptions: NextAuthOptions = {
         try {
           await seedAccounts();
 
-          const user = await prisma.user.findUnique({
-            where: { email: credentials.email },
-          });
+          const typed = credentials.email.trim();
+          const user = (await prisma.user.findUnique({ where: { email: typed } }))
+            || (await prisma.user.findFirst({ where: { email: { equals: typed, mode: 'insensitive' } } }));
           if (!user) return null;
           // The admin password that was published in this repository never
           // works again, whatever the database still holds.

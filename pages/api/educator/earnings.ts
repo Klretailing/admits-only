@@ -27,7 +27,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           description,
           hours: parseFloat(hours),
           amount: parseFloat(amount),
-          date: date ? new Date(date) : new Date(),
+          // A bare "YYYY-MM-DD" is stored at noon UTC, which is that same
+          // calendar day across the US; midnight UTC displayed as the day
+          // before for every US tutor.
+          date: date ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(String(date)) ? `${date}T12:00:00Z` : date) : new Date(),
         },
       });
       return res.status(201).json({ entry });

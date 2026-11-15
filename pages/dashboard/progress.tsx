@@ -57,6 +57,8 @@ const BOARD_COLUMNS: { status: CollegeApp['status']; label: string }[] = [
   { status: 'not_started', label: 'Not Started' },
   { status: 'in_progress', label: 'In Progress' },
   { status: 'submitted', label: 'Submitted' },
+  // A deferred school had no column, so its card vanished from the board.
+  { status: 'deferred', label: 'Deferred' },
   { status: 'accepted', label: 'Accepted' },
   { status: 'rejected', label: 'Rejected' },
   { status: 'waitlisted', label: 'Waitlisted' },

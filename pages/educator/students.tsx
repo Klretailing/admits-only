@@ -240,9 +240,20 @@ export default function EducatorStudents() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
               </svg>
             </div>
-            <p className="text-sm text-slate-600 font-medium mb-1">No students yet</p>
-            <p className="text-xs text-slate-400 mb-4">Add your first student to start tracking sessions and notes.</p>
-            <button onClick={() => { setShowAddModal(true); setConnectionCode(''); setConnectionResult(null); setAddError(''); }} className="btn-primary text-sm">Add Your First Student</button>
+            {students.length > 0 ? (
+              /* A search or filter with no matches used to say "No students
+                 yet" and offer to add a first student. */
+              <>
+                <p className="text-sm text-slate-700 font-medium mb-1">No students match {search.trim() ? `"${search.trim()}"` : 'this filter'}</p>
+                <button onClick={() => { setSearch(''); setFilter('all'); }} className="mt-3 btn-secondary text-sm">Show all students</button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-slate-600 font-medium mb-1">No students yet</p>
+                <p className="text-xs text-slate-600 mb-4">Add your first student to start tracking sessions and notes.</p>
+                <button onClick={() => { setShowAddModal(true); setConnectionCode(''); setConnectionResult(null); setAddError(''); }} className="btn-primary text-sm">Add Your First Student</button>
+              </>
+            )}
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

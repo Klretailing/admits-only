@@ -24,10 +24,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Get or create code
     let codeRow: any[] = await prisma.$queryRaw`SELECT * FROM "connection_codes" WHERE "userId" = ${userId}`;
     if (codeRow.length === 0) {
-      const id = `cc_${Date.now().toString(36)}`;
+      const id = `cc_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
       const code = generateCode();
-      await prisma.$executeRaw`INSERT INTO "connection_codes" ("id", "userId", "code") VALUES (${id}, ${userId}, ${code})`;
-      codeRow = [{ id, userId, code }];
+      // Two first visits at once could both try to insert; the loser reads
+      // the winner's row instead of failing with a 500.
+      await prisma.$executeRaw`INSERT INTO "connection_codes" ("id", "userId", "code") VALUES (${id}, ${userId}, ${code}) ON CONFLICT DO NOTHING`;
+      codeRow = await prisma.$queryRaw`SELECT * FROM "connection_codes" WHERE "userId" = ${userId}`;
     }
 
     // Get connections where I'm the student
@@ -55,12 +57,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // POST — submit someone else's code to connect
   if (req.method === 'POST') {
-    const { code, role } = req.body;
+    const { role } = req.body || {};
+    const code = typeof req.body?.code === 'string' || typeof req.body?.code === 'number' ? String(req.body.code) : '';
     if (!code || !role) return res.status(400).json({ error: 'code and role are required' });
     if (!['parent', 'tutor'].includes(role)) return res.status(400).json({ error: 'role must be parent or tutor' });
 
     // Find the code
-    const codeRows: any[] = await prisma.$queryRaw`SELECT * FROM "connection_codes" WHERE "code" = ${code.toUpperCase().trim()}`;
+    // Match ignoring case, spaces and hyphens: "k7m2 9fpd" and "K7M29FPD"
+    // are the same code as "K7M2-9FPD" (the parent form didn't add the hyphen).
+    const typed = code.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const codeRows: any[] = await prisma.$queryRaw`SELECT * FROM "connection_codes" WHERE REPLACE(UPPER("code"), '-', '') = ${typed}`;
     if (codeRows.length === 0) return res.status(404).json({ error: 'Invalid code' });
 
     const studentId = codeRows[0].userId;

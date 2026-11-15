@@ -240,7 +240,9 @@ export default function SessionNotes() {
     setPreviewTemplate(null);
     try {
       const isLesson = t.id !== 'blank';
-      const today = new Date().toISOString().slice(0, 10);
+      // Local date: toISOString() is UTC, which is already tomorrow after ~5pm PT.
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       const structured = isStructured(t.id);
       const res = await fetch('/api/educator/session-notes', {
         method: 'POST',

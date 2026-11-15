@@ -7,6 +7,7 @@ import DashboardLayout from '../../components/DashboardLayout';
 import PageHeader from '../../components/PageHeader';
 import ProgressSummary from '../../components/ProgressSummary';
 import { useCountUp, useInView } from '../../hooks/useAnimations';
+import { daysUntilDay } from '../../lib/dateOnly';
 
 /* ─── Upcoming Deadlines Widget ─── */
 
@@ -19,10 +20,10 @@ interface StoredApp {
   tasks: { id: string; label: string; done: boolean }[];
 }
 
-function daysUntil(dateStr: string): number {
-  const deadline = new Date(dateStr + 'T23:59:59');
-  const now = new Date();
-  return Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+// Whole calendar days, so the deadline day itself reads "Due today" (the old
+// ceil-to-23:59 math read "1d left" all of that day).
+function daysUntil(dateStr: string): number | null {
+  return daysUntilDay(dateStr);
 }
 
 function deadlineBadge(days: number): { label: string; className: string } {
@@ -36,17 +37,26 @@ function deadlineBadge(days: number): { label: string; className: string } {
 function UpcomingDeadlines() {
   const [apps, setApps] = useState<StoredApp[]>([]);
 
+  // The saved list, not just this browser's copy: on a new device the widget
+  // said "No deadlines tracked yet" beside a populated progress bar.
   useEffect(() => {
     try {
       const stored = localStorage.getItem('admitsonly_applications');
       if (stored) setApps(JSON.parse(stored));
     } catch {}
+    fetch('/api/applications')
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (d && Array.isArray(d.applications)) setApps(d.applications); })
+      .catch(() => {});
   }, []);
 
   const upcoming = useMemo(() => {
     return apps
-      .filter(a => a.status !== 'submitted' && a.status !== 'accepted' && a.status !== 'rejected')
+      .filter(a => a && !['submitted', 'accepted', 'rejected', 'waitlisted', 'deferred'].includes(a.status))
       .map(a => ({ ...a, days: daysUntil(a.deadline) }))
+      // Schools without a deadline have nothing to count down to (they
+      // used to render "NaNd left").
+      .filter((a): a is typeof a & { days: number } => a.days !== null)
       .sort((a, b) => a.days - b.days)
       .slice(0, 4);
   }, [apps]);

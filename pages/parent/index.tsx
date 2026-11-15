@@ -65,7 +65,9 @@ export default function ParentDashboard() {
   useEffect(() => {
     if (status !== 'authenticated') return;
     fetch('/api/parent/overview')
-      .then(function(r) { return r.json(); })
+      // An error response used to be treated as "not connected", telling a
+      // connected parent to connect again.
+      .then(function(r) { if (!r.ok) throw new Error('We couldn\u2019t load your dashboard. Please refresh to try again.'); return r.json(); })
       .then(function(d) { setOverview(d); setLoading(false); })
       .catch(function(e) { setError(e.message); setLoading(false); });
   }, [status]);

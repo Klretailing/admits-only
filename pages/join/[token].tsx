@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
+import { useSession } from 'next-auth/react';
 import Head from 'next/head';
 import Link from 'next/link';
 import LogoMark from '../../components/LogoMark';
@@ -16,6 +17,26 @@ export default function JoinInvite() {
   const [info, setInfo] = useState<InviteInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [invalid, setInvalid] = useState(false);
+  const { data: session } = useSession();
+  const signedInStudent = (session?.user as any)?.role === 'student';
+  const [accepting, setAccepting] = useState(false);
+  const [acceptError, setAcceptError] = useState<string | null>(null);
+
+  // Students who already have an account accept here. "Sign in" used to drop
+  // the invite, and only a brand-new sign-up could link it.
+  const accept = async () => {
+    setAccepting(true);
+    setAcceptError(null);
+    try {
+      const res = await fetch(`/api/join/${encodeURIComponent(String(token))}`, { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Could not accept the invite.');
+      router.push('/dashboard');
+    } catch (e) {
+      setAcceptError((e as Error).message);
+      setAccepting(false);
+    }
+  };
 
   useEffect(() => {
     if (!token || typeof token !== 'string') return;
@@ -98,6 +119,20 @@ export default function JoinInvite() {
                   Your tutor will see your essays and progress right here, and give you feedback along the way. Create your free account to get started.
                 </p>
 
+                {signedInStudent ? (
+                <div className="mt-6 space-y-3">
+                  <button
+                    type="button"
+                    onClick={accept}
+                    disabled={accepting}
+                    className="block w-full text-center py-3 rounded-xl btn-primary text-sm disabled:opacity-60"
+                  >
+                    {accepting ? 'Connecting…' : `Connect with ${info.tutorName}`}
+                  </button>
+                  {acceptError && <p role="alert" className="text-sm text-red-pencil text-center">{acceptError}</p>}
+                  <p className="text-center text-xs text-slate-600">Signed in as {session?.user?.email}</p>
+                </div>
+                ) : (
                 <div className="mt-6 space-y-3">
                   <Link
                     href={registerHref()}
@@ -106,12 +141,13 @@ export default function JoinInvite() {
                     Create my free account
                   </Link>
                   <Link
-                    href="/auth/login"
+                    href={`/auth/login?next=${encodeURIComponent(`/join/${String(token)}`)}`}
                     className="block w-full text-center py-3 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-colors"
                   >
                     Already have an account? Sign in
                   </Link>
                 </div>
+                )}
               </div>
             )}
           </div>

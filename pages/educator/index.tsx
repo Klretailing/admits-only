@@ -127,6 +127,8 @@ export default function EducatorOverview() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [data, setData] = useState<OverviewData | null>(null);
+  // A failed load used to read "You're all caught up".
+  const [loadFailed, setLoadFailed] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/login');
@@ -142,9 +144,9 @@ export default function EducatorOverview() {
   useEffect(() => {
     if (status !== 'authenticated') return;
     fetch('/api/educator/overview')
-      .then(r => r.json())
+      .then(r => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
       .then(setData)
-      .catch(() => {});
+      .catch(() => setLoadFailed(true));
   }, [status]);
 
   if (status === 'loading' || !session) {
@@ -168,7 +170,11 @@ export default function EducatorOverview() {
   if (reviewCount > 0) summaryParts.push(`${reviewCount} essay${reviewCount === 1 ? '' : 's'} to review`);
   if (deadlineCount > 0) summaryParts.push(`${deadlineCount} deadline${deadlineCount === 1 ? '' : 's'} soon`);
   if (atRiskCount > 0) summaryParts.push(`${atRiskCount} student${atRiskCount === 1 ? '' : 's'} to nudge`);
-  const summary = summaryParts.length > 0 ? summaryParts.join(' · ') : "You're all caught up — nothing needs attention right now.";
+  const summary = loadFailed
+    ? "We couldn't load your overview. Refresh the page to try again."
+    : !data
+      ? 'Loading your overview…'
+      : summaryParts.length > 0 ? summaryParts.join(' · ') : "You're all caught up — nothing needs attention right now.";
 
   const stats = [
     { label: 'Active Students', value: data?.activeStudents || 0, icon: 'students', color: 'bg-emerald-500', href: '/educator/students' },
@@ -238,7 +244,7 @@ export default function EducatorOverview() {
               </div>
               <h3 className="text-base font-bold font-display text-primary leading-tight">Upcoming deadlines</h3>
             </div>
-            <SectionLabel count={deadlineCount} tone="red">This month</SectionLabel>
+            <SectionLabel count={deadlineCount} tone="red">Next 3 weeks</SectionLabel>
             {deadlineCount === 0 ? (
               <EmptyState label="No deadlines coming up ✓" />
             ) : (

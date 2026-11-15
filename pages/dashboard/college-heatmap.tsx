@@ -1123,7 +1123,8 @@ export default function CollegeHeatmapPage() {
         .then(data => {
           if (data.studentStats) {
             setGpa(data.studentStats.gpa || 3.5);
-            setSat(data.studentStats.totalSAT || 1200);
+            // No score means test-optional, not a pretend 1200.
+            setSat(data.studentStats.totalSAT || 0);
             if (data.studentStats.actScore) setAct(data.studentStats.actScore);
           }
           setProfileLoaded(true);
@@ -1449,19 +1450,23 @@ export default function CollegeHeatmapPage() {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs font-semibold text-slate-600">SAT</label>
-                <span className="text-sm font-bold text-primary tabular-nums">{sat}</span>
+                <span className="text-sm font-bold text-primary tabular-nums">{sat || '—'}</span>
               </div>
+              {/* The far left (790) means "no SAT": test-optional students
+                  were scored against an SAT they never took, because the
+                  old minimum of 800 couldn't express "none". */}
               <input
-                type="range" min="800" max="1600" step="10" value={sat}
+                type="range" min="790" max="1600" step="10" value={sat || 790}
+                aria-label="SAT score"
                 onChange={e => {
-                  const v = parseInt(e.target.value); setSat(v);
+                  const raw = parseInt(e.target.value); const v = raw <= 790 ? 0 : raw; setSat(v);
                   if (sliderDebounceRef.current) clearTimeout(sliderDebounceRef.current);
                   sliderDebounceRef.current = setTimeout(() => tracker.feature('college-heatmap', 'sat_slider', { sat: v }), 800);
                 }}
                 className="w-full h-2 rounded-full appearance-none cursor-pointer accent-accent"
-                style={{ background: `linear-gradient(to right, #7a7771 ${((sat - 800) / 800) * 100}%, #ebe7df ${((sat - 800) / 800) * 100}%)` }}
+                style={{ background: `linear-gradient(to right, #7a7771 ${sat ? ((sat - 790) / 810) * 100 : 0}%, #ebe7df ${sat ? ((sat - 790) / 810) * 100 : 0}%)` }}
               />
-              <div className="flex justify-between text-[10px] text-slate-400 mt-1"><span>800</span><span>1200</span><span>1600</span></div>
+              <div className="flex justify-between text-xs text-slate-600 mt-1"><span>Off</span><span>1200</span><span>1600</span></div>
             </div>
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -1470,6 +1475,7 @@ export default function CollegeHeatmapPage() {
               </div>
               <input
                 type="range" min="0" max="36" step="1" value={act}
+                aria-label="ACT score"
                 onChange={e => {
                   const v = parseInt(e.target.value); setAct(v);
                   if (sliderDebounceRef.current) clearTimeout(sliderDebounceRef.current);
@@ -1478,7 +1484,7 @@ export default function CollegeHeatmapPage() {
                 className="w-full h-2 rounded-full appearance-none cursor-pointer accent-accent"
                 style={{ background: `linear-gradient(to right, #7a7771 ${(act / 36) * 100}%, #ebe7df ${(act / 36) * 100}%)` }}
               />
-              <div className="flex justify-between text-[10px] text-slate-400 mt-1"><span>Off</span><span>18</span><span>36</span></div>
+              <div className="flex justify-between text-xs text-slate-600 mt-1"><span>Off</span><span>18</span><span>36</span></div>
               {act > 0 && <p className="text-[10px] text-slate-400 mt-1">SAT equivalent: {actToSat(act)}</p>}
             </div>
           </div>

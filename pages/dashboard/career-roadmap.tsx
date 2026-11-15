@@ -842,8 +842,11 @@ export default function CareerRoadmapPage() {
             onSelectB={(majorId) =>
               setView({ ...view, majorIdB: majorId })
             }
+            // The picker fills the right-hand slot, so to change the left
+            // major keep the right one (moved across) and pick a new partner.
+            // This used to clear the right major and leave the left unchangeable.
             onChangeA={() =>
-              setView({ ...view, majorIdA: view.majorIdA, majorIdB: null })
+              setView({ ...view, majorIdA: view.majorIdB ?? view.majorIdA, majorIdB: null })
             }
             onChangeB={() =>
               setView({ ...view, majorIdB: null })

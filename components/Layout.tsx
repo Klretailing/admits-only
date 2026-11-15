@@ -348,6 +348,8 @@ export default function Layout({ children }: LayoutProps) {
                   <li><Link href="/about" className="hover:text-white transition-colors">About Us</Link></li>
                   <li><Link href="/faq" className="hover:text-white transition-colors">FAQ</Link></li>
                   <li><Link href="/newsletter" className="hover:text-white transition-colors">Newsletter</Link></li>
+                  <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link></li>
+                  <li><Link href="/terms" className="hover:text-white transition-colors">Terms</Link></li>
                   <li><a href="mailto:info@admitsonly.com" className="hover:text-white transition-colors">info@admitsonly.com</a></li>
                 </ul>
               </div>

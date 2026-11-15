@@ -201,6 +201,7 @@ export default function Register() {
             </form>
           </div>
 
+          <p className="text-center text-xs text-slate-600 mt-4">By creating an account you agree to our <Link href="/terms" className="underline underline-offset-2">Terms</Link> and <Link href="/privacy" className="underline underline-offset-2">Privacy</Link> notice.</p>
           <p className="mt-6 text-center text-sm text-slate-500">
             Already have an account?{' '}
             <Link href={safeNext(router.query.next) ? `/auth/login?next=${encodeURIComponent(safeNext(router.query.next)!)}` : '/auth/login'} className="text-accent font-semibold hover:underline">

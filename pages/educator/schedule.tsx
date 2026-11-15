@@ -201,9 +201,12 @@ export default function EducatorSchedule() {
                   <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                     {/* Date/time badge */}
                     <div className="flex items-center gap-4 flex-1 min-w-0">
-                      <div className={`w-14 h-14 rounded-xl flex flex-col items-center justify-center flex-shrink-0 ${isPast ? 'bg-slate-100' : 'bg-blue-50'}`}>
-                        <span className={`text-xs font-bold ${isPast ? 'text-slate-400' : 'text-blue-600'}`}>{dt.date.split(',')[0]}</span>
-                        <span className={`text-sm font-bold ${isPast ? 'text-slate-500' : 'text-blue-700'}`}>{dt.time}</span>
+                      {/* Weekday, date and time: the badge used to show only
+                          the weekday, so Mondays weeks apart looked identical. */}
+                      <div className={`w-20 py-2 rounded-xl flex flex-col items-center justify-center flex-shrink-0 border ${isPast ? 'bg-slate-50 border-slate-200' : 'bg-white border-ink'}`}>
+                        <span className={`text-xs font-semibold ${isPast ? 'text-slate-600' : 'text-primary'}`}>{new Date(booking.date).toLocaleDateString('en-US', { weekday: 'short' })}</span>
+                        <span className={`text-sm font-bold ${isPast ? 'text-slate-600' : 'text-primary'}`}>{new Date(booking.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                        <span className={`text-xs ${isPast ? 'text-slate-600' : 'text-slate-700'}`}>{dt.time}</span>
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">

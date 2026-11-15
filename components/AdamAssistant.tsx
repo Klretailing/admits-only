@@ -231,7 +231,12 @@ export function AdamPanel({
       }
 
       setAvailable(true);
-      if (data.reply) {
+      if (res.status === 401) {
+        setStatusNote('Your session ended. Please sign in again and resend that.');
+      } else if (!res.ok || !data.reply) {
+        // Any other failure used to leave the message hanging with no reply.
+        setStatusNote("Something went wrong on my end, so that didn't send. Mind trying again?");
+      } else {
         setMessages((prev) => [...prev, { role: 'assistant', content: data.reply }]);
       }
     } catch {

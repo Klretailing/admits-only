@@ -70,12 +70,14 @@ function formatAmount(amount: number): string {
   return `$${amount.toFixed(0)}`;
 }
 
-function getStatusLabel(status: string, date: string): 'upcoming' | 'completed' | 'cancelled' {
+function getStatusLabel(status: string, date: string, duration = 60): 'upcoming' | 'completed' | 'cancelled' {
   if (status === 'cancelled' || status === 'no_show') return 'cancelled';
   if (status === 'completed') return 'completed';
-  // If scheduled, check if it's in the future or past
-  const d = new Date(date);
-  return d.getTime() > Date.now() ? 'upcoming' : 'completed';
+  // A scheduled session stays joinable until it ends (plus a little grace).
+  // It used to move to "Completed", and lose its Join link, the minute it
+  // started, so a student two minutes late had no way in.
+  const end = new Date(date).getTime() + (Number(duration) || 60) * 60000 + 15 * 60000;
+  return end > Date.now() ? 'upcoming' : 'completed';
 }
 
 export default function Sessions() {
@@ -83,6 +85,7 @@ export default function Sessions() {
   const router = useRouter();
   const [sessions, setSessions] = useState<SessionData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/login');
@@ -91,19 +94,20 @@ export default function Sessions() {
   useEffect(() => {
     if (status !== 'authenticated') return;
     fetch('/api/student/sessions')
-      .then((r) => r.json())
+      .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
       .then((data) => {
         setSessions(data.sessions || []);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      // An error used to look exactly like "No sessions yet".
+      .catch(() => { setLoadError(true); setLoading(false); });
   }, [status]);
 
   if (status !== 'authenticated') return null;
 
-  const upcoming = sessions.filter((s) => getStatusLabel(s.status, s.date) === 'upcoming');
-  const completed = sessions.filter((s) => getStatusLabel(s.status, s.date) === 'completed');
-  const cancelled = sessions.filter((s) => getStatusLabel(s.status, s.date) === 'cancelled');
+  const upcoming = sessions.filter((s) => getStatusLabel(s.status, s.date, s.duration) === 'upcoming');
+  const completed = sessions.filter((s) => getStatusLabel(s.status, s.date, s.duration) === 'completed');
+  const cancelled = sessions.filter((s) => getStatusLabel(s.status, s.date, s.duration) === 'cancelled');
 
   return (
     <DashboardLayout>
@@ -125,6 +129,12 @@ export default function Sessions() {
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
             <span className="ml-3 text-sm text-slate-500">Loading sessions...</span>
+          </div>
+        ) : loadError ? (
+          <div role="alert" className="rounded-2xl border bg-white p-6 text-center">
+            <p className="text-base font-bold text-primary">We couldn&apos;t load your sessions</p>
+            <p className="mt-1 text-sm text-slate-700">Check your connection and try again.</p>
+            <button onClick={() => window.location.reload()} className="mt-4 btn-secondary text-sm">Try again</button>
           </div>
         ) : sessions.length === 0 ? (
           <div className="text-center py-16">

@@ -37,7 +37,7 @@ function catConfig(category: string) {
 
 function fmtDue(v?: string | null) {
   if (!v) return '';
-  const d = new Date(v);
+  const d = parseDay(v);
   if (isNaN(d.getTime())) return '';
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
