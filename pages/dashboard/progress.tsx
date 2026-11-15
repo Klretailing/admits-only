@@ -265,6 +265,7 @@ export default function Applications() {
     async function loadApps() {
       let serverApps: CollegeApp[] = [];
       let localApps: CollegeApp[] = [];
+      let serverOk = false;
 
       try {
         const stored = localStorage.getItem(STORAGE_KEY);
@@ -276,6 +277,7 @@ export default function Applications() {
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data.applications)) serverApps = data.applications;
+          serverOk = true;
         }
       } catch {}
 
@@ -300,7 +302,10 @@ export default function Applications() {
 
       setApps(merged);
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(merged)); } catch {}
-      if (merged.length > serverApps.length && merged.length > 0) {
+      // Only push local-only entries up when the server list actually loaded;
+      // after a failed load, this device's copy may be stale and would
+      // overwrite newer work saved from another device.
+      if (serverOk && merged.length > serverApps.length && merged.length > 0) {
         fetch('/api/applications', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -326,19 +331,27 @@ export default function Applications() {
     return () => window.removeEventListener('storage', onStorage);
   }, []);
 
-  // Save to both localStorage and server
+  // Save to both localStorage and server. One request at a time, and the
+  // newest list always gets sent: edits made while a save was in flight used
+  // to be skipped entirely, so fast typing in Notes saved only "H".
+  const pendingRef = useRef<CollegeApp[] | null>(null);
+  const flushSave = useCallback(function flush() {
+    if (syncingRef.current || !pendingRef.current) return;
+    const body = pendingRef.current;
+    pendingRef.current = null;
+    syncingRef.current = true;
+    fetch('/api/applications', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ applications: body }),
+    }).catch(() => {}).finally(() => { syncingRef.current = false; flush(); });
+  }, []);
   const save = useCallback((updated: CollegeApp[]) => {
     setApps(updated);
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(updated)); } catch {}
-    if (!syncingRef.current) {
-      syncingRef.current = true;
-      fetch('/api/applications', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ applications: updated }),
-      }).catch(() => {}).finally(() => { syncingRef.current = false; });
-    }
-  }, []);
+    pendingRef.current = updated;
+    flushSave();
+  }, [flushSave]);
 
   const addApp = () => {
     if (!newName.trim()) return;
@@ -1023,7 +1036,7 @@ function DetailPanel({ app, onClose, onUpdate, onToggleTask, onAddTask, onDelete
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-slate-100 px-6 py-4 z-10">
           <div className="flex items-center justify-between">
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors text-slate-400 hover:text-slate-600">
+            <button aria-label="Close" onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors text-slate-400 hover:text-slate-600">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>

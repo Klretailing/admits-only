@@ -16,6 +16,9 @@ function Toggle({ enabled, onChange, label, description }: {
     <label className="flex items-start gap-4 p-4 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer">
       <button
         type="button"
+        role="switch"
+        aria-checked={enabled}
+        aria-label={label}
         onClick={() => onChange(!enabled)}
         className={`mt-0.5 relative inline-flex h-6 w-11 flex-shrink-0 rounded-full transition-colors duration-200 ${
           enabled ? 'bg-accent' : 'bg-slate-200'

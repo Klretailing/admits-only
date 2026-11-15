@@ -372,7 +372,7 @@ export default function EducatorSettings() {
                 placeholder="2020"
               />
             </div>
-            <button onClick={addCredential} className="p-2.5 rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 transition-colors">
+            <button aria-label="Add credential" onClick={addCredential} className="p-2.5 rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 transition-colors">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
             </button>
           </div>

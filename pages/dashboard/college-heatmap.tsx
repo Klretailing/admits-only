@@ -10,7 +10,8 @@ import { actToSat, satToAct } from '../../lib/scoring';
 import { tracker } from '../../lib/analytics';
 import DeadlineChips from '../../components/DeadlineChips';
 import PageHeader from '../../components/PageHeader';
-import { deadlinesFor } from '../../lib/deadlines';
+import { deadlinesFor, orderedRounds } from '../../lib/deadlines';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 /* ──────────────────────── TYPES ──────────────────────── */
 
@@ -87,6 +88,19 @@ function computeMatch(
    "Warm". Colour and label now both derive from the tier, using the same
    rose / amber / emerald the list view already used, so they cannot disagree.
    `solid` backs white text (all ≥ 4.5:1); `rgb` is for text-free map dots. */
+/** "Jan 2" → this application cycle's date (cycles start Aug 1). */
+const MONTH_NUM: Record<string, number> = { Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6, Jul: 7, Aug: 8, Sep: 9, Oct: 10, Nov: 11, Dec: 12 };
+function cycleDate(monthDay: string): string {
+  const [mon, day] = monthDay.trim().split(/\s+/);
+  const m = MONTH_NUM[mon?.slice(0, 3)];
+  const d = Number(day);
+  if (!m || !d) return '';
+  const now = new Date();
+  const cycle = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
+  const year = m >= 8 ? cycle : cycle + 1;
+  return `${year}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
 /* Monochrome tiers: ink marks what needs attention. Reach is inked in, match
    is shaded graphite, safety is a plain card with an ink outline. (It used to
    be the other way round, which turned a strong student's grid into a wall
@@ -1067,6 +1081,7 @@ export default function CollegeHeatmapPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'galaxy' | 'list' | 'trends'>('list');
   const sliderDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedTile, setSelectedTile] = useState<HeatmapTile | null>(null);
+  useEscapeKey(!!selectedTile, () => setSelectedTile(null));
   const [savedSchools, setSavedSchools] = useState<Set<string>>(new Set());
   const [sortKey, setSortKey] = useState<SortKey>('fit-desc');
   const [filterTier, setFilterTier] = useState<'' | 'safety' | 'match' | 'reach'>('');
@@ -1205,36 +1220,53 @@ export default function CollegeHeatmapPage() {
     return result;
   }, [visibleTiles, listTypeFilter, listSizeFilter, listStrengthFilter, listStateFilter, listSearch]);
 
-  const addToTracker = useCallback((college: College) => {
+  const addToTracker = useCallback(async (college: College) => {
+    // Start from the list saved on the server. This used to rebuild the list
+    // from this browser's localStorage alone and PUT it, and that PUT
+    // replaces everything: on a new laptop, "+ Track" wiped every other
+    // school, task and note the student had.
     try {
-      const stored = localStorage.getItem('admitsonly_applications');
-      const apps = stored ? JSON.parse(stored) : [];
-      if (apps.some((a: any) => a.name.toLowerCase() === college.name.toLowerCase())) return;
-      apps.push({
-        id: `app_${Date.now()}`,
-        name: college.name,
-        deadline: '',
-        type: 'RD',
-        status: 'not_started',
-        priority: '',
-        notes: '',
-        tasks: [
-          { id: `t1_${Date.now()}`, label: 'Research program requirements', done: false, category: 'misc' },
-          { id: `t2_${Date.now()}`, label: 'Write main essay', done: false, category: 'essays' },
-          { id: `t3_${Date.now()}`, label: 'Complete supplemental essays', done: false, category: 'essays' },
-          { id: `t4_${Date.now()}`, label: 'Request recommendation letters', done: false, category: 'recommendations' },
-          { id: `t5_${Date.now()}`, label: 'Submit application', done: false, category: 'misc' },
-        ],
-      });
-      localStorage.setItem('admitsonly_applications', JSON.stringify(apps));
+      const res = await fetch('/api/applications');
+      if (!res.ok) throw new Error(String(res.status));
+      const data = await res.json();
+      const apps: any[] = Array.isArray(data?.applications) ? data.applications : [];
+      const already = apps.some((a: any) => String(a?.name || '').toLowerCase() === college.name.toLowerCase());
+      if (!already) {
+        // Prefill the school's usual Regular Decision date for this cycle,
+        // so the tracker never shows a blank or "NaN days" countdown.
+        const d = deadlinesFor(college.id);
+        const rounds = d ? orderedRounds(d) : [];
+        const round = rounds.find((r) => r.key === 'rd') || rounds[rounds.length - 1];
+        const stamp = Date.now();
+        apps.push({
+          id: `app_${stamp}`,
+          name: college.name,
+          deadline: round ? cycleDate(round.date) : '',
+          type: round && round.key !== 'rd' ? round.key.toUpperCase() : 'RD',
+          status: 'not_started',
+          priority: '',
+          notes: '',
+          tasks: [
+            { id: `t1_${stamp}`, label: 'Research program requirements', done: false, category: 'misc' },
+            { id: `t2_${stamp}`, label: 'Write main essay', done: false, category: 'essays' },
+            { id: `t3_${stamp}`, label: 'Complete supplemental essays', done: false, category: 'essays' },
+            { id: `t4_${stamp}`, label: 'Request recommendation letters', done: false, category: 'recommendations' },
+            { id: `t5_${stamp}`, label: 'Submit application', done: false, category: 'misc' },
+          ],
+        });
+        const put = await fetch('/api/applications', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ applications: apps }),
+        });
+        if (!put.ok) throw new Error(String(put.status));
+        tracker.feature('college-heatmap', 'add_to_tracker', { college: college.name, acceptanceRate: college.acceptanceRate });
+      }
+      try { localStorage.setItem('admitsonly_applications', JSON.stringify(apps)); } catch {}
       setSavedSchools(prev => { const next = new Set(Array.from(prev)); next.add(college.name.toLowerCase()); return next; });
-      tracker.feature('college-heatmap', 'add_to_tracker', { college: college.name, acceptanceRate: college.acceptanceRate });
-      fetch('/api/applications', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ applications: apps }),
-      }).catch(() => {});
-    } catch {}
+    } catch {
+      alert(`Couldn't add ${college.name} right now. Please try again.`);
+    }
   }, []);
 
   if (status === 'loading') {

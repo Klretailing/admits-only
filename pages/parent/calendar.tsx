@@ -129,11 +129,11 @@ export default function ParentCalendar() {
         <div className="bg-white rounded-2xl border border-slate-100 p-5">
           {/* Month nav */}
           <div className="flex items-center justify-between mb-4">
-            <button onClick={prevMonth} className="p-2 rounded-lg hover:bg-slate-50 text-slate-500 hover:text-primary transition-all">
+            <button aria-label="Previous month" onClick={prevMonth} className="p-2 rounded-lg hover:bg-slate-50 text-slate-500 hover:text-primary transition-all">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
             </button>
             <h2 className="text-lg font-bold font-display text-primary">{monthName}</h2>
-            <button onClick={nextMonth} className="p-2 rounded-lg hover:bg-slate-50 text-slate-500 hover:text-primary transition-all">
+            <button aria-label="Next month" onClick={nextMonth} className="p-2 rounded-lg hover:bg-slate-50 text-slate-500 hover:text-primary transition-all">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
             </button>
           </div>
