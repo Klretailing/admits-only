@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useState, type ReactNode } from 'react';
 import { useTheme } from '../lib/themeContext';
 import LogoMark from './LogoMark';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 const sidebarLinks = [
   {
@@ -85,6 +86,7 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
   const { data: session } = useSession();
   const isSubPage = router.pathname !== '/parent';
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  useEscapeKey(mobileMenuOpen, () => setMobileMenuOpen(false));
   const { theme, toggleTheme } = useTheme();
 
   const currentLabel = sidebarLinks.find((l) => l.href === router.pathname)?.label || 'Parent Dashboard';
@@ -174,7 +176,7 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
                   <span className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wider leading-tight">Parent</span>
                 </div>
               </Link>
-              <button onClick={() => setMobileMenuOpen(false)} className="p-2 rounded-lg text-slate-400 hover:text-primary hover:bg-slate-50">
+              <button onClick={() => setMobileMenuOpen(false)} aria-label="Close menu" className="p-2 rounded-lg text-slate-600 hover:text-primary hover:bg-slate-50">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
@@ -245,6 +247,7 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
             {/* Mobile hamburger */}
             <button
               onClick={() => setMobileMenuOpen(true)}
+              aria-label="Open menu"
               className="lg:hidden p-1.5 rounded-lg text-slate-500 hover:text-primary hover:bg-slate-50 transition-all"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

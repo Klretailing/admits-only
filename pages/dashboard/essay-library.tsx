@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import Head from 'next/head';
 import DashboardLayout from '../../components/DashboardLayout';
 import PageHeader from '../../components/PageHeader';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 /* ── Types (mirror /api/sample-essays) ── */
 interface EssayMeta {
@@ -104,6 +105,7 @@ export default function EssaySamples() {
   const PAGE = 24; // cap rendered cards per bucket to keep the DOM light
 
   const [reader, setReader] = useState<ReaderDoc | null>(null);
+  useEscapeKey(!!reader, () => setReader(null));
   const [loadingDoc, setLoadingDoc] = useState(false);
 
   /* Checkout state */
@@ -429,7 +431,7 @@ export default function EssaySamples() {
                       {reader.locked && reader.fullWordCount ? `${reader.fullWordCount} words` : `${reader.essay.wordCount} words`}
                     </p>
                   </div>
-                  <button onClick={closeReader} className="text-slate-400 hover:text-slate-600 flex-shrink-0">
+                  <button aria-label="Close essay" onClick={closeReader} className="text-slate-400 hover:text-slate-600 flex-shrink-0">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                   </button>
                 </div>

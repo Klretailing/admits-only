@@ -203,6 +203,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             "done" = EXCLUDED."done",
             "dueDate" = EXCLUDED."dueDate",
             "updatedAt" = CURRENT_TIMESTAMP
+          WHERE "parent_action_items"."userId" = ${userId}
         `;
       }
       return res.json({ ok: true });

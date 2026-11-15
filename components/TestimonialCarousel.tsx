@@ -50,7 +50,10 @@ export default function TestimonialCarousel() {
   const [isMobile, setIsMobile] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
 
-  const totalSlides = testimonials.length;
+  // Desktop shows three at a time, so the last full view starts at length - 3;
+  // stepping further left one or two blank slots.
+  const totalSlides = isMobile ? testimonials.length : Math.max(1, testimonials.length - 2);
+  useEffect(() => { if (activeIndex >= totalSlides) setActiveIndex(0); }, [activeIndex, totalSlides]);
 
   // Track screen size for responsive carousel math
   useEffect(() => {

@@ -133,7 +133,7 @@ export default function Layout({ children }: LayoutProps) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="description" content="AdmitsOnly is the all-in-one notebook for high school, grades 9 to 12: activities and GPA, essay feedback, study groups, career exploration and college planning, in one place. Free to start." />
         <meta name="keywords" content="high school planner, student planner app, GPA tracker, extracurricular tracker, essay feedback, college essay checker, study group app, career exploration for teens, college list builder" />
-        <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect rx='20' width='100' height='100' fill='%237a7771'/><text x='50' y='68' font-size='60' text-anchor='middle' fill='white' font-weight='bold'>A</text></svg>" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <title>AdmitsOnly | The All-in-One Notebook for High School</title>
         {/* One canonical address. The same site is also served on two
             *.vercel.app domains, which otherwise compete with
@@ -348,6 +348,8 @@ export default function Layout({ children }: LayoutProps) {
                   <li><Link href="/about" className="hover:text-white transition-colors">About Us</Link></li>
                   <li><Link href="/faq" className="hover:text-white transition-colors">FAQ</Link></li>
                   <li><Link href="/newsletter" className="hover:text-white transition-colors">Newsletter</Link></li>
+                  <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link></li>
+                  <li><Link href="/terms" className="hover:text-white transition-colors">Terms</Link></li>
                   <li><a href="mailto:info@admitsonly.com" className="hover:text-white transition-colors">info@admitsonly.com</a></li>
                 </ul>
               </div>

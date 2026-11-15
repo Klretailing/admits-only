@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 /* ──────────────────────────────────────────────────────────────
    Adam — AI college-admissions assistant.
@@ -133,6 +134,7 @@ export function AdamPanel({
   open: boolean;
   onClose: () => void;
 }) {
+  useEscapeKey(open, onClose);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -229,7 +231,12 @@ export function AdamPanel({
       }
 
       setAvailable(true);
-      if (data.reply) {
+      if (res.status === 401) {
+        setStatusNote('Your session ended. Please sign in again and resend that.');
+      } else if (!res.ok || !data.reply) {
+        // Any other failure used to leave the message hanging with no reply.
+        setStatusNote("Something went wrong on my end, so that didn't send. Mind trying again?");
+      } else {
         setMessages((prev) => [...prev, { role: 'assistant', content: data.reply }]);
       }
     } catch {
@@ -264,10 +271,10 @@ export function AdamPanel({
 
       {/* Docked panel — slides in from the right edge */}
       <aside
-        className={`fixed z-50 flex flex-col bg-white shadow-2xl transition-transform duration-300 ease-out
+        className={`fixed z-50 flex flex-col bg-white shadow-2xl transition-[transform,visibility] duration-300 ease-out
           top-0 left-0 right-0 h-screen lg:left-auto lg:w-[400px] xl:w-[420px]
           lg:border-l lg:border-orange-100
-          ${open ? 'translate-x-0' : 'translate-x-full'}`}
+          ${open ? 'translate-x-0 visible' : 'translate-x-full invisible'}`}
         style={{ height: '100dvh' }}
         role="dialog"
         aria-label="Adam, your admissions guide"

@@ -11,6 +11,8 @@ import '@fontsource-variable/shantell-sans/full.css';
 export const metadata = {
   title: 'AdmitsOnly',
   metadataBase: new URL('https://www.admitsonly.com'),
+  // Without an icon the browser asked for /favicon.ico, which 404s.
+  icons: { icon: '/favicon.svg' },
 };
 
 export default function RootLayout({

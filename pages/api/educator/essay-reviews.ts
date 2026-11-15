@@ -118,11 +118,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (review.status !== 'pending') {
           return res.status(409).json({ error: 'This review has already been claimed' });
         }
-        await prisma.$executeRaw`
+        // Only a tutor the student is connected to can claim, and the claim
+        // is atomic: the WHERE re-checks 'pending', so two tutors clicking at
+        // once can't both believe they hold it.
+        const linked: any[] = await prisma.$queryRaw`
+          SELECT 1 FROM "account_connections"
+          WHERE "studentId" = ${review.studentId} AND "connectedUserId" = ${tutorId} AND "role" = 'tutor'
+          LIMIT 1
+        `;
+        if (linked.length === 0) {
+          return res.status(403).json({ error: 'This student is not connected to you' });
+        }
+        const claimed = await prisma.$executeRaw`
           UPDATE "essay_reviews"
           SET "tutorId" = ${tutorId}, "status" = 'in_review', "updatedAt" = CURRENT_TIMESTAMP
-          WHERE "id" = ${reviewId}
+          WHERE "id" = ${reviewId} AND "status" = 'pending'
         `;
+        if (claimed === 0) {
+          return res.status(409).json({ error: 'This review has already been claimed' });
+        }
       } else if (action === 'save') {
         // Save draft — only the assigned tutor can save
         if (review.tutorId !== tutorId) {

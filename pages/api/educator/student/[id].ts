@@ -24,7 +24,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       SELECT "id", "educatorId", "studentName", "studentEmail", "tags", "notes",
              "status", "startDate", "inviteStatus", "inviteToken", "linkedUserId"
       FROM "educator_students"
-      WHERE "id" = ${id}
+      WHERE "educatorId" = ${educatorId}
+        AND ("id" = ${id} OR "linkedUserId" = ${id})
+      ORDER BY ("id" = ${id}) DESC
+      LIMIT 1
     `;
     student = rows[0];
   } catch (e) {
@@ -32,12 +35,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: 'Failed to load student' });
   }
 
-  // 404 if not found or not owned by this educator
+  // 404 if not found or not owned by this educator. The id may be the roster
+  // id or the student's account id: the overview and Student Progress pages
+  // link with the account id, and used to land on "Student not found".
   if (!student || student.educatorId !== educatorId) {
     return res.status(404).json({ error: 'Student not found' });
   }
 
-  const linkedUserId: string | null = student.linkedUserId || null;
+  // The roster's link alone is not enough to see the student's work: if the
+  // student has since removed this tutor, their profile, essays and
+  // applications are theirs again.
+  let linkedUserId: string | null = student.linkedUserId || null;
+  if (linkedUserId) {
+    const conn: any[] = await prisma.$queryRaw`
+      SELECT 1 FROM "account_connections"
+      WHERE "studentId" = ${linkedUserId} AND "connectedUserId" = ${educatorId}
+      LIMIT 1
+    `;
+    if (conn.length === 0) linkedUserId = null;
+  }
   const linked = !!linkedUserId;
 
   const parseJson = (v: any, fallback: any) => {

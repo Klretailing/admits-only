@@ -62,7 +62,8 @@ function NewsletterForm() {
 
     if (!grade) errs.grade = "Please select a grade.";
     if (!region) errs.region = "Please select your region.";
-    if (!district) errs.district = "Please select your district.";
+    // Outside the two regions there is no district list; it isn't required.
+    if (!district && region !== "other") errs.district = "Please select your district.";
     if (!interest) errs.interest = "Please select an interest.";
     if (!consentEmail)
       errs.consentEmail =
@@ -407,6 +408,7 @@ function NewsletterForm() {
                       </option>
                       <option value="bay_area">Bay Area</option>
                       <option value="sacramento_central_valley">Sacramento / Central Valley</option>
+                      <option value="other">Somewhere else</option>
                     </select>
                     <div
                       className={
@@ -476,14 +478,14 @@ function NewsletterForm() {
                     id="district"
                     name="district"
                     value={district}
-                    disabled={!region}
+                    disabled={!region || region === "other"}
                     onChange={(e) => {
                       setDistrict(e.target.value);
                       clearError("district");
                     }}
                   >
                     <option value="" disabled>
-                      {region ? "Select district" : "Select a region first"}
+                      {region === "other" ? "Not needed outside these areas" : region ? "Select district" : "Select a region first"}
                     </option>
                     {region === "bay_area" && (
                       <>
@@ -649,7 +651,7 @@ function NewsletterForm() {
                     email address, phone number (if provided), and household
                     information will be collected and stored by Learner&rsquo;s
                     Edge Weekly in accordance with our{" "}
-                    <a className={s.disclaimerLink} href="/privacy-policy">
+                    <a className={s.disclaimerLink} href="/privacy">
                       Privacy Policy
                     </a>{" "}
                     and{" "}
@@ -667,33 +669,15 @@ function NewsletterForm() {
                     emailing{" "}
                     <a
                       className={s.disclaimerLink}
-                      href="mailto:privacy@learnersedge.com"
+                      href="mailto:info@admitsonly.com"
                     >
-                      privacy@learnersedge.com
+                      info@admitsonly.com
                     </a>
                     . California residents have additional rights under the{" "}
                     <strong>
                       California Consumer Privacy Act (CCPA)
                     </strong>
-                    . This form is protected by reCAPTCHA and Google&rsquo;s{" "}
-                    <a
-                      className={s.disclaimerLink}
-                      href="https://policies.google.com/privacy"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Privacy Policy
-                    </a>{" "}
-                    and{" "}
-                    <a
-                      className={s.disclaimerLink}
-                      href="https://policies.google.com/terms"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Terms of Service
-                    </a>{" "}
-                    apply.
+                    .
                     <br />
                     <br />
                     SMS consent: If you opt into text alerts above, you consent

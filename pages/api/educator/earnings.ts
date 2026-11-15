@@ -27,7 +27,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           description,
           hours: parseFloat(hours),
           amount: parseFloat(amount),
-          date: date ? new Date(date) : new Date(),
+          // A bare "YYYY-MM-DD" is stored at noon UTC, which is that same
+          // calendar day across the US; midnight UTC displayed as the day
+          // before for every US tutor.
+          date: date ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(String(date)) ? `${date}T12:00:00Z` : date) : new Date(),
         },
       });
       return res.status(201).json({ entry });
@@ -42,7 +45,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { id } = req.body;
     if (!id) return res.status(400).json({ error: 'ID is required' });
     try {
-      await prisma.manualEarning.delete({ where: { id } });
+      // Scoped to this educator: deleting by id alone let any tutor delete
+      // another tutor's entries.
+      const { count } = await prisma.manualEarning.deleteMany({ where: { id, educatorId: (session.user as any).id } });
+      if (count === 0) return res.status(404).json({ error: 'Entry not found' });
       return res.json({ ok: true });
     } catch (e) {
       console.error('Delete earning error:', (e as Error).message);

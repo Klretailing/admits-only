@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 /* ──────────────────────────────────────────────────────────────────────
    SHARE DECISIONS → #CollegeDecisions
@@ -50,10 +51,9 @@ export default function ShareDecisions({ apps }: { apps: DecidedApp[] }) {
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
+  useEscapeKey(open && !busy, () => setOpen(false));
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  if (decided.length === 0) return null;
 
   function toggle(id: string) {
     setPicked(prev => {
@@ -71,6 +71,10 @@ export default function ShareDecisions({ apps }: { apps: DecidedApp[] }) {
     const lines = chosen.map(a => `${DECISION_LABEL[a.status as DecisionStatus]} — ${a.name}${a.type ? ` (${a.type})` : ''}`);
     return [note.trim(), ...lines].filter(Boolean).join('\n');
   }, [chosen, note]);
+
+  // After every hook: returning before useMemo above changed the hook count
+  // when the first decision arrived, and React crashed the Applications page.
+  if (decided.length === 0) return null;
 
   async function share() {
     if (chosen.length === 0 || busy) return;

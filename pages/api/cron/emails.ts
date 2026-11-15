@@ -113,8 +113,15 @@ async function appsFor(userId: string): Promise<App[]> {
   const rows: any[] = await prisma.$queryRaw`
     SELECT "data" FROM "saved_applications" WHERE "userId" = ${userId}`;
   const d = rows[0]?.data;
-  const parsed = typeof d === 'string' ? JSON.parse(d) : d;
-  return Array.isArray(parsed) ? parsed : [];
+  let parsed: unknown = d;
+  if (typeof d === 'string') { try { parsed = JSON.parse(d); } catch { return []; } }
+  if (!Array.isArray(parsed)) return [];
+  // The tracker is saved as free-form JSON from the client. One student's
+  // malformed entry ([null], or tasks that aren't a list) used to throw here
+  // and stop the job for every student after them.
+  return parsed
+    .filter((a): a is App => !!a && typeof a === 'object')
+    .map((a) => ({ ...a, tasks: Array.isArray(a.tasks) ? a.tasks.filter((t) => !!t && typeof t === 'object') : [] }));
 }
 
 function tally(results: SendResult[]): Record<string, number> {
@@ -188,11 +195,14 @@ async function runIdle(students: { id: string; name: string | null; email: strin
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Vercel cron sends this header; a manual call needs the secret.
+  // With CRON_SECRET set, Vercel sends it as a Bearer token on every cron
+  // call, and that token is the only way in: a header like x-vercel-cron can
+  // be added to any request by anyone. Without CRON_SECRET we fall back to
+  // that header so the scheduled emails keep running; set the secret.
   const secret = process.env.CRON_SECRET;
   const auth = req.headers.authorization;
-  const isVercelCron = req.headers['x-vercel-cron'] != null;
-  if (!isVercelCron && (!secret || auth !== `Bearer ${secret}`)) {
+  const allowed = secret ? auth === `Bearer ${secret}` : req.headers['x-vercel-cron'] != null;
+  if (!allowed) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 

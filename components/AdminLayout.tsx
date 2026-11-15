@@ -287,6 +287,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setMobileMenuOpen(true)}
+              aria-label="Open menu"
               className="lg:hidden p-1.5 rounded-lg text-slate-500 hover:text-primary hover:bg-slate-50 transition-all"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

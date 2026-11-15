@@ -39,6 +39,11 @@ export default function AdminEssays() {
       <Head><title>Essays | Admin — AdmitsOnly</title></Head>
 
       <div className="space-y-6">
+        {/* The rows below are hard-coded examples, not your data, and the
+            actions aren't wired up. Said plainly so nobody acts on them. */}
+        <div role="note" className="rounded-xl border-[1.5px] border-red-pencil bg-white px-4 py-3 text-sm text-primary">
+          <strong>Sample screen.</strong> This page shows example rows, not real students, and its buttons don&apos;t do anything yet.
+        </div>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold font-display text-primary">Essays</h1>

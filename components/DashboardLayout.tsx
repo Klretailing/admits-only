@@ -7,6 +7,7 @@ import { AdamPanel, AdamNavButton, AdamFloatingButton } from './AdamAssistant';
 import { useTheme } from '../lib/themeContext';
 import { tracker } from '../lib/analytics';
 import LogoMark from './LogoMark';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 /** The pages that get a slot in the mobile tab bar; the rest live under More. */
 const MOBILE_TABS = ['/dashboard', '/dashboard/essays', '/dashboard/progress', '/dashboard/pods'];
@@ -94,6 +95,18 @@ const sidebarLinks = [
     ),
   },
   {
+    // Sessions booked with a tutor, with their Join links. The page existed
+    // but nothing linked to it, so students never saw their bookings.
+    href: '/dashboard/sessions',
+    label: 'Tutor Sessions',
+    mobileLabel: 'Sessions',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+      </svg>
+    ),
+  },
+  {
     href: '/dashboard/settings',
     label: 'Settings',
     mobileLabel: 'Settings',
@@ -112,6 +125,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const isAdmin = (session?.user as any)?.role === 'admin';
   const isSubPage = router.pathname !== '/dashboard';
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  useEscapeKey(mobileMenuOpen, () => setMobileMenuOpen(false));
   const [adamOpen, setAdamOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
 
@@ -241,7 +255,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   Admits<span className="gradient-text">Only</span>
                 </span>
               </Link>
-              <button onClick={() => setMobileMenuOpen(false)} className="p-2 rounded-lg text-slate-400 hover:text-primary hover:bg-slate-50">
+              <button onClick={() => setMobileMenuOpen(false)} aria-label="Close menu" className="p-2 rounded-lg text-slate-600 hover:text-primary hover:bg-slate-50">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
@@ -333,6 +347,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             {/* Mobile hamburger */}
             <button
               onClick={() => setMobileMenuOpen(true)}
+              aria-label="Open menu"
               className="lg:hidden p-1.5 rounded-lg text-slate-500 hover:text-primary hover:bg-slate-50 transition-all"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

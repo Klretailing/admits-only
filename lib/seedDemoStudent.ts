@@ -80,7 +80,7 @@ const ESSAYS = [
   {
     title: "The Bug That Wouldn't Die",
     prompt: 'Common App: Some students have a background, identity, interest, or talent so meaningful they believe their application would be incomplete without it.',
-    status: 'Complete', aiScore: 88, vocabScore: 91, grammarScore: 95, originalityScore: 86, overallScore: 89,
+    status: 'Complete', aiScore: 12, vocabScore: 91, grammarScore: 95, originalityScore: 86, overallScore: 89,
     content: `For three weeks, my robot drove in circles.
 
 Not literal circles — worse. Every time our FIRST Robotics team ran the autonomous routine I had written, the robot lurched toward the game piece, hesitated, and spun off course like a confused Roomba. My teammates started calling it "the drunk driver." I called it something less printable.
@@ -102,7 +102,7 @@ My grandfather's carburetors are long gone, but his rule survived the jump from 
   {
     title: 'Rebuilding the CS Club',
     prompt: 'UC PIQ #1: Describe an example of your leadership experience in which you have positively influenced others.',
-    status: 'Complete', aiScore: 85, vocabScore: 88, grammarScore: 96, originalityScore: 84, overallScore: 86,
+    status: 'Complete', aiScore: 15, vocabScore: 88, grammarScore: 96, originalityScore: 84, overallScore: 86,
     content: `When I inherited our high school's Computer Science Club as a junior, it had twelve members, a broken projector, and a reputation as "the place you put on your college app." I wanted it to be the place you actually learned something.
 
 My first instinct — schedule harder lectures — flopped. Attendance dropped to eight. So I stopped talking and started asking. In one-on-one conversations, I learned that members didn't want lectures; they wanted to build things with people who wouldn't judge them for googling basic syntax.
@@ -200,6 +200,15 @@ async function refreshDemoCycle(uid: string) {
     UPDATE "study_pods" SET "name" = ${podNameForCycle(cycle)}, "updatedAt" = NOW() WHERE "id" = ${'pod_demo_cs'}`;
 }
 
+/** aiScore is stored inverted (lower = sounds more like the student). The
+ *  demo essays were seeded with it the wrong way round, so the strongest
+ *  essay read "Sounds like you: 12 · Needs work". Correct existing rows once. */
+async function fixDemoVoiceScores(uid: string) {
+  await prisma.$executeRaw`
+    UPDATE "essays" SET "aiScore" = 100 - "aiScore"
+    WHERE "userId" = ${uid} AND "id" IN ('es_demo_0', 'es_demo_1') AND "aiScore" > 50`;
+}
+
 export async function seedDemoStudent() {
   try {
     const ids: Record<string, string> = {};
@@ -218,6 +227,7 @@ export async function seedDemoStudent() {
     const done: any[] = await prisma.$queryRaw`SELECT 1 FROM "adam_memory" WHERE "userId" = ${uid} LIMIT 1`;
     if (done.length > 0) {
       await refreshDemoCycle(uid);
+      await fixDemoVoiceScores(uid);
       return;
     }
     const cycle = currentCycle();

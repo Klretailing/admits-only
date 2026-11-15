@@ -2,6 +2,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
 import DashboardLayout from '../../components/DashboardLayout';
 import { SCHOOLS, PROMPT_TYPES as SUPP_PROMPT_TYPES, getPromptTypeInfo, findSchoolByName, findReuseOpportunities, type SchoolData, type SupplementalPrompt, type ReuseMatch, type PromptType as SuppPromptType } from '../../lib/schoolData';
 import { analyzeSentences, computeStats, type AnalyzedSentence, type AnalysisStats } from '../../lib/sentenceAnalysis';
@@ -9,8 +10,10 @@ import { checkGrammar, applyFix, type GrammarIssue } from '../../lib/grammarChec
 import { analyzeEssayInsights, type EssayInsights } from '../../lib/essayInsights';
 import { analyzeCraft, type LearnedRule } from '../../lib/essayCraft';
 import CraftStudio from '../../components/CraftStudio';
+import EssayScoreCard from '../../components/EssayScoreCard';
 import { tracker } from '../../lib/analytics';
 import { analyzeActivities } from '../../lib/motifEngine';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 /* ══════════════════════════════════════════════════════════════════════
    TYPES
@@ -2392,61 +2395,20 @@ function GrammarEditor({
   );
 }
 
-/* ══════════════════════════════════════════════════════════════════════
-   SCORE BAR COMPONENT (compact for sidebar)
-   ══════════════════════════════════════════════════════════════════════ */
-
-/* Score colours are bright enough for a bar fill but not for small text:
-   #b6b0a9 on white is 2.15:1 and #a7a29b is 2.54:1. Numbers and grades use a
-   darker shade of the same hue in light mode and a lighter one in dark mode. */
+/* Text colours for score numbers in the Logic & flow panel. */
 const SCORE_INK: Record<string, string> = {
   '#a7a29b': 'text-emerald-700 dark:text-emerald-400',
   '#b6b0a9': 'text-amber-700 dark:text-amber-400',
   '#de574e': 'text-red-700 dark:text-red-400',
 };
 
-function ScoreBar({ label, value, color, sublabel, invert }: {
-  label: string; value: number | null; color: string; sublabel: string; invert?: boolean;
-}) {
-  const pct = value != null ? (invert ? 100 - value : value) : 0;
-  let barColor = color;
-  let grade = '';
-  if (value != null) {
-    if (invert) {
-      barColor = value <= 20 ? '#a7a29b' : value <= 45 ? '#b6b0a9' : '#de574e';
-      grade = value <= 20 ? 'A' : value <= 35 ? 'B' : value <= 50 ? 'C' : 'D';
-    } else {
-      barColor = value >= 70 ? '#a7a29b' : value >= 45 ? '#b6b0a9' : '#de574e';
-      grade = value >= 80 ? 'A' : value >= 65 ? 'B' : value >= 45 ? 'C' : 'D';
-    }
-  }
 
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-[11px] font-semibold text-slate-600">{label}</span>
-        <div className="flex items-center gap-1.5">
-          {value != null && (
-            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${SCORE_INK[barColor] || ''}`}
-              style={{ backgroundColor: `${barColor}15`, ...(SCORE_INK[barColor] ? {} : { color: barColor }) }}>
-              {grade}
-            </span>
-          )}
-          <span className={`text-[11px] font-bold ${SCORE_INK[barColor] || ''}`} style={SCORE_INK[barColor] ? undefined : { color: barColor }}>
-            {value != null ? (invert ? `${value}%` : `${value}`) : '\u2014'}
-          </span>
-        </div>
-      </div>
-      <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-        <div
-          className="h-full rounded-full transition-all duration-700 ease-out"
-          style={{ width: `${pct}%`, backgroundColor: barColor, boxShadow: value != null ? `0 0 8px ${barColor}40` : 'none' }}
-        />
-      </div>
-      <p className="text-[9px] text-slate-400 mt-0.5">{value != null ? sublabel : 'Write 50+ words'}</p>
-    </div>
-  );
-}
+const SAMPLE_PROMPT = 'Discuss an accomplishment, event, or realization that sparked a period of personal growth and a new understanding of yourself or others.';
+const SAMPLE_ESSAY = `Every Saturday my grandmother wakes at four to push her cart three miles to the market. I have been her helper since I was seven. At first I hated it. The cart was heavy, the streets were dark, and I wanted to sleep in like my friends. I thought selling vegetables was a very small thing to do with a life.
+
+That changed the winter she slipped on the ice. For three weeks I ran the stall alone. I learned which customers wanted their tomatoes wrapped in newspaper, which ones haggled for fun, and which ones paid a little extra when nobody was looking. I learned that the market is not really about vegetables. It is about a hundred small promises that keep a neighborhood together.
+
+Now I want to study urban planning, because I think cities should be built for people like my grandmother. This experience was transformative and taught me the quintessential importance of community.`;
 
 /* ══════════════════════════════════════════════════════════════════════
    MAIN COMPONENT
@@ -2470,7 +2432,11 @@ export default function Essays() {
   const [mobileEditorTab, setMobileEditorTab] = useState<'write' | 'scores'>('write');
   const [editContent, setEditContent] = useState('');
   const [saving, setSaving] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The edit waiting to be saved, tagged with the essay it belongs to.
+  const pendingSave = useRef<{ id: string; content: string; status?: string } | null>(null);
 
   const [ecs, setEcs] = useState<Extracurricular[]>([]);
   const [ecsLoading, setEcsLoading] = useState(true);
@@ -2534,6 +2500,8 @@ export default function Essays() {
   const [suppSchoolFilter, setSuppSchoolFilter] = useState<string>('all');
   const [suppTypeFilter, setSuppTypeFilter] = useState<SuppPromptType | 'all'>('all');
   const [suppExpandedPrompt, setSuppExpandedPrompt] = useState<string | null>(null);
+  useEscapeKey(showReviewModal, () => setShowReviewModal(false));
+  useEscapeKey(suppExpandedPrompt != null, () => setSuppExpandedPrompt(null));
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   // Handle URL query params for deep-linking from applications page
@@ -2620,6 +2588,8 @@ export default function Essays() {
       } else if (recent && typeof window !== 'undefined' && window.innerWidth >= 1024) {
         setActiveEssay(prev => prev || recent);
         setEditContent(prev => prev || recent.content || '');
+        // Below 2xl the list and editor take turns, so show the editor.
+        setMobileEssayView('editor');
       }
     }).catch(() => setLoading(false));
     fetch('/api/profile').then(r => r.json()).then(d => { if (d.profile?.extracurriculars) setEcs(d.profile.extracurriculars as Extracurricular[]); setEcsLoading(false); }).catch(() => setEcsLoading(false));
@@ -2667,28 +2637,96 @@ export default function Essays() {
     setCreating(true);
     try {
       const res = await fetch('/api/essays', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: newTitle.trim(), prompt: newPrompt.trim() }) });
-      const data = await res.json();
-      if (data.essay) { setEssays(prev => [data.essay, ...prev]); setActiveEssay(data.essay); setEditContent(data.essay.content || ''); }
-    } catch (e) {}
-    setCreating(false); setShowNewForm(false); setNewTitle(''); setNewPrompt('');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.essay) throw new Error(data.error || 'Could not create the essay.');
+      flushEssaySave();
+      setEssays(prev => [data.essay, ...prev]); setActiveEssay(data.essay); setEditContent(data.essay.content || '');
+      setMobileEssayView('editor'); setMobileEditorTab('write');
+      // Only clear the form once the essay exists; a failed create used to
+      // close the form and throw away what the student had typed.
+      setShowNewForm(false); setNewTitle(''); setNewPrompt(''); setCreateError(null);
+    } catch (e) {
+      setCreateError((e as Error).message || 'Could not create the essay. Try again.');
+    }
+    setCreating(false);
   };
+
+  /* A short practice draft with a few deliberate weaknesses (a generic
+     closing line, a thesaurus word, filler like "very"), so a first-time
+     student sees real feedback before writing a word of their own. */
+  const trySampleEssay = async () => {
+    setCreating(true);
+    try {
+      const res = await fetch('/api/essays', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Practice: The Saturday Market', prompt: SAMPLE_PROMPT, content: SAMPLE_ESSAY }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.essay) throw new Error(data.error || 'Could not load the sample.');
+      setEssays(prev => [data.essay, ...prev]); setActiveEssay(data.essay); setEditContent(data.essay.content || '');
+      setMobileEssayView('editor'); setMobileEditorTab('scores'); setCreateError(null);
+      tracker.feature('essays', 'try_sample', {});
+    } catch (e) {
+      setCreateError((e as Error).message);
+    }
+    setCreating(false);
+  };
+
+  /* Autosave. The pending edit carries the id of the essay it was typed
+     into, and is sent before switching essays. Before, the timer saved
+     whatever essay was open when it fired and then re-selected that essay,
+     so typing in A and clicking B within a second put A's title over B's
+     text, and the next save wrote B's text into A. Failures are now shown
+     instead of vanishing with the "Saving..." label. */
+  const flushEssaySave = useCallback(async () => {
+    if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null; }
+    const job = pendingSave.current;
+    if (!job) return;
+    pendingSave.current = null;
+    setSaving(true);
+    try {
+      const res = await fetch('/api/essays', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(job) });
+      if (!res.ok) throw new Error(String(res.status));
+      const data = await res.json();
+      if (data.essay) {
+        setEssays(prev => prev.map(e => e.id === data.essay.id ? data.essay : e));
+        setActiveEssay(cur => (cur && cur.id === data.essay.id ? data.essay : cur));
+      }
+      setSaveFailed(false);
+    } catch {
+      // Keep the edit queued (unless a newer one replaced it) so Retry or the
+      // next keystroke sends it.
+      if (!pendingSave.current) pendingSave.current = job;
+      setSaveFailed(true);
+    }
+    setSaving(false);
+  }, []);
 
   const handleContentChange = useCallback((content: string) => {
     setEditContent(content);
+    if (!activeEssay) return;
+    // A finished or submitted essay keeps its status when edited.
+    const keepStatus = activeEssay.status === 'Complete' || activeEssay.status === 'In Review';
+    pendingSave.current = {
+      id: activeEssay.id,
+      content,
+      ...(keepStatus ? {} : { status: content.trim().length > 50 ? 'Draft' : 'Not Started' }),
+    };
     if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(async () => {
-      if (!activeEssay) return;
-      setSaving(true);
-      try {
-        const res = await fetch('/api/essays', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: activeEssay.id, content, status: content.trim().length > 50 ? 'Draft' : 'Not Started' }) });
-        const data = await res.json();
-        if (data.essay) { setActiveEssay(data.essay); setEssays(prev => prev.map(e => e.id === data.essay.id ? data.essay : e)); }
-      } catch (e) {}
-      setSaving(false);
-    }, 1200);
-  }, [activeEssay]);
+    saveTimer.current = setTimeout(() => { void flushEssaySave(); }, 1200);
+  }, [activeEssay, flushEssaySave]);
 
-  const openEssay = (essay: Essay) => { setActiveEssay(essay); setEditContent(essay.content || ''); setMobileEssayView('editor'); setMobileEditorTab('write'); };
+  // Warn before leaving with an unsaved edit.
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (pendingSave.current) { e.preventDefault(); e.returnValue = ''; }
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, []);
+
+  const openEssay = (essay: Essay) => { void flushEssaySave(); setActiveEssay(essay); setEditContent(essay.content || ''); setMobileEssayView('editor'); setMobileEditorTab('write'); };
 
   const deleteEssay = async (id: string) => {
     try { await fetch('/api/essays', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) }); setEssays(prev => prev.filter(e => e.id !== id)); if (activeEssay?.id === id) { setActiveEssay(null); setEditContent(''); } } catch (e) {}
@@ -2843,43 +2881,45 @@ export default function Essays() {
       {/* height: on mobile subtract extra 4rem for bottom tab bar; lg uses original calc */}
       <div className="flex flex-col h-[calc(100vh-12rem)] lg:h-[calc(100vh-8rem)]">
         {/* Header with mode tabs */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 lg:mb-5 flex-shrink-0 gap-3">
-          <div className="flex items-center gap-3 lg:gap-5">
+        <div className="flex flex-wrap items-center justify-between mb-4 lg:mb-5 flex-shrink-0 gap-3">
+          <div className="flex flex-wrap items-center gap-3 lg:gap-5 min-w-0">
             {/* Mobile back to list button */}
             {mode === 'essays' && mobileEssayView === 'editor' && activeEssay && (
               <button
-                onClick={() => setMobileEssayView('list')}
-                className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-primary hover:bg-slate-50 transition-all flex-shrink-0"
+                onClick={() => { void flushEssaySave(); setMobileEssayView('list'); }}
+                aria-label="All essays"
+                className="2xl:hidden inline-flex items-center gap-1 p-1.5 pr-2.5 rounded-lg text-slate-600 hover:text-primary hover:bg-slate-50 transition-all flex-shrink-0"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                <span className="hidden sm:inline text-sm font-semibold">All essays</span>
               </button>
             )}
             <div>
               <h1 className="text-xl lg:text-2xl font-bold font-display text-primary tracking-tight">Essay Workspace</h1>
-              <p className="mt-0.5 text-xs lg:text-sm text-slate-400 hidden sm:block">{mode === 'essays' ? 'Write, analyze, and get real-time admissions-grade feedback.' : mode === 'motifs' ? 'Discover hidden connections between your ideas and stitch them into compelling stories.' : 'Browse school-specific prompts and find reuse opportunities across your essays.'}</p>
+              <p className="mt-0.5 text-xs lg:text-sm text-slate-600 hidden 2xl:block">{mode === 'essays' ? 'Write, analyze, and get real-time admissions-grade feedback.' : mode === 'motifs' ? 'Discover hidden connections between your ideas and stitch them into compelling stories.' : 'Browse school-specific prompts and find reuse opportunities across your essays.'}</p>
             </div>
-            <div className="flex bg-slate-100 rounded-xl p-1 gap-0.5 border border-slate-200">
+            <div className="flex max-w-full overflow-x-auto bg-slate-100 rounded-xl p-1 gap-0.5 border border-slate-200">
               <button
                 onClick={() => setMode('essays')}
-                className={`px-3 lg:px-5 py-2 rounded-lg text-xs font-semibold transition-all ${mode === 'essays' ? 'bg-white text-accent shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-primary'}`}
+                className={`px-3 lg:px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${mode === 'essays' ? 'bg-white text-accent shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-primary'}`}
               >
                 My Essays
               </button>
               <button
                 onClick={() => setMode('motifs')}
-                className={`px-3 lg:px-5 py-2 rounded-lg text-xs font-semibold transition-all ${mode === 'motifs' ? 'bg-white text-accent shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-primary'}`}
+                className={`px-3 lg:px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${mode === 'motifs' ? 'bg-white text-accent shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-primary'}`}
               >
                 Motifs
               </button>
               <button
                 onClick={() => setMode('supplementals')}
-                className={`px-3 lg:px-5 py-2 rounded-lg text-xs font-semibold transition-all ${mode === 'supplementals' ? 'bg-white text-accent shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-primary'}`}
+                className={`px-3 lg:px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${mode === 'supplementals' ? 'bg-white text-accent shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-primary'}`}
               >
                 Prompts
               </button>
               <button
                 onClick={() => router.push('/dashboard/story-builder')}
-                className="px-3 lg:px-5 py-2 rounded-lg text-xs font-semibold transition-all text-slate-500 hover:text-primary"
+                className="px-3 lg:px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all text-slate-600 hover:text-primary"
               >
                 Story Builder
               </button>
@@ -3559,23 +3599,40 @@ export default function Essays() {
         {/* New Essay Form */}
         {mode === 'essays' && showNewForm && (
           <div className="bg-white rounded-2xl border border-accent/20 p-5 shadow-sm mb-4 flex-shrink-0">
-            <h3 className="text-base font-bold font-display text-primary mb-3">Create New Essay</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <input type="text" value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="Essay title (e.g. Personal Statement)" className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent" autoFocus />
-              <input type="text" value={newPrompt} onChange={e => setNewPrompt(e.target.value)} placeholder="Prompt (e.g. Describe a creative solution...)" className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent" />
+            <form onSubmit={(e) => { e.preventDefault(); if (newTitle.trim() && !creating) void handleCreate(); }}>
+            <h3 className="text-base font-bold font-display text-primary">Start an essay</h3>
+            <p className="mt-0.5 mb-3 text-sm text-slate-600">Give it a name, and paste the prompt if you have one: the feedback uses it. You can paste your draft next.</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span className="block text-sm font-semibold text-primary mb-1">Title</span>
+                <input type="text" value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="e.g. Personal statement" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent" autoFocus />
+              </label>
+              <label className="block">
+                <span className="block text-sm font-semibold text-primary mb-1">Prompt <span className="font-normal text-slate-600">(optional)</span></span>
+                <input type="text" value={newPrompt} onChange={e => setNewPrompt(e.target.value)} placeholder="e.g. Describe a challenge you overcame" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent" />
+              </label>
             </div>
+            {createError && <p role="alert" className="mt-2 text-sm text-red-pencil">{createError}</p>}
             <div className="flex gap-2 justify-end mt-3">
-              <button onClick={() => { setShowNewForm(false); setNewTitle(''); setNewPrompt(''); }} className="px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-700">Cancel</button>
-              <button onClick={handleCreate} disabled={!newTitle.trim() || creating} className="px-5 py-2 text-sm font-semibold text-white bg-accent rounded-lg hover:bg-accent/90 transition-colors disabled:opacity-40">{creating ? 'Creating...' : 'Create'}</button>
+              <button type="button" onClick={() => { setShowNewForm(false); setNewTitle(''); setNewPrompt(''); setCreateError(null); }} className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-primary">Cancel</button>
+              <button type="submit" disabled={!newTitle.trim() || creating} className="btn-primary text-sm !py-2 !px-5 disabled:opacity-40">{creating ? 'Creating…' : 'Create'}</button>
             </div>
+            </form>
           </div>
         )}
 
-        {/* ═══ 3-COLUMN LAYOUT ═══ */}
-        {mode === 'essays' && <div className="flex-1 min-h-0 grid lg:grid-cols-[240px_1fr_340px] gap-4 lg:gap-5">
+        {/* ═══ LAYOUT ═══
+            Three columns only from 2xl (1536px): beside the app's own
+            sidebar, list + editor + feedback left the editor ~85px wide on a
+            1024px laptop. xl: editor + feedback, with "All essays" to switch.
+            Below xl: one column, Write / Feedback tabs.
+            minmax(0, 1fr) matters: a plain 1fr column won't shrink below its
+            widest unbreakable line (the one-line essay prompt), which pushed
+            the feedback panel off-screen even on a 2200px display. */}
+        {mode === 'essays' && <div className={`flex-1 min-h-0 grid gap-4 xl:gap-5 ${essays.length === 0 && !loading ? '' : 'xl:grid-cols-[minmax(0,1fr)_360px] 2xl:grid-cols-[240px_minmax(0,1fr)_360px]'}`}>
 
           {/* ─── LEFT: Essay List ─── */}
-          <div className={`overflow-y-auto space-y-2 pr-1 ${mobileEssayView === 'editor' && activeEssay ? 'hidden lg:block' : ''}`}>
+          <div className={`overflow-y-auto space-y-2 pr-1 min-w-0 ${essays.length === 0 && !loading ? '' : mobileEssayView === 'editor' && activeEssay ? 'hidden 2xl:block' : 'xl:col-span-2 2xl:col-span-1'}`}>
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <svg className="w-6 h-6 animate-spin text-accent" fill="none" viewBox="0 0 24 24">
@@ -3584,29 +3641,38 @@ export default function Essays() {
                 </svg>
               </div>
             ) : essays.length === 0 ? (
-              <div className="text-center py-10 px-4">
-                <div className="w-16 h-16 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+              /* First visit: one welcome that says what this does and how to
+                 start, instead of two empty states and a blank "Select an
+                 Essay" box. */
+              <div className="max-w-3xl mx-auto py-6 sm:py-10 px-1">
+                <p className="note text-xl text-slate-600">your first essay</p>
+                <h2 className="mt-1 text-2xl sm:text-3xl font-bold text-primary">Get honest feedback on any essay</h2>
+                <p className="mt-2 text-base sm:text-lg text-slate-700 leading-relaxed">
+                  Paste a draft or start from a blank page. As you write, you&apos;ll see the few changes most worth making,
+                  each with an example, and how the draft reads overall.
+                </p>
+                <ol className="mt-6 grid gap-3 sm:grid-cols-3">
+                  {[
+                    ['Write or paste', 'A college essay, a supplement, or an English assignment.'],
+                    ['Read the feedback', 'It starts at about 40 words and updates as you type.'],
+                    ['Revise', 'Fix the first suggestion, then the next. Ask a tutor when you are ready.'],
+                  ].map(([t, d], i) => (
+                    <li key={t} className="rounded-2xl border bg-white p-4">
+                      <span className="text-sm font-bold text-slate-600">Step {i + 1}</span>
+                      <p className="mt-0.5 text-base font-bold text-primary">{t}</p>
+                      <p className="mt-1 text-sm text-slate-700 leading-snug">{d}</p>
+                    </li>
+                  ))}
+                </ol>
+                <div className="mt-7 flex flex-wrap items-center gap-3">
+                  <button type="button" onClick={() => { setShowNewForm(true); setCreateError(null); }} className="btn-primary text-base">Start an essay</button>
+                  <button type="button" onClick={trySampleEssay} disabled={creating} className="btn-secondary text-base disabled:opacity-60">{creating ? 'Loading…' : 'Try it on a sample essay'}</button>
                 </div>
-                <h4 className="text-sm font-bold text-primary mb-1">Start your first essay</h4>
-                <p className="text-xs text-slate-400 max-w-[200px] mx-auto mb-4">Personal statements can make or break your application. Our AI scores your writing in real time.</p>
-                <button
-                  onClick={() => setShowNewForm(true)}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-accent rounded-lg hover:bg-accent/90 transition-colors shadow-sm"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
-                  Create Essay
-                </button>
-                <div className="mt-4 pt-4 border-t border-slate-100 max-w-[240px] mx-auto">
-                  <p className="text-[11px] text-slate-400 mb-2">Not sure what to write about?</p>
-                  <button
-                    onClick={() => router.push('/dashboard/story-builder')}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-accent border border-accent/30 rounded-lg hover:bg-accent/5 transition-colors"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                    Try Story Builder for ideas
-                  </button>
-                </div>
+                {createError && <p role="alert" className="mt-3 text-sm text-red-pencil">{createError}</p>}
+                <p className="mt-5 text-sm text-slate-700">
+                  Not sure what to write about?{' '}
+                  <Link href="/dashboard/story-builder" className="font-semibold underline underline-offset-4 decoration-[1.5px]">Find a story with Story Builder</Link>
+                </p>
               </div>
             ) : (
               essays.map(essay => {
@@ -3614,8 +3680,12 @@ export default function Essays() {
                 return (
                   <div
                     key={essay.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-current={activeEssay?.id === essay.id ? 'true' : undefined}
                     onClick={() => openEssay(essay)}
-                    className={`p-4 rounded-xl border-2 cursor-pointer group transition-all duration-200 ${
+                    onKeyDown={e => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openEssay(essay); } }}
+                    className={`p-4 rounded-xl border-2 cursor-pointer group transition-all duration-200 focus-visible:outline-2 ${
                       activeEssay?.id === essay.id ? 'bg-accent/5 border-accent/30 shadow-sm' : 'bg-white border-transparent hover:border-slate-200 hover:shadow-sm'
                     }`}
                   >
@@ -3623,24 +3693,22 @@ export default function Essays() {
                       <h3 className="text-sm font-bold text-primary truncate flex-1">{essay.title}</h3>
                       {deleteConfirmId === essay.id ? (
                         <span className="flex items-center gap-1 flex-shrink-0" onClick={e => e.stopPropagation()}>
-                          <button onClick={() => deleteEssay(essay.id)} className="text-[10px] font-semibold text-red-500 hover:text-red-600 px-1.5 py-0.5 rounded bg-red-50">Delete</button>
-                          <button onClick={() => setDeleteConfirmId(null)} className="text-[10px] font-semibold text-slate-400 hover:text-slate-600 px-1.5 py-0.5 rounded bg-slate-50">Cancel</button>
+                          <button onClick={() => deleteEssay(essay.id)} className="text-xs font-semibold text-paper bg-red-pencil px-2 py-1 rounded">Delete</button>
+                          <button onClick={() => setDeleteConfirmId(null)} className="text-xs font-semibold text-slate-700 px-2 py-1 rounded bg-slate-100">Cancel</button>
                         </span>
                       ) : (
-                        <button onClick={e => { e.stopPropagation(); setDeleteConfirmId(essay.id); }} className="text-slate-300 hover:text-red-400 opacity-0 group-hover:opacity-100 flex-shrink-0 p-0.5">
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        <button onClick={e => { e.stopPropagation(); setDeleteConfirmId(essay.id); }} onKeyDown={e => e.stopPropagation()} aria-label={`Delete ${essay.title}`} title="Delete" className="text-slate-500 hover:text-red-pencil opacity-0 group-hover:opacity-100 focus:opacity-100 [@media(hover:none)]:opacity-100 flex-shrink-0 p-1">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                         </button>
                       )}
                     </div>
-                    {essay.prompt && <p className="text-[10px] text-slate-400 italic mt-1 truncate">{essay.prompt}</p>}
+                    {essay.prompt && <p className="text-xs text-slate-600 italic mt-1 truncate">{essay.prompt}</p>}
                     <div className="flex items-center gap-2 mt-2.5">
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-semibold ${statusColors[essay.status] || statusColors['Draft']}`}>{essay.status}</span>
+                      <span className={`px-2 py-0.5 rounded-md text-xs font-semibold ${statusColors[essay.status] || statusColors['Draft']}`}>{essay.status}</span>
                       {essay.overallScore != null && (
-                        <span className={`text-[10px] font-bold ${essay.overallScore >= 70 ? 'text-emerald-600' : essay.overallScore >= 45 ? 'text-amber-600' : 'text-slate-400'}`}>
-                          {essay.overallScore}%
-                        </span>
+                        <span className="text-xs font-bold text-primary tabular-nums" title="Overall score">{essay.overallScore}</span>
                       )}
-                      <span className="text-[10px] text-slate-300">{essayWords}w</span>
+                      <span className="text-xs text-slate-600">{essayWords} words</span>
                       {essayReviews[essay.id] && (
                         <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
                           essayReviews[essay.id].status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
@@ -3654,25 +3722,6 @@ export default function Essays() {
                         </span>
                       )}
                     </div>
-                    {/* Mini score indicators on essay cards */}
-                    {essay.overallScore != null && (
-                      <div className="flex items-center gap-1.5 mt-2">
-                        {[
-                          { val: essay.aiScore, label: 'V', inv: true },
-                          { val: essay.vocabScore, label: 'L', inv: false },
-                          { val: essay.grammarScore, label: 'S', inv: false },
-                          { val: essay.originalityScore, label: 'T', inv: false },
-                          { val: essay.overallScore, label: 'I', inv: false },
-                        ].map((s, si) => {
-                          const c = s.val != null ? (s.inv ? (s.val <= 20 ? '#a7a29b' : s.val <= 45 ? '#b6b0a9' : '#de574e') : (s.val >= 70 ? '#a7a29b' : s.val >= 45 ? '#b6b0a9' : '#de574e')) : '#d9d3cb';
-                          return (
-                            <div key={si} className="flex-1 h-1 rounded-full overflow-hidden bg-slate-100" title={s.label}>
-                              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${s.val != null ? (s.inv ? 100 - s.val : s.val) : 0}%`, backgroundColor: c }} />
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
                   </div>
                 );
               })
@@ -3680,77 +3729,79 @@ export default function Essays() {
           </div>
 
           {/* ─── CENTER: Editor ─── */}
-          <div className={`flex flex-col min-h-0 ${mobileEssayView === 'list' ? 'hidden lg:flex' : ''}`}>
+          <div className={`flex flex-col min-h-0 min-w-0 ${essays.length === 0 && !loading ? 'hidden' : mobileEssayView === 'list' || !activeEssay ? 'hidden 2xl:flex' : ''}`}>
             {activeEssay ? (
               <div className="bg-white rounded-2xl border border-slate-200/80 surface-raised flex flex-col flex-1 min-h-0 overflow-hidden">
-                {/* Editor header */}
-                <div className="flex items-center justify-between px-4 lg:px-6 py-3 lg:py-4 border-b border-slate-100 flex-shrink-0 bg-slate-50/50">
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-sm lg:text-base font-bold font-display text-primary truncate">{activeEssay.title}</h3>
-                    {activeEssay.prompt && <p className="text-[10px] lg:text-xs text-slate-400 italic truncate mt-0.5">&ldquo;{activeEssay.prompt}&rdquo;</p>}
+                {/* Editor header. Two rows that wrap instead of one row that
+                    couldn't: the old single line set the editor's minimum
+                    width and pushed the page sideways. Tool names now say
+                    what each one does. */}
+                <div className="px-4 xl:px-6 py-3 border-b border-slate-100 flex-shrink-0 bg-slate-50/50 space-y-2">
+                  <div className="min-w-0">
+                    <h3 className="text-base font-bold font-display text-primary break-words">{activeEssay.title}</h3>
+                    {activeEssay.prompt && <p className="text-xs text-slate-600 italic mt-0.5 line-clamp-2 break-words">&ldquo;{activeEssay.prompt}&rdquo;</p>}
                   </div>
-                  <div className="flex items-center gap-2 lg:gap-3 flex-shrink-0 ml-3 lg:ml-4">
-                    {saving && <span className="text-[10px] text-accent animate-pulse font-medium">Saving...</span>}
-                    <div className="flex items-center gap-1 bg-slate-100 rounded-lg px-2 lg:px-2.5 py-1">
-                      <span className="text-[11px] lg:text-xs font-bold text-primary">{wordCount}</span>
-                      <span className="text-[10px] text-slate-400">w</span>
-                    </div>
-                    <div className="hidden sm:flex gap-1">
-                      {[500, 650, 700].map(t => (
-                        <span key={t} className={`text-[9px] px-1.5 py-0.5 rounded-md font-medium ${wordCount >= t ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>{t}</span>
-                      ))}
-                    </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-baseline gap-1 rounded-lg bg-slate-100 px-2.5 py-1 text-xs text-slate-700" title="Common App personal statements allow up to 650 words">
+                      <span className="font-bold text-primary tabular-nums">{wordCount}</span> words
+                      {wordCount > 650 && <span className="font-semibold text-red-pencil">· over 650</span>}
+                    </span>
+                    <span className="text-xs text-slate-600 min-w-[4.5rem]" aria-live="polite">
+                      {saveFailed ? (
+                        <span className="text-red-pencil font-semibold">Not saved · <button type="button" onClick={() => void flushEssaySave()} className="underline underline-offset-2">Retry</button></span>
+                      ) : saving ? 'Saving…' : 'Saved'}
+                    </span>
+                    <span className="hidden sm:block h-5 w-px bg-slate-200" aria-hidden />
                     <button
+                      type="button"
                       onClick={() => { setShowGrammar(prev => !prev); if (!showGrammar) { setShowSentenceAnalysis(false); setShowInsights(false); tracker.feature('essays', 'grammar_check', { wordCount }); } }}
                       disabled={wordCount < 4}
-                      title="Grammar check: errors first, then stylistic optimizations"
-                      className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed ${showGrammar ? 'bg-emerald-500 text-white shadow-sm' : 'text-slate-500 bg-slate-100 hover:bg-slate-200'}`}
+                      aria-pressed={showGrammar}
+                      title="Spelling and grammar: errors first, then optional polish"
+                      className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed ${showGrammar ? 'bg-ink text-paper' : 'text-slate-700 bg-slate-100 hover:bg-slate-200'}`}
                     >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" /></svg>
                       Grammar
                       {showGrammar && grammarIssues.length > 0 && (
-                        <span className="ml-0.5 text-[10px] font-bold bg-white/25 rounded-full px-1.5 py-0.5">{grammarIssues.length}</span>
+                        <span className="text-[11px] font-bold tabular-nums">{grammarIssues.length}</span>
                       )}
                     </button>
                     <button
+                      type="button"
                       onClick={() => { setShowSentenceAnalysis(prev => !prev); if (!showSentenceAnalysis) { setShowGrammar(false); setShowInsights(false); tracker.feature('essays', 'sentence_analysis', { wordCount }); } }}
                       disabled={wordCount < 10}
-                      title="Sentence Analysis: highlights internalized (thoughts/feelings) vs externalized (actions/events) sentences"
-                      className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed ${showSentenceAnalysis ? 'bg-indigo-500 text-white shadow-sm' : 'text-slate-500 bg-slate-100 hover:bg-slate-200'}`}
+                      aria-pressed={showSentenceAnalysis}
+                      title="Highlights sentences that show your thoughts and feelings versus ones that report events"
+                      className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed ${showSentenceAnalysis ? 'bg-ink text-paper' : 'text-slate-700 bg-slate-100 hover:bg-slate-200'}`}
                     >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>
-                      {showSentenceAnalysis ? 'Analysis On' : 'Analyze'}
+                      Show vs. tell
                     </button>
                     <button
+                      type="button"
                       onClick={() => { setShowInsights(prev => !prev); if (!showInsights) { setShowGrammar(false); setShowSentenceAnalysis(false); tracker.feature('essays', 'insights_panel', { wordCount }); } }}
                       disabled={wordCount < 50}
-                      title="Logic & Flow: tense shifts, unsupported claims, show-don't-tell, and more"
-                      className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed ${showInsights ? 'bg-indigo-500 text-white shadow-sm' : 'text-slate-500 bg-slate-100 hover:bg-slate-200'}`}
+                      aria-pressed={showInsights}
+                      title="Tense shifts, claims without evidence, and places to show instead of tell"
+                      className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed ${showInsights ? 'bg-ink text-paper' : 'text-slate-700 bg-slate-100 hover:bg-slate-200'}`}
                     >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
-                      Insights
+                      Logic &amp; flow
                     </button>
-                    <button onClick={markComplete} disabled={wordCount < 50} className="hidden sm:block px-3 py-1.5 text-xs font-semibold text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all">Mark Complete</button>
+                    <span className="flex-1" aria-hidden />
+                    <button type="button" onClick={markComplete} disabled={wordCount < 50} title={wordCount < 50 ? 'Available once the draft passes 50 words' : undefined} className="hidden sm:inline-flex px-3 py-1.5 text-xs font-semibold text-primary border-[1.5px] border-ink rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all">Mark complete</button>
                     {activeEssay && !essayReviews[activeEssay.id] ? (
-                      <button onClick={() => setShowReviewModal(true)} disabled={wordCount < 50} className="hidden sm:block px-3 py-1.5 text-xs font-semibold text-white bg-accent rounded-lg hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all">Submit for Review</button>
+                      <button type="button" onClick={() => setShowReviewModal(true)} disabled={wordCount < 50} title={wordCount < 50 ? 'Available once the draft passes 50 words' : 'Send this draft to your tutor'} className="hidden sm:inline-flex px-3 py-1.5 text-xs font-semibold text-paper bg-ink rounded-lg hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all">Ask a tutor to review</button>
                     ) : activeEssay && essayReviews[activeEssay.id] ? (
-                      <span className={`hidden sm:block px-3 py-1.5 text-[10px] font-bold rounded-lg ${
-                        essayReviews[activeEssay.id].status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
-                        essayReviews[activeEssay.id].status === 'in_review' ? 'bg-blue-100 text-blue-700' :
-                        essayReviews[activeEssay.id].status === 'returned' ? 'bg-purple-100 text-purple-700' :
-                        'bg-amber-100 text-amber-700'
-                      }`}>
-                        {essayReviews[activeEssay.id].status === 'completed' ? 'Review Complete' :
-                         essayReviews[activeEssay.id].status === 'in_review' ? 'Under Review' :
-                         essayReviews[activeEssay.id].status === 'returned' ? 'Returned' :
-                         'Pending Review'}
+                      <span className="hidden sm:inline-flex px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 text-slate-700">
+                        {essayReviews[activeEssay.id].status === 'completed' ? 'Tutor review done' :
+                         essayReviews[activeEssay.id].status === 'in_review' ? 'Tutor is reviewing' :
+                         essayReviews[activeEssay.id].status === 'returned' ? 'Returned by tutor' :
+                         'Waiting for a tutor'}
                       </span>
                     ) : null}
                   </div>
                 </div>
 
                 {/* Mobile tab bar: Write / Scores */}
-                <div className="lg:hidden flex border-b border-slate-100 flex-shrink-0">
+                <div className="xl:hidden flex border-b border-slate-100 flex-shrink-0" role="tablist" aria-label="Editor view">
                   <button
                     onClick={() => setMobileEditorTab('write')}
                     className={`flex-1 px-4 py-2.5 text-xs font-semibold transition-all ${mobileEditorTab === 'write' ? 'text-accent border-b-2 border-accent bg-accent/5' : 'text-slate-400 hover:text-slate-600'}`}
@@ -3766,10 +3817,10 @@ export default function Essays() {
                   >
                     <span className="flex items-center justify-center gap-1.5">
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-                      Live Scores
+                      Feedback
                       {activeEssay.overallScore != null && (
                         <span className={`ml-1 text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeEssay.overallScore >= 70 ? 'bg-emerald-100 text-emerald-700' : activeEssay.overallScore >= 45 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
-                          {activeEssay.overallScore}%
+                          {activeEssay.overallScore}
                         </span>
                       )}
                     </span>
@@ -3781,13 +3832,13 @@ export default function Essays() {
                   >
                     <span className="flex items-center justify-center gap-1.5">
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>
-                      Analyze
+                      Show vs. tell
                     </span>
                   </button>
                 </div>
 
                 {/* Textarea with optional sentence analysis overlay */}
-                <div className={`flex-1 min-h-0 flex flex-col relative ${mobileEditorTab === 'scores' ? 'hidden lg:flex' : ''}`}>
+                <div className={`flex-1 min-h-0 flex flex-col relative ${mobileEditorTab === 'scores' ? 'hidden xl:flex' : ''}`}>
                   {/* Grammar overlay */}
                   {showGrammar && editContent.trim().length > 0 ? (
                     <GrammarEditor
@@ -4090,73 +4141,63 @@ export default function Essays() {
                       ref={textareaRef}
                       value={editContent}
                       onChange={e => handleContentChange(e.target.value)}
-                      placeholder="Start writing your essay here...&#10;&#10;Your writing will be analyzed in real-time as you type. Tap &quot;Live Scores&quot; above to see your scores, tips, and suggestions."
+                      aria-label="Your essay"
+                      placeholder="Write or paste your draft here.&#10;&#10;Feedback appears once you have about 40 words, and updates as you type."
                       className="flex-1 min-h-0 w-full px-4 lg:px-6 py-4 lg:py-5 text-[15px] lg:text-[16px] leading-[1.8] focus:outline-none resize-none student-page text-slate-800 placeholder:text-slate-300"
                     />
                   )}
                 </div>
 
                 {/* Mobile Scores Panel — shown only on mobile when scores tab is active */}
-                <div className={`flex-1 min-h-0 overflow-y-auto ${mobileEditorTab === 'write' ? 'hidden' : 'lg:hidden'}`}>
+                <div className={`flex-1 min-h-0 overflow-y-auto ${mobileEditorTab === 'write' ? 'hidden' : 'xl:hidden'}`}>
                   <div className="p-4 space-y-3">
-                    {/* Mobile Mark Complete button */}
-                    <div className="flex items-center justify-between sm:hidden">
-                      <div className="flex gap-1">
-                        {[500, 650, 700].map(t => (
-                          <span key={t} className={`text-[9px] px-1.5 py-0.5 rounded-md font-medium ${wordCount >= t ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>{t}</span>
-                        ))}
-                      </div>
-                      <button onClick={markComplete} disabled={wordCount < 50} className="px-3 py-1.5 text-xs font-semibold text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all">Mark Complete</button>
+                    {/* Phone actions. "Submit for review" used to exist only
+                        from sm up, so a student on a phone couldn't send a
+                        draft to their tutor at all. */}
+                    <div className="flex flex-wrap items-center gap-2 sm:hidden">
+                      <button type="button" onClick={markComplete} disabled={wordCount < 50} className="px-3 py-2 text-sm font-semibold text-primary border-[1.5px] border-ink rounded-lg disabled:opacity-40 disabled:cursor-not-allowed">Mark complete</button>
+                      {activeEssay && !essayReviews[activeEssay.id] ? (
+                        <button type="button" onClick={() => setShowReviewModal(true)} disabled={wordCount < 50} className="px-3 py-2 text-sm font-semibold text-paper bg-ink rounded-lg disabled:opacity-40 disabled:cursor-not-allowed">Ask a tutor to review</button>
+                      ) : activeEssay && essayReviews[activeEssay.id] ? (
+                        <span className="px-3 py-2 text-sm font-semibold rounded-lg bg-slate-100 text-slate-700">
+                          {essayReviews[activeEssay.id].status === 'completed' ? 'Tutor review done' : essayReviews[activeEssay.id].status === 'in_review' ? 'Tutor is reviewing' : essayReviews[activeEssay.id].status === 'returned' ? 'Returned by tutor' : 'Waiting for a tutor'}
+                        </span>
+                      ) : null}
+                      {wordCount < 50 && <p className="w-full text-xs text-slate-600">Both unlock once the draft passes 50 words.</p>}
                     </div>
 
-                    {/* Prompt type indicator */}
-                    {promptAnalysis && (
-                      <div className="bg-indigo-50 rounded-xl border border-accent/10 px-4 py-3">
-                        <p className="text-[10px] font-bold text-accent uppercase tracking-wider">Prompt detected</p>
-                        <p className="text-xs font-semibold text-primary mt-0.5">{promptAnalysis.label}</p>
-                        <p className="text-[10px] text-slate-500 mt-1">AOs look for: {promptAnalysis.aoLookingFor}</p>
-                      </div>
-                    )}
 
-                    {/* Score cards */}
-                    <div className="bg-white rounded-xl border border-slate-100 surface p-4">
-                      <h4 className="text-[11px] font-bold text-primary uppercase tracking-wider mb-3">Live Scores</h4>
-                      <div className="space-y-2.5">
-                        <ScoreBar label="Voice & Authenticity" value={activeEssay.aiScore} color="#88857f" invert
-                          sublabel={activeEssay.aiScore != null ? (activeEssay.aiScore <= 15 ? 'Genuine, personal voice' : activeEssay.aiScore <= 35 ? 'Mostly authentic' : 'Sounds formulaic') : ''} />
-                        <ScoreBar label="Language & Precision" value={activeEssay.vocabScore} color="#7d7b75"
-                          sublabel={activeEssay.vocabScore != null ? (activeEssay.vocabScore >= 70 ? 'Sophisticated word choice' : activeEssay.vocabScore >= 45 ? 'Adequate vocabulary' : 'Too basic') : ''} />
-                        <ScoreBar label="Structure & Coherence" value={activeEssay.grammarScore} color="#7a7771"
-                          sublabel={activeEssay.grammarScore != null ? (activeEssay.grammarScore >= 70 ? 'Well-organized flow' : activeEssay.grammarScore >= 45 ? 'Some drift detected' : 'Topic drift or grammar issues') : ''} />
-                        <ScoreBar label="Storytelling" value={activeEssay.originalityScore} color="#e35d53"
-                          sublabel={activeEssay.originalityScore != null ? (activeEssay.originalityScore >= 70 ? 'Vivid, show-don\'t-tell' : activeEssay.originalityScore >= 45 ? 'More details needed' : 'Too abstract, needs scenes') : ''} />
-                        <ScoreBar label="Admissions Impact" value={activeEssay.overallScore} color="#a7a29b"
-                          sublabel={activeEssay.overallScore != null ? (activeEssay.overallScore >= 70 ? 'Compelling read' : activeEssay.overallScore >= 45 ? 'Good with room to improve' : 'Needs significant revision') : ''} />
-                      </div>
-                    </div>
+                    <EssayScoreCard scores={activeEssay} wordCount={wordCount} />
 
                     {/* Craft Studio — deep writing craft coaching */}
                     {craftReport && <CraftStudio report={craftReport} />}
+                    {promptAnalysis && (
+                      <section className="bg-white rounded-2xl border p-4">
+                        <h3 className="text-sm font-bold text-primary">What this prompt is asking</h3>
+                        <p className="mt-1 text-sm text-slate-700">{promptAnalysis.label}</p>
+                        <p className="mt-1.5 text-sm text-slate-700 leading-snug"><span className="font-semibold text-primary">Admissions readers look for:</span> {promptAnalysis.aoLookingFor}</p>
+                      </section>
+                    )}
 
                     {/* EC Insights */}
                     {!ecsLoading && ecs.length > 0 && (
                       <div className="bg-white rounded-xl border border-slate-100 surface p-4">
                         <div className="flex items-center gap-1.5 mb-3">
                           <svg className="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
-                          <h4 className="text-[11px] font-bold text-primary uppercase tracking-wider">Activity Insights</h4>
+                          <h4 className="text-sm font-bold text-primary uppercase tracking-wider">Activity Insights</h4>
                         </div>
 
                         {/* Referenced ECs */}
                         {mentionedECs.length > 0 && (
                           <div className="mb-3">
-                            <p className="text-[9px] font-semibold text-green-600 uppercase tracking-wider mb-1.5">Referenced</p>
+                            <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-1.5">Referenced</p>
                             {mentionedECs.map(ins => (
                               <div key={ins.ec.id} className="mb-2">
                                 <div className="flex items-center gap-1.5 mb-0.5">
                                   <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                                  <span className="text-[10px] font-bold text-green-800">{ins.ec.name}</span>
+                                  <span className="text-xs font-bold text-green-800">{ins.ec.name}</span>
                                 </div>
-                                <p className="text-[10px] text-slate-500 leading-relaxed ml-3">{ins.suggestion}</p>
+                                <p className="text-xs text-slate-500 leading-relaxed ml-3">{ins.suggestion}</p>
                               </div>
                             ))}
                           </div>
@@ -4165,23 +4206,23 @@ export default function Essays() {
                         {/* Suggested ECs */}
                         {suggestedECs.length > 0 && (
                           <div>
-                            <p className="text-[9px] font-semibold text-indigo-600 uppercase tracking-wider mb-1.5">
+                            <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wider mb-1.5">
                               {promptAnalysis ? `Best for "${promptAnalysis.label}"` : 'Recommended'}
                             </p>
                             {suggestedECs.map(ins => (
                               <div key={ins.ec.id} className="mb-3 p-2.5 rounded-lg bg-indigo-50/50 border border-indigo-100">
                                 <div className="flex items-center gap-1.5 mb-1">
-                                  <span className="text-[10px] font-bold text-indigo-700">{ins.ec.name}</span>
-                                  <span className="text-[9px] text-indigo-500">{ins.ec.role}</span>
+                                  <span className="text-xs font-bold text-indigo-700">{ins.ec.name}</span>
+                                  <span className="text-xs text-indigo-500">{ins.ec.role}</span>
                                 </div>
-                                <p className="text-[10px] text-slate-600 leading-relaxed">{ins.suggestion}</p>
+                                <p className="text-xs text-slate-600 leading-relaxed">{ins.suggestion}</p>
                               </div>
                             ))}
                           </div>
                         )}
 
                         {mentionedECs.length === 0 && suggestedECs.length === 0 && editContent.length > 50 && (
-                          <p className="text-[10px] text-slate-400">
+                          <p className="text-xs text-slate-600">
                             {promptAnalysis
                               ? `None of your activities strongly match this ${promptAnalysis.label.toLowerCase()} prompt. Consider if any EC has an unexpected connection.`
                               : 'Add a prompt to get activity-based suggestions.'}
@@ -4192,7 +4233,7 @@ export default function Essays() {
 
                     {!ecsLoading && ecs.length === 0 && (
                       <div className="bg-white rounded-xl border border-slate-100 surface p-4">
-                        <p className="text-[10px] text-slate-500">
+                        <p className="text-xs text-slate-500">
                           Add activities in your <a href="/dashboard/profile" className="text-accent font-semibold underline underline-offset-2">Profile</a> to get live essay suggestions based on your extracurriculars.
                         </p>
                       </div>
@@ -4206,50 +4247,29 @@ export default function Essays() {
                   <svg className="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                 </div>
                 <h3 className="text-lg font-bold text-primary">Select an Essay</h3>
-                <p className="text-sm text-slate-400 mt-1.5 max-w-xs">Choose an essay from the left panel or create a new one to start writing with real-time feedback.</p>
+                <p className="text-sm text-slate-600 mt-1.5 max-w-xs">Choose an essay from the left panel or create a new one to start writing with real-time feedback.</p>
               </div>
             )}
           </div>
 
           {/* ─── RIGHT: Live Sidebar ─── */}
-          <div className="hidden lg:block overflow-y-auto space-y-3 pl-1">
+          <div className={`hidden min-w-0 overflow-y-auto space-y-3 pl-1 ${essays.length === 0 && !loading ? '' : mobileEssayView === 'list' || !activeEssay ? '2xl:block' : 'xl:block'}`}>
             {activeEssay && (
               <>
-                {/* Prompt type indicator */}
-                {promptAnalysis && (
-                  <div className="bg-indigo-50 rounded-xl border border-accent/10 px-4 py-3">
-                    <p className="text-[10px] font-bold text-accent uppercase tracking-wider">Prompt detected</p>
-                    <p className="text-xs font-semibold text-primary mt-0.5">{promptAnalysis.label}</p>
-                    <p className="text-[10px] text-slate-500 mt-1">AOs look for: {promptAnalysis.aoLookingFor}</p>
-                  </div>
-                )}
 
-                {/* Score cards (compact) */}
-                <div className="bg-white rounded-xl border border-slate-100 surface p-4">
-                  <h4 className="text-[11px] font-bold text-primary uppercase tracking-wider mb-3">Live Scores</h4>
-                  <div className="space-y-2.5">
-                    <ScoreBar label="Voice & Authenticity" value={activeEssay.aiScore} color="#88857f" invert
-                      sublabel={activeEssay.aiScore != null ? (activeEssay.aiScore <= 15 ? 'Genuine, personal voice' : activeEssay.aiScore <= 35 ? 'Mostly authentic' : 'Sounds formulaic') : ''} />
-                    <ScoreBar label="Language & Precision" value={activeEssay.vocabScore} color="#7d7b75"
-                      sublabel={activeEssay.vocabScore != null ? (activeEssay.vocabScore >= 70 ? 'Sophisticated word choice' : activeEssay.vocabScore >= 45 ? 'Adequate vocabulary' : 'Too basic') : ''} />
-                    <ScoreBar label="Structure & Coherence" value={activeEssay.grammarScore} color="#7a7771"
-                      sublabel={activeEssay.grammarScore != null ? (activeEssay.grammarScore >= 70 ? 'Well-organized flow' : activeEssay.grammarScore >= 45 ? 'Some drift detected' : 'Topic drift or grammar issues') : ''} />
-                    <ScoreBar label="Storytelling" value={activeEssay.originalityScore} color="#e35d53"
-                      sublabel={activeEssay.originalityScore != null ? (activeEssay.originalityScore >= 70 ? 'Vivid, show-don\'t-tell' : activeEssay.originalityScore >= 45 ? 'More details needed' : 'Too abstract, needs scenes') : ''} />
-                    <ScoreBar label="Admissions Impact" value={activeEssay.overallScore} color="#a7a29b"
-                      sublabel={activeEssay.overallScore != null ? (activeEssay.overallScore >= 70 ? 'Compelling read' : activeEssay.overallScore >= 45 ? 'Good with room to improve' : 'Needs significant revision') : ''} />
-                  </div>
-                </div>
+                <EssayScoreCard scores={activeEssay} wordCount={wordCount} />
 
                 {/* Tutor Review Feedback */}
                 {activeEssay && essayReviews[activeEssay.id] && essayReviews[activeEssay.id].status === 'completed' && (
                   <div className="bg-white rounded-xl border border-emerald-200 p-4">
                     <div className="flex items-center gap-1.5 mb-2">
                       <svg className="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                      <h4 className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">Tutor Feedback</h4>
+                      <h4 className="text-sm font-bold text-emerald-700 uppercase tracking-wider">Tutor Feedback</h4>
                     </div>
-                    {essayReviews[activeEssay.id].tutorFeedback && (
-                      <p className="text-xs text-slate-600 leading-relaxed mb-3">{essayReviews[activeEssay.id].tutorFeedback}</p>
+                    {essayReviews[activeEssay.id].tutorFeedback ? (
+                      <p className="text-sm text-slate-700 leading-relaxed mb-3">{essayReviews[activeEssay.id].tutorFeedback}</p>
+                    ) : (
+                      <p className="text-sm text-slate-700 leading-relaxed mb-3">Your tutor finished reviewing this draft without written comments. Any notes they left are below.</p>
                     )}
                     {essayReviews[activeEssay.id].scores && Object.keys(essayReviews[activeEssay.id].scores).length > 0 && (
                       <div className="space-y-1.5">
@@ -4264,11 +4284,11 @@ export default function Essays() {
                           if (val == null) return null;
                           return (
                             <div key={dim.key} className="flex items-center gap-2">
-                              <span className="text-[10px] text-slate-500 w-16">{dim.label}</span>
+                              <span className="text-xs text-slate-500 w-16">{dim.label}</span>
                               <div className="flex-1 h-1.5 rounded-full bg-slate-100">
                                 <div className="h-full rounded-full transition-all" style={{ width: (val * 10) + '%', backgroundColor: val >= 8 ? '#a7a29b' : val >= 5 ? '#b6b0a9' : '#de574e' }} />
                               </div>
-                              <span className="text-[10px] font-bold text-primary w-4 text-right">{val}</span>
+                              <span className="text-xs font-bold text-primary w-4 text-right">{val}</span>
                             </div>
                           );
                         })}
@@ -4276,17 +4296,17 @@ export default function Essays() {
                     )}
                     {essayReviews[activeEssay.id].annotations && essayReviews[activeEssay.id].annotations.length > 0 && (
                       <div className="mt-3 pt-3 border-t border-emerald-100">
-                        <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-2">{essayReviews[activeEssay.id].annotations.length} Annotation{essayReviews[activeEssay.id].annotations.length !== 1 ? 's' : ''}</p>
+                        <p className="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-2">{essayReviews[activeEssay.id].annotations.length} Annotation{essayReviews[activeEssay.id].annotations.length !== 1 ? 's' : ''}</p>
                         <div className="space-y-2 max-h-40 overflow-y-auto">
                           {essayReviews[activeEssay.id].annotations.map(function(ann: any) {
                             var colors: Record<string, string> = { strength: 'bg-emerald-100 text-emerald-700', suggestion: 'bg-blue-100 text-blue-700', issue: 'bg-rose-100 text-rose-700', question: 'bg-amber-100 text-amber-700' };
                             return (
                               <div key={ann.id} className="p-2 rounded-lg bg-slate-50">
                                 <div className="flex items-center gap-1.5 mb-1">
-                                  <span className={'px-1.5 py-0.5 rounded text-[9px] font-bold ' + (colors[ann.type] || 'bg-slate-100 text-slate-500')}>{ann.type}</span>
-                                  <span className="text-[9px] text-slate-400">P{(ann.paragraphIndex || 0) + 1}</span>
+                                  <span className={'px-1.5 py-0.5 rounded text-xs font-bold ' + (colors[ann.type] || 'bg-slate-100 text-slate-500')}>{ann.type}</span>
+                                  <span className="text-xs text-slate-600">P{(ann.paragraphIndex || 0) + 1}</span>
                                 </div>
-                                <p className="text-[10px] text-slate-600">{ann.comment}</p>
+                                <p className="text-xs text-slate-600">{ann.comment}</p>
                               </div>
                             );
                           })}
@@ -4300,7 +4320,7 @@ export default function Essays() {
                   <div className="bg-white rounded-xl border border-purple-200 p-4">
                     <div className="flex items-center gap-1.5 mb-2">
                       <svg className="w-3.5 h-3.5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg>
-                      <h4 className="text-[11px] font-bold text-purple-700 uppercase tracking-wider">Returned for Revision</h4>
+                      <h4 className="text-sm font-bold text-purple-700 uppercase tracking-wider">Returned for Revision</h4>
                     </div>
                     {essayReviews[activeEssay.id].tutorFeedback && (
                       <p className="text-xs text-slate-600 leading-relaxed">{essayReviews[activeEssay.id].tutorFeedback}</p>
@@ -4318,26 +4338,33 @@ export default function Essays() {
 
                 {/* Craft Studio — deep writing craft coaching */}
                 {craftReport && <CraftStudio report={craftReport} />}
+                {promptAnalysis && (
+                  <section className="bg-white rounded-2xl border p-4">
+                    <h3 className="text-sm font-bold text-primary">What this prompt is asking</h3>
+                    <p className="mt-1 text-sm text-slate-700">{promptAnalysis.label}</p>
+                    <p className="mt-1.5 text-sm text-slate-700 leading-snug"><span className="font-semibold text-primary">Admissions readers look for:</span> {promptAnalysis.aoLookingFor}</p>
+                  </section>
+                )}
 
                 {/* EC Insights */}
                 {!ecsLoading && ecs.length > 0 && (
                   <div className="bg-white rounded-xl border border-slate-100 surface p-4">
                     <div className="flex items-center gap-1.5 mb-3">
                       <svg className="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
-                      <h4 className="text-[11px] font-bold text-primary uppercase tracking-wider">Activity Insights</h4>
+                      <h4 className="text-sm font-bold text-primary uppercase tracking-wider">Activity Insights</h4>
                     </div>
 
                     {/* Referenced ECs */}
                     {mentionedECs.length > 0 && (
                       <div className="mb-3">
-                        <p className="text-[9px] font-semibold text-green-600 uppercase tracking-wider mb-1.5">Referenced</p>
+                        <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-1.5">Referenced</p>
                         {mentionedECs.map(ins => (
                           <div key={ins.ec.id} className="mb-2">
                             <div className="flex items-center gap-1.5 mb-0.5">
                               <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                              <span className="text-[10px] font-bold text-green-800">{ins.ec.name}</span>
+                              <span className="text-xs font-bold text-green-800">{ins.ec.name}</span>
                             </div>
-                            <p className="text-[10px] text-slate-500 leading-relaxed ml-3">{ins.suggestion}</p>
+                            <p className="text-xs text-slate-500 leading-relaxed ml-3">{ins.suggestion}</p>
                           </div>
                         ))}
                       </div>
@@ -4346,23 +4373,23 @@ export default function Essays() {
                     {/* Suggested ECs */}
                     {suggestedECs.length > 0 && (
                       <div>
-                        <p className="text-[9px] font-semibold text-indigo-600 uppercase tracking-wider mb-1.5">
+                        <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wider mb-1.5">
                           {promptAnalysis ? `Best for "${promptAnalysis.label}"` : 'Recommended'}
                         </p>
                         {suggestedECs.map(ins => (
                           <div key={ins.ec.id} className="mb-3 p-2.5 rounded-lg bg-indigo-50/50 border border-indigo-100">
                             <div className="flex items-center gap-1.5 mb-1">
-                              <span className="text-[10px] font-bold text-indigo-700">{ins.ec.name}</span>
-                              <span className="text-[9px] text-indigo-500">{ins.ec.role}</span>
+                              <span className="text-xs font-bold text-indigo-700">{ins.ec.name}</span>
+                              <span className="text-xs text-indigo-500">{ins.ec.role}</span>
                             </div>
-                            <p className="text-[10px] text-slate-600 leading-relaxed">{ins.suggestion}</p>
+                            <p className="text-xs text-slate-600 leading-relaxed">{ins.suggestion}</p>
                           </div>
                         ))}
                       </div>
                     )}
 
                     {mentionedECs.length === 0 && suggestedECs.length === 0 && editContent.length > 50 && (
-                      <p className="text-[10px] text-slate-400">
+                      <p className="text-xs text-slate-600">
                         {promptAnalysis
                           ? `None of your activities strongly match this ${promptAnalysis.label.toLowerCase()} prompt. Consider if any EC has an unexpected connection.`
                           : 'Add a prompt to get activity-based suggestions.'}
@@ -4373,7 +4400,7 @@ export default function Essays() {
 
                 {!ecsLoading && ecs.length === 0 && (
                   <div className="bg-white rounded-xl border border-slate-100 surface p-4">
-                    <p className="text-[10px] text-slate-500">
+                    <p className="text-xs text-slate-500">
                       Add activities in your <a href="/dashboard/profile" className="text-accent font-semibold underline underline-offset-2">Profile</a> to get live essay suggestions based on your extracurriculars.
                     </p>
                   </div>

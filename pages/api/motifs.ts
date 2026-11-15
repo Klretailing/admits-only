@@ -30,6 +30,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Update existing
     if (id) {
+      // Only the owner may update a board (this used to update any board by id).
+      const mine = await (prisma as any).motifBoard.findFirst({ where: { id, userId: user.id }, select: { id: true } });
+      if (!mine) return res.status(404).json({ error: 'Board not found' });
       const board = await (prisma as any).motifBoard.update({
         where: { id },
         data: {

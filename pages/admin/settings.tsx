@@ -2,6 +2,7 @@ import Head from 'next/head';
 import { useState } from 'react';
 import AdminLayout from '../../components/AdminLayout';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
+import ChangePasswordForm from '../../components/ChangePasswordForm';
 
 /* ──────────────────────── TOGGLE COMPONENT ──────────────────────── */
 
@@ -15,6 +16,9 @@ function Toggle({ enabled, onChange, label, description }: {
     <label className="flex items-start gap-4 p-4 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer">
       <button
         type="button"
+        role="switch"
+        aria-checked={enabled}
+        aria-label={label}
         onClick={() => onChange(!enabled)}
         className={`mt-0.5 relative inline-flex h-6 w-11 flex-shrink-0 rounded-full transition-colors duration-200 ${
           enabled ? 'bg-accent' : 'bg-slate-200'
@@ -553,36 +557,11 @@ export default function AdminSettings() {
                     />
                     <p className="text-xs text-slate-400 mt-1">Contact support to change the admin email.</p>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-primary mb-1.5">Display Name</label>
-                    <input
-                      type="text"
-                      defaultValue={session?.user?.name || 'Admin'}
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
-                    />
+                  {/* Display name and password fields here used to save nothing. */}
+                  <div className="pt-2 border-t border-slate-100">
+                    <h4 className="text-sm font-semibold text-primary mb-3">Change password</h4>
+                    <ChangePasswordForm minLength={12} />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-primary mb-1.5">Change Password</label>
-                    <input
-                      type="password"
-                      placeholder="New password"
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Danger Zone */}
-              <div className="bg-white rounded-2xl border border-red-100 p-6">
-                <h3 className="text-lg font-bold font-display text-red-600 mb-2">Danger Zone</h3>
-                <p className="text-sm text-slate-500 mb-4">These actions are irreversible. Proceed with caution.</p>
-                <div className="flex gap-3">
-                  <button className="px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-xl hover:bg-red-50 transition-colors">
-                    Reset All Data
-                  </button>
-                  <button className="px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-xl hover:bg-red-50 transition-colors">
-                    Delete Platform
-                  </button>
                 </div>
               </div>
             </>

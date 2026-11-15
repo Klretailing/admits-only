@@ -623,13 +623,16 @@ export default function StudentProfile() {
   const [scored, setScored] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  // If the profile can't be loaded, the form is blank, and autosaving it
+  // would PUT that blank form over the student's real profile.
+  const [loadFailed, setLoadFailed] = useState(false);
   const [showPersonas, setShowPersonas] = useState(true);
 
   // Load profile
   useEffect(() => {
     if (status !== 'authenticated') return;
     fetch('/api/profile')
-      .then(r => r.json())
+      .then(r => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
       .then(data => {
         if (data.profile) {
           const p = data.profile;
@@ -646,7 +649,7 @@ export default function StudentProfile() {
         }
         setLoaded(true);
       })
-      .catch(() => setLoaded(true));
+      .catch(() => { setLoadFailed(true); setLoaded(true); });
   }, [status]);
 
   const results = useMemo(() => computeHolisticScore({
@@ -765,10 +768,10 @@ export default function StudentProfile() {
 
   // Auto-save
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || loadFailed) return;
     const timer = setTimeout(() => { saveProfile(scored); }, 1500);
     return () => clearTimeout(timer);
-  }, [profile, scored, loaded, saveProfile]);
+  }, [profile, scored, loaded, loadFailed, saveProfile]);
 
   if (status !== 'authenticated') return null;
 
@@ -778,6 +781,12 @@ export default function StudentProfile() {
   return (
     <DashboardLayout>
       <Head><title>My Profile | AdmitsOnly Dashboard</title></Head>
+      {loadFailed && (
+        <div role="alert" className="mb-4 rounded-xl border-[1.5px] border-red-pencil bg-white px-4 py-3 text-sm text-primary">
+          We couldn&apos;t load your profile, so nothing here will be saved yet (that keeps your saved profile safe).{' '}
+          <button onClick={() => window.location.reload()} className="font-semibold underline underline-offset-2">Try again</button>
+        </div>
+      )}
 
       <div className="space-y-8">
         <PageHeader
@@ -1263,11 +1272,16 @@ function ConnectionCodeSection() {
   };
 
   const handleRemove = async (id: string) => {
-    await fetch('/api/connection-code', {
+    // Removing a parent or tutor was instant and unconfirmed, and the row
+    // disappeared even if the server refused.
+    const who = connections.find(c => c.id === id);
+    if (!window.confirm(`Remove ${who?.connectedName || 'this connection'}? They will no longer see your progress.`)) return;
+    const res = await fetch('/api/connection-code', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ connectionId: id }),
-    });
+    }).catch(() => null);
+    if (!res || !res.ok) { window.alert('Could not remove the connection. Please try again.'); return; }
     setConnections(prev => prev.filter(c => c.id !== id));
   };
 

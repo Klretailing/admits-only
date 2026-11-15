@@ -8,3 +8,6 @@ next-env.d.ts
 .env*.local
 
 /lib/generated/prisma
+
+# site-walker output (npm run audit:site)
+audit-report/

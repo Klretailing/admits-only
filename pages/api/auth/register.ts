@@ -1,41 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createUser } from '../../../lib/auth';
-import { prisma } from '../../../lib/db';
-
-async function linkInvite(inviteToken: string, userId: string, name: string, email: string) {
-  // Look up the roster row by token; must exist and not already active
-  const rows: any[] = await prisma.$queryRaw`
-    SELECT "id", "educatorId", "inviteStatus", "studentName", "studentEmail"
-    FROM "educator_students"
-    WHERE "inviteToken" = ${inviteToken}
-  `;
-  if (rows.length === 0) return;
-  const row = rows[0];
-  if (row.inviteStatus === 'active') return;
-
-  // Create tutor connection (student → tutor) if one doesn't already exist
-  const existing: any[] = await prisma.$queryRaw`
-    SELECT "id" FROM "account_connections"
-    WHERE "studentId" = ${userId} AND "connectedUserId" = ${row.educatorId}
-  `;
-  if (existing.length === 0) {
-    const connId = `ac_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-    await prisma.$executeRaw`
-      INSERT INTO "account_connections" ("id", "studentId", "connectedUserId", "role")
-      VALUES (${connId}, ${userId}, ${row.educatorId}, ${'tutor'})
-    `;
-  }
-
-  // Mark the roster row active and backfill missing name/email
-  const newName = row.studentName && row.studentName.trim() ? row.studentName : name;
-  const newEmail = row.studentEmail && row.studentEmail.trim() ? row.studentEmail : email;
-  await prisma.$executeRaw`
-    UPDATE "educator_students"
-    SET "inviteStatus" = 'active', "linkedUserId" = ${userId},
-        "studentName" = ${newName}, "studentEmail" = ${newEmail}
-    WHERE "id" = ${row.id}
-  `;
-}
+import { linkInvite } from '../../../lib/invites';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -59,7 +24,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Admin registration requires a secret key to prevent unauthorized admin accounts
   if (role === 'admin') {
     const adminKey = req.body.adminKey || req.headers['x-admin-key'];
-    if (adminKey !== process.env.ADMIN_SECRET_KEY) {
+    // Fail closed: with ADMIN_SECRET_KEY unset, a request with no key used to
+    // match `undefined === undefined` and create an admin.
+    if (!process.env.ADMIN_SECRET_KEY || typeof adminKey !== 'string' || adminKey !== process.env.ADMIN_SECRET_KEY) {
       return res.status(403).json({ error: 'Unauthorized: invalid admin key' });
     }
   }

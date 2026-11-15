@@ -28,10 +28,13 @@ export default function EmailPreferences() {
     const next = { ...prefs, [key]: !prefs[key] };
     setPrefs(next); setSaving(key);
     try {
-      await fetch('/api/email-preferences', {
+      const res = await fetch('/api/email-preferences', {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ [key]: next[key] }),
       });
+      // A refused save used to leave the switch showing a state the server
+      // never stored.
+      if (!res.ok) throw new Error(String(res.status));
     } catch { setPrefs(prefs); }
     setSaving(null);
   }

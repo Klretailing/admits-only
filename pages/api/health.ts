@@ -1,47 +1,36 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { getServerSession } from 'next-auth';
 import { prisma } from '../../lib/db';
+import { authOptions } from '../../lib/auth';
 
-export default async function handler(_req: NextApiRequest, res: NextApiResponse) {
+/* Health check. Anyone (an uptime monitor, say) gets a bare up/down. Only a
+   signed-in admin sees the detail: it used to show everyone the database
+   error text, user counts, and whether the session secret was missing. */
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const checks: Record<string, string> = {};
-
-  // Check environment variables
   checks.POSTGRES_PRISMA_URL = process.env.POSTGRES_PRISMA_URL ? 'set' : 'MISSING';
   checks.DATABASE_URL = process.env.DATABASE_URL ? 'set' : 'not set';
-  checks.NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET ? 'set' : 'not set (using fallback)';
+  checks.NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET ? 'set' : 'not set';
+  checks.ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ? 'set' : 'not set';
+  checks.CRON_SECRET = process.env.CRON_SECRET ? 'set' : 'not set';
+  checks.RESEND_API_KEY = process.env.RESEND_API_KEY ? 'set' : 'not set';
   checks.NODE_ENV = process.env.NODE_ENV || 'undefined';
 
-  // Test database connection
+  let dbOk = false;
   try {
-    const result = await prisma.$queryRawUnsafe('SELECT 1 as ok') as any[];
+    await prisma.$queryRaw`SELECT 1`;
+    dbOk = true;
     checks.db_connection = 'OK';
+    checks.users = String(await prisma.user.count());
+    checks.essays = String(await prisma.essay.count());
   } catch (e) {
     checks.db_connection = `FAILED: ${(e as Error).message}`;
   }
 
-  // Check if users table exists
-  try {
-    const count = await prisma.user.count();
-    checks.users_table = `OK (${count} users)`;
-  } catch (e) {
-    checks.users_table = `FAILED: ${(e as Error).message}`;
+  const status = dbOk ? 200 : 503;
+  const session = await getServerSession(req, res, authOptions).catch(() => null);
+  if ((session?.user as any)?.role === 'admin') {
+    return res.status(status).json({ status: dbOk ? 'healthy' : 'unhealthy', checks });
   }
-
-  // Check if student_profiles table exists
-  try {
-    const count = await prisma.studentProfile.count();
-    checks.student_profiles_table = `OK (${count} profiles)`;
-  } catch (e) {
-    checks.student_profiles_table = `FAILED: ${(e as Error).message}`;
-  }
-
-  // Check if essays table exists
-  try {
-    const count = await prisma.essay.count();
-    checks.essays_table = `OK (${count} essays)`;
-  } catch (e) {
-    checks.essays_table = `FAILED: ${(e as Error).message}`;
-  }
-
-  const allOk = checks.db_connection === 'OK' && checks.POSTGRES_PRISMA_URL === 'set';
-  res.status(allOk ? 200 : 500).json({ status: allOk ? 'healthy' : 'unhealthy', checks });
+  return res.status(status).json({ status: dbOk ? 'healthy' : 'unhealthy' });
 }

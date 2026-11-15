@@ -44,12 +44,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       JOIN "users" u ON b."educatorId" = u."id"
       LEFT JOIN "educator_profiles" ep ON ep."userId" = b."educatorId"
       LEFT JOIN "educator_services" svc ON b."serviceId" = svc."id"
+      -- Only this student's own roster entries. The old second branch matched
+      -- any roster row of a tutor the student was connected to, which showed
+      -- the student every other student's bookings with that tutor (names,
+      -- meeting links, amounts, private notes). The email branch now also
+      -- requires a real connection, since sign-up emails are not verified.
       WHERE (
-        LOWER(es."studentEmail") = LOWER(${userEmail})
-        OR EXISTS (
-          SELECT 1 FROM "account_connections" ac
-          WHERE ac."studentId" = ${userId}
-            AND ac."connectedUserId" = es."educatorId"
+        es."linkedUserId" = ${userId}
+        OR (
+          LOWER(es."studentEmail") = LOWER(${userEmail})
+          AND EXISTS (
+            SELECT 1 FROM "account_connections" ac
+            WHERE ac."studentId" = ${userId}
+              AND ac."connectedUserId" = es."educatorId"
+          )
         )
       )
       ORDER BY b."date" DESC

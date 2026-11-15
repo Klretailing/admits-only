@@ -197,6 +197,11 @@ export async function createOrder(
  * captures[]` with each capture's own status/amount. Callers MUST verify
  * status === 'COMPLETED' before granting anything.
  */
+/** Read an order as it stands (a completed one includes its captures). */
+export async function getOrder(orderId: string): Promise<any> {
+  return paypalFetch(`/v2/checkout/orders/${encodeURIComponent(orderId)}`, { method: 'GET' });
+}
+
 export async function captureOrder(orderId: string): Promise<any> {
   return paypalFetch(`/v2/checkout/orders/${encodeURIComponent(orderId)}/capture`, {
     method: 'POST',

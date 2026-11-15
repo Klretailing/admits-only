@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { daysUntilDay } from '../lib/dateOnly';
 
 /* ──────────────────────────────────────────────────────────────────────
    PROGRESS SUMMARY — the student's "how far am I" block.
@@ -44,11 +45,9 @@ function lastSevenDays(): { key: string; letter: string; isToday: boolean }[] {
   });
 }
 
+// Calendar days, so the deadline day reads "due today" rather than "1 day left".
 function daysUntil(deadline?: string): number | null {
-  if (!deadline) return null;
-  const t = new Date(deadline + 'T23:59:59').getTime();
-  if (Number.isNaN(t)) return null;
-  return Math.ceil((t - Date.now()) / 86400000);
+  return daysUntilDay(deadline);
 }
 
 export default function ProgressSummary({ checklist }: { checklist?: ChecklistItem[] }) {

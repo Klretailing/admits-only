@@ -47,10 +47,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const reviewId = 'er_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
       const studentNote = (note && typeof note === 'string') ? note.trim() : '';
 
-      await prisma.$executeRaw`
-        INSERT INTO "essay_reviews" ("id", "essayId", "studentId", "status", "studentNote", "submittedAt")
-        VALUES (${reviewId}, ${essayId}, ${userId}, 'pending', ${studentNote}, CURRENT_TIMESTAMP)
+      // Conditional insert: two quick clicks can both pass the check above,
+      // so the NOT EXISTS makes the second one a no-op instead of a duplicate.
+      const inserted = await prisma.$executeRaw`
+        INSERT INTO "essay_reviews" ("id", "essayId", "studentId", "status", "studentNote", "submittedAt", "updatedAt")
+        SELECT ${reviewId}, ${essayId}, ${userId}, 'pending', ${studentNote}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        WHERE NOT EXISTS (
+          SELECT 1 FROM "essay_reviews" WHERE "essayId" = ${essayId} AND "status" IN ('pending', 'in_review')
+        )
       `;
+      if (inserted === 0) {
+        return res.status(409).json({ error: 'This essay already has a pending or in-progress review' });
+      }
 
       // Return the created review
       const created: any[] = await prisma.$queryRaw`

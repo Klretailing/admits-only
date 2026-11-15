@@ -147,7 +147,7 @@ export default function SessionNotes() {
   // Premium templates are preview-only for now (billing isn't set up yet).
   // Flip to true once a paid plan / entitlement is live to make them usable.
   const premiumLive = false;
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [mobileShowEditor, setMobileShowEditor] = useState(false);
 
@@ -240,7 +240,9 @@ export default function SessionNotes() {
     setPreviewTemplate(null);
     try {
       const isLesson = t.id !== 'blank';
-      const today = new Date().toISOString().slice(0, 10);
+      // Local date: toISOString() is UTC, which is already tomorrow after ~5pm PT.
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       const structured = isStructured(t.id);
       const res = await fetch('/api/educator/session-notes', {
         method: 'POST',
@@ -266,28 +268,50 @@ export default function SessionNotes() {
     }
   };
 
+  /* Edits are merged per note and sent 1.5s after the last keystroke.
+     Before, each change replaced the pending one (edit Subject, then type in
+     the title: only the title was saved), the server's reply overwrote text
+     typed while the request was out, and switching notes dropped the pending
+     save outright. */
+  const pendingSaveRef = useRef<{ noteId: string; updates: Partial<Note> } | null>(null);
+
+  const sendSave = useCallback(async (noteId: string, updates: Partial<Note>) => {
+    try {
+      const res = await fetch('/api/educator/session-notes', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: noteId, ...updates }),
+      });
+      if (!res.ok) throw new Error('Failed to save');
+      const updated: Note = await res.json();
+      // Local text is already current; take only the server's timestamp.
+      setNotes(prev => prev.map(n => (n.id === updated.id ? { ...n, updatedAt: updated.updatedAt } : n)));
+      if (!pendingSaveRef.current) {
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus(cur => (cur === 'saved' ? 'idle' : cur)), 2000);
+      }
+    } catch {
+      setSaveStatus('error');
+    }
+  }, []);
+
+  const flushPendingSave = useCallback(() => {
+    if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null; }
+    const pending = pendingSaveRef.current;
+    pendingSaveRef.current = null;
+    if (pending) void sendSave(pending.noteId, pending.updates);
+  }, [sendSave]);
+
   const debouncedSave = useCallback(
     (noteId: string, updates: Partial<Note>) => {
+      if (pendingSaveRef.current && pendingSaveRef.current.noteId !== noteId) flushPendingSave();
+      const prior = pendingSaveRef.current?.noteId === noteId ? pendingSaveRef.current.updates : {};
+      pendingSaveRef.current = { noteId, updates: { ...prior, ...updates } };
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       setSaveStatus('saving');
-      saveTimerRef.current = setTimeout(async () => {
-        try {
-          const res = await fetch('/api/educator/session-notes', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: noteId, ...updates }),
-          });
-          if (!res.ok) throw new Error('Failed to save');
-          const updated: Note = await res.json();
-          setNotes(prev => prev.map(n => (n.id === updated.id ? updated : n)));
-          setSaveStatus('saved');
-          setTimeout(() => setSaveStatus('idle'), 2000);
-        } catch {
-          setSaveStatus('idle');
-        }
-      }, 1500);
+      saveTimerRef.current = setTimeout(flushPendingSave, 1500);
     },
-    [],
+    [flushPendingSave],
   );
 
   const handleUpdateField = (field: 'title' | 'content' | 'student' | 'subject' | 'grade' | 'lessonDate', value: string) => {
@@ -390,11 +414,8 @@ export default function SessionNotes() {
   };
 
   const selectNote = (noteId: string) => {
-    // Flush any pending save before switching
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
-    }
+    // Send any pending edit now, instead of discarding it.
+    flushPendingSave();
     setActiveNoteId(noteId);
     setMobileShowEditor(true);
     setDeleteConfirmId(null);
@@ -848,6 +869,9 @@ export default function SessionNotes() {
                       </svg>
                       Saved
                     </span>
+                  )}
+                  {saveStatus === 'error' && (
+                    <span role="alert" className="text-red-pencil font-medium">Not saved. Check your connection; your text is still here.</span>
                   )}
                   {saveStatus === 'idle' && activeNote.updatedAt && (
                     <span>Last saved {relativeDate(activeNote.updatedAt)}</span>

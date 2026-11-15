@@ -37,7 +37,7 @@ function catConfig(category: string) {
 
 function fmtDue(v?: string | null) {
   if (!v) return '';
-  const d = new Date(v);
+  const d = parseDay(v);
   if (isNaN(d.getTime())) return '';
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
@@ -98,11 +98,16 @@ export default function ParentActionItems() {
     const newTask: ParentTask = { id: genId(), label: newTaskLabel.trim(), category: 'custom', done: false };
     setTasks(prev => [...prev, newTask]);
     setNewTaskLabel('');
+    // The server assigns the real id; swap it in so ticking or deleting the
+    // task later reaches the right row (the temporary id never existed there).
     fetch('/api/parent/action-items', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ label: newTask.label, category: 'custom' }),
-    }).catch(() => {});
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d?.id) setTasks((prev) => prev.map((t) => (t.id === newTask.id ? { ...t, id: d.id } : t))); })
+      .catch(() => {});
   };
 
   const suggestionToTask = (s: Suggestion): ParentTask => ({

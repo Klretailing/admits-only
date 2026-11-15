@@ -25,13 +25,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   /* ─── GET: List documents for a pod OR get a single document ─── */
   if (method === 'GET') {
     const { podId, documentId, action } = req.query;
+    if (documentId && typeof documentId !== 'string') return res.status(400).json({ error: 'Invalid document id' });
 
-    // Verify membership
-    if (podId) {
-      const membership = await (prisma as any).podMember.findUnique({
-        where: { podId_userId: { podId: podId as string, userId: user.id } },
-      });
-      if (!membership) return res.status(403).json({ error: 'Not a member of this pod' });
+    // Membership is checked against the pod the document actually belongs
+    // to. Checking only a podId from the query let anyone read any document
+    // by id, and let a member of one pod read another pod's documents.
+    const isMember = async (pid: string) => !!(await (prisma as any).podMember.findUnique({
+      where: { podId_userId: { podId: pid, userId: user.id } },
+    }));
+    if (podId && !(await isMember(podId as string))) return res.status(403).json({ error: 'Not a member of this pod' });
+    if (documentId) {
+      const owner = await (prisma as any).podDocument.findUnique({ where: { id: documentId }, select: { podId: true } });
+      if (!owner) return res.status(404).json({ error: 'Document not found' });
+      if (!(await isMember(owner.podId))) return res.status(403).json({ error: 'Not a member of this pod' });
     }
 
     // Get comments for a document

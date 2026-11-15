@@ -2,46 +2,47 @@ import { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 
+/* Answers describe what the product actually does. The previous list was
+   consulting-template copy: programs for grades 5–8 that don't exist, a
+   "Family Progress Hub" with messaging and quarterly reports, and policies
+   (a satisfaction guarantee, scholarships) nobody had confirmed. Add a
+   policy here only once it is real. */
 const faqs = [
   {
-    question: 'What age groups and grade levels do you serve?',
-    answer: 'Our Foundations for Growth program serves students in grades 5–8, while the Scholarship-Ready Academy, STEM Innovators Lab, and Humanities Leadership Studio are designed for students in grades 8–12. Every program is tailored to the individual student\'s academic level and college admissions goals.',
+    question: 'What is AdmitsOnly?',
+    answer: 'A notebook for all four years of high school. Students keep their activities and grades, write essays with live feedback, study with friends in Study Pods, explore careers by major, build a college list on the College Map, and track every application and deadline, all in one place.',
   },
   {
-    question: 'How does the college admissions consulting enrollment process work?',
-    answer: 'Enrollment begins with a free strategy call where we learn about your student\'s goals, strengths, and areas for growth. From there, we conduct a diagnostic assessment and recommend a personalized program track. Once enrollment is confirmed, we match your student with expert coaches and begin onboarding into our learning platform.',
+    question: 'Is it free?',
+    answer: 'Yes, the notebook is free to start, with no card needed. A few extras are paid, such as the full library of sample essays, and one-on-one consulting with a mentor is a separate paid service.',
   },
   {
-    question: 'What is the difference between half-year and full-year programs?',
-    answer: 'Half-year programs typically run for one semester and focus on targeted skill-building or standardized test preparation. Full-year programs provide comprehensive college admissions support across the entire academic cycle, including admissions strategy, ongoing coaching, and portfolio development. Full-year students benefit from deeper mentorship and more sustained academic growth.',
+    question: 'Which grades is it for?',
+    answer: 'Grades 9 through 12. Ninth graders build good habits and log activities as they happen; seniors manage applications, essays and decisions. Parents and tutors can join to follow along.',
   },
   {
-    question: 'Can sessions be conducted online, in-person, or both?',
-    answer: 'Yes — we offer fully online, fully in-person, and hybrid delivery options. Our platform supports live video sessions with collaborative whiteboards, and all materials are accessible through the Family Progress Hub. Many families choose hybrid delivery for maximum flexibility while maintaining the personal connection of in-person coaching.',
+    question: 'How does the essay feedback work?',
+    answer: 'Paste or write a draft and, once it passes about 40 words, you see the few changes most worth making (each with an example), words a busy reader might trip on, and how the draft reads overall. It is guidance, not a grade. When you are ready, you can send the draft to a tutor for a human review.',
   },
   {
-    question: 'How do you match students with coaches and mentors?',
-    answer: 'We match students based on learning style, academic goals, personality, and subject area expertise. Our Global Faculty Network includes expert educators, published researchers, and industry professionals. Every match is reviewed by our program team to ensure the best fit, and families can request adjustments at any time.',
+    question: 'Who can see my essays and progress?',
+    answer: 'Only you, unless you connect a parent or tutor. You share a connection code from Settings, and you can remove a connection at any time. Study Pod messages are visible to that pod\u2019s members.',
   },
   {
-    question: 'What does the Family Progress Hub include?',
-    answer: 'The Family Progress Hub is a dedicated dashboard for parents and families. It includes weekly coaching summaries, achievement milestones, diagnostic results, upcoming session schedules, and direct messaging with your student\'s coaching team. Quarterly impact reports provide a comprehensive view of academic progress and college readiness.',
+    question: 'How do parents and tutors connect to a student?',
+    answer: 'The student shares their connection code from Settings. A parent or tutor creates their own account, enters the code, and can then follow the progress the student shares. Tutors can also invite a student from their roster by email.',
   },
   {
-    question: 'How do you measure student progress toward college admissions goals?',
-    answer: 'We use a combination of diagnostic assessments, mastery-based milestone tracking, and qualitative feedback from coaches. Parents receive weekly insights and a detailed quarterly impact report that tracks academic growth, standardized test improvement, skill development, and overall goal attainment.',
+    question: 'Are the college deadlines official?',
+    answer: 'They are the dates each school has typically used in recent years, so you can plan ahead. Schools change dates from year to year, so always confirm on the school\u2019s own admissions website before you submit.',
   },
   {
-    question: 'What is your cancellation and refund policy?',
-    answer: 'We offer a satisfaction guarantee for the first two weeks of enrollment. After that, families can pause or cancel with 30 days\' notice. Unused sessions in prepaid packages are credited toward future enrollment. Please contact us during your strategy call for specific details about your program.',
+    question: 'How does one-on-one consulting work?',
+    answer: 'It starts with a free strategy call to understand the student\u2019s goals. From there a mentor builds a plan across writing, SAT/ACT preparation, career guidance or college admissions, with regular check-ins. Ask on the call about format, schedule and pricing.',
   },
   {
-    question: 'Do you offer financial aid or scholarships for your programs?',
-    answer: 'We are committed to making premium college admissions coaching accessible to all families. A limited number of need-based scholarships are available each enrollment cycle. Contact us during your strategy call to learn more about eligibility requirements and the application process.',
-  },
-  {
-    question: 'How is AdmitsOnly different from other college admissions consultants?',
-    answer: 'AdmitsOnly is not a traditional tutoring service or college admissions consultant. We are a learning collective that provides end-to-end academic coaching, admissions strategy, and mentorship. Our programs are designed around outcomes — not just hours — with dedicated teams, proprietary curricula, AI-powered diagnostics, and a 98% family retention rate that speaks to the quality of our approach.',
+    question: 'How do I delete my account or my data?',
+    answer: 'Email info@admitsonly.com from the address on your account and we will delete your account and everything in it, or send you a copy first if you would like one.',
   },
 ];
 

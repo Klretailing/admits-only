@@ -140,7 +140,7 @@ const SCORE_DIMENSIONS: { key: keyof TutorScores; label: string }[] = [
 ];
 
 const AUTO_SCORE_LABELS: { key: string; label: string }[] = [
-  { key: 'aiScore', label: 'Voice & Authenticity' },
+  { key: 'aiScore', label: 'Sounds like the student' },
   { key: 'vocabScore', label: 'Language & Precision' },
   { key: 'grammarScore', label: 'Structure & Coherence' },
   { key: 'originalityScore', label: 'Storytelling' },
@@ -171,6 +171,7 @@ export default function EssayReviews() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // Review editing state
   const [tutorFeedback, setTutorFeedback] = useState('');
@@ -208,25 +209,25 @@ export default function EssayReviews() {
     if (status === 'authenticated') fetchReviews();
   }, [status, fetchReviews]);
 
-  // Auto-save logic
+  // Auto-save logic. The timer reads the draft from a ref at the moment it
+  // fires; it used to close over the previous render's state, so the newest
+  // annotation or sentence was missing from the save.
+  const draftRef = useRef({ tutorFeedback, annotations, scores });
+  draftRef.current = { tutorFeedback, annotations, scores };
+  const saveDraftNow = useCallback(() => {
+    if (autoSaveTimer.current) { clearTimeout(autoSaveTimer.current); autoSaveTimer.current = null; }
+    const reviewId = activeReviewId.current;
+    if (!reviewId) return;
+    fetch('/api/educator/essay-reviews', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reviewId, action: 'save', ...draftRef.current }),
+    }).catch(() => {});
+  }, []);
   const triggerAutoSave = useCallback(() => {
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
-    autoSaveTimer.current = setTimeout(() => {
-      const reviewId = activeReviewId.current;
-      if (!reviewId) return;
-      fetch('/api/educator/essay-reviews', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reviewId,
-          action: 'save',
-          tutorFeedback,
-          annotations,
-          scores,
-        }),
-      }).catch(() => {});
-    }, 3000);
-  }, [tutorFeedback, annotations, scores]);
+    autoSaveTimer.current = setTimeout(saveDraftNow, 3000);
+  }, [saveDraftNow]);
 
   // Cleanup auto-save timer
   useEffect(() => {
@@ -250,6 +251,7 @@ export default function EssayReviews() {
         body: JSON.stringify(body),
       });
       if (res.ok) {
+        setActionError(null);
         if (action === 'complete' || action === 'return') {
           activeReviewId.current = null;
           setView({ type: 'queue', filter: 'all' });
@@ -257,9 +259,12 @@ export default function EssayReviews() {
         } else {
           fetchReviews();
         }
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setActionError(data.error || 'That didn\u2019t go through. Your review is still here; try again.');
       }
     } catch {
-      // silent fail
+      setActionError('Could not reach the server. Your review is still here; try again.');
     }
     setActionLoading(false);
   };
@@ -269,11 +274,21 @@ export default function EssayReviews() {
     if (review.status === 'pending') {
       setActionLoading(true);
       try {
-        await fetch('/api/educator/essay-reviews', {
+        const res = await fetch('/api/educator/essay-reviews', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ reviewId: review.id, action: 'claim' }),
         });
+        if (!res.ok) {
+          // Someone else claimed it, or this student isn't connected to you:
+          // stop here rather than let the tutor write a review that can't save.
+          const data = await res.json().catch(() => ({}));
+          setActionError(data.error || 'This review can\u2019t be opened right now.');
+          setActionLoading(false);
+          fetchReviews();
+          return;
+        }
+        setActionError(null);
         fetchReviews();
       } catch {
         // continue anyway
@@ -289,7 +304,7 @@ export default function EssayReviews() {
   };
 
   const backToQueue = () => {
-    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    saveDraftNow(); // send the pending draft instead of discarding it
     activeReviewId.current = null;
     setView({ type: 'queue', filter: 'all' });
   };
@@ -372,6 +387,12 @@ export default function EssayReviews() {
         <title>Essay Review Queue | AdmitsOnly Educator</title>
       </Head>
 
+      {actionError && (
+        <div role="alert" className="mb-4 flex items-start justify-between gap-3 rounded-xl border-[1.5px] border-red-pencil bg-white px-4 py-3 text-sm text-primary">
+          <span>{actionError}</span>
+          <button onClick={() => setActionError(null)} className="text-xs font-semibold underline underline-offset-2">Dismiss</button>
+        </div>
+      )}
       {view.type === 'queue' ? (
         <QueueView
           reviews={reviews}
@@ -708,7 +729,7 @@ function ReviewInterface({
   return (
     <div className="space-y-4">
       {/* Back button */}
-      <button
+      <button aria-label="Back to queue"
         onClick={onBack}
         className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-primary transition-colors"
       >
@@ -882,9 +903,13 @@ function ReviewInterface({
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Auto Scores</p>
               <div className="space-y-3">
                 {AUTO_SCORE_LABELS.map((item) => {
-                  const val = review[item.key as keyof Review] as number | null;
-                  const displayVal = val !== null && val !== undefined ? val : null;
-                  const pct = displayVal !== null ? (displayVal / 10) * 100 : 0;
+                  // Auto scores come from the essay analyzer on a 0-100 scale
+                  // (voice is stored inverted: lower = more authentic). They were
+                  // shown as if out of 10, so an 88 read "88.0" with a bar at 880%.
+                  const raw = review[item.key as keyof Review] as number | null;
+                  const val100 = raw === null || raw === undefined ? null : item.key === 'aiScore' ? 100 - raw : raw;
+                  const displayVal = val100 === null ? null : Math.round(val100) / 10;
+                  const pct = val100 === null ? 0 : Math.max(0, Math.min(100, val100));
                   return (
                     <div key={item.key}>
                       <div className="flex items-center justify-between mb-1">
@@ -953,7 +978,7 @@ function ReviewInterface({
                   Annotations ({annotations.length})
                 </p>
                 {isEditable && (
-                  <button
+                  <button aria-label="Add annotation"
                     onClick={onNewAnnotation}
                     className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors"
                   >

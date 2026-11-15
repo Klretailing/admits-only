@@ -10,7 +10,8 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "npx tsx prisma/seed.ts",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "audit:site": "node scripts/site-audit/walk.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

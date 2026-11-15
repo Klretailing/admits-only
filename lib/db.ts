@@ -750,6 +750,24 @@ export async function ensureSchema() {
       )`);
     await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "pod_message_reports_key" ON "pod_message_reports"("messageId","userId")`);
 
+    // "updatedAt" is Prisma-managed (@updatedAt), so a schema created by
+    // `prisma db push` has it NOT NULL with no database default. Every raw
+    // INSERT that left it out failed: "Submit for review" among them, and
+    // the demo seed. A default makes those inserts valid; Prisma still sets
+    // the column itself on its own writes. Idempotent and metadata-only.
+    await prisma.$executeRawUnsafe(`
+      DO $$
+      DECLARE t text;
+      BEGIN
+        FOR t IN
+          SELECT c.table_name FROM information_schema.columns c
+          WHERE c.table_schema = current_schema() AND c.column_name = 'updatedAt'
+            AND c.is_nullable = 'NO' AND c.column_default IS NULL
+        LOOP
+          EXECUTE format('ALTER TABLE %I ALTER COLUMN "updatedAt" SET DEFAULT CURRENT_TIMESTAMP', t);
+        END LOOP;
+      END $$;`);
+
     globalForPrisma.schemaReady = true;
   } catch (e) {
     // Tables likely already exist — mark as ready

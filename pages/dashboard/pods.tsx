@@ -464,6 +464,8 @@ export default function StudyPods() {
   const [docModalLoading, setDocModalLoading] = useState(false);
   const [docContent, setDocContent] = useState('');
   const [docDirty, setDocDirty] = useState(false);
+  const [podCreating, setPodCreating] = useState(false);
+  const podCreatingRef = useRef(false);
   const [docSaving, setDocSaving] = useState(false);
   const [docZoom, setDocZoom] = useState(100);
   const [docComment, setDocComment] = useState('');
@@ -512,7 +514,13 @@ export default function StudyPods() {
     if (status === 'authenticated') fetchPods();
   }, [status, fetchPods]);
 
+  // Which pod is on screen. Responses for any other pod are dropped: switching
+  // quickly used to show pod A's messages under pod B, and B's next sync then
+  // asked for messages after A's newest timestamp.
+  const openPodRef = useRef<string | null>(null);
+
   const bootstrapPod = useCallback(async (pod: PodSummary) => {
+    openPodRef.current = pod.id;
     setBootstrapping(true);
     setError('');
     setMessages([]);
@@ -526,6 +534,7 @@ export default function StudyPods() {
       const res = await fetch(`/api/pods?action=bootstrap&podId=${pod.id}`);
       if (!res.ok) throw new Error('Failed to open pod');
       const data = await res.json();
+      if (openPodRef.current !== pod.id) return;
       const msgs: PodMessage[] = data.messages || [];
       setMessages(msgs);
       setMembers(data.members || []);
@@ -536,9 +545,9 @@ export default function StudyPods() {
       setAchievementDefs(data.achievements || []);
       if (msgs.length > 0) newestTsRef.current = msgs[msgs.length - 1].createdAt;
     } catch {
-      setError('Could not open this pod.');
+      if (openPodRef.current === pod.id) setError('Could not open this pod.');
     } finally {
-      setBootstrapping(false);
+      if (openPodRef.current === pod.id) setBootstrapping(false);
     }
   }, []);
 
@@ -573,6 +582,7 @@ export default function StudyPods() {
 
   const runSync = useCallback(async () => {
     if (!selectedPod) return;
+    const podId = selectedPod.id;
     try {
       const after = newestTsRef.current;
       const url = after
@@ -583,6 +593,7 @@ export default function StudyPods() {
       const res = await fetch(url + seen);
       if (!res.ok) return;
       const data = await res.json();
+      if (openPodRef.current !== podId) return;
       const incoming: PodMessage[] = data.messages || [];
       if (incoming.length > 0) {
         setMessages((prev) => {
@@ -780,23 +791,32 @@ export default function StudyPods() {
   }, [selectedPod]);
 
   const handleCreatePoll = useCallback(async () => {
-    if (!selectedPod || !pollQuestion.trim()) return;
-    const opts = pollOptions.map((o) => o.trim()).filter(Boolean);
-    if (opts.length < 2) return;
+    // Guard against a double click creating two of the same thing.
+    if (podCreatingRef.current) return;
+    podCreatingRef.current = true;
+    setPodCreating(true);
     try {
-      const res = await fetch('/api/pod-engage', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create-poll', podId: selectedPod.id, question: pollQuestion.trim(), options: opts }),
-      });
-      if (!res.ok) throw new Error('poll failed');
-      setPollQuestion('');
-      setPollOptions(['', '']);
-      setShowCreatePoll(false);
-      const data = await res.json();
-      if (data.poll) setPolls((prev) => [data.poll, ...prev]);
-    } catch {
-      setError('Could not create poll.');
+      if (!selectedPod || !pollQuestion.trim()) return;
+      const opts = pollOptions.map((o) => o.trim()).filter(Boolean);
+      if (opts.length < 2) return;
+      try {
+        const res = await fetch('/api/pod-engage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'create-poll', podId: selectedPod.id, question: pollQuestion.trim(), options: opts }),
+        });
+        if (!res.ok) throw new Error('poll failed');
+        setPollQuestion('');
+        setPollOptions(['', '']);
+        setShowCreatePoll(false);
+        const data = await res.json();
+        if (data.poll) setPolls((prev) => [data.poll, ...prev]);
+      } catch {
+        setError('Could not create poll.');
+      }
+    } finally {
+      podCreatingRef.current = false;
+      setPodCreating(false);
     }
   }, [selectedPod, pollQuestion, pollOptions]);
 
@@ -897,11 +917,15 @@ export default function StudyPods() {
     }
   }, []);
 
+  // Escape, the backdrop and X all close the document; with unsaved edits
+  // they used to discard them without asking.
   const closeDocModal = useCallback(() => {
+    if (docDirty && !window.confirm('Discard your unsaved changes to this document?')) return;
     setDocModalId(null);
     setDocModal(null);
     setShowSelectionPopup(false);
-  }, []);
+    setDocDirty(false);
+  }, [docDirty]);
 
   useEffect(() => {
     if (!docModalId) return;
@@ -992,14 +1016,20 @@ export default function StudyPods() {
 
   const handleDeleteDoc = useCallback(async () => {
     if (!docModal) return;
+    // One click used to delete for everyone in the pod, and the file vanished
+    // from the list even when the server refused.
+    if (!window.confirm(`Delete "${docModal.fileName}" for everyone in this pod?`)) return;
     try {
-      await fetch('/api/pod-documents', {
+      const res = await fetch('/api/pod-documents', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ documentId: docModal.id }),
       });
+      if (!res.ok) throw new Error('delete failed');
       setDocuments((prev) => prev.filter((d) => d.id !== docModal.id));
-      closeDocModal();
+      setDocDirty(false);
+      setDocModalId(null);
+      setDocModal(null);
     } catch {
       setError('Could not delete document.');
     }
@@ -1084,17 +1114,26 @@ export default function StudyPods() {
   );
 
   const handleCreateSession = useCallback(async () => {
-    if (!selectedPod || !sessionTitle.trim()) return;
-    await sessionAction('create', {
-      podId: selectedPod.id,
-      title: sessionTitle.trim(),
-      focusDuration: sessionFocus,
-      breakDuration: sessionBreak,
-      rounds: sessionRounds,
-      goal: sessionGoal.trim(),
-    });
-    setShowCreateSession(false);
-    setSessionGoal('');
+    // Guard against a double click creating two of the same thing.
+    if (podCreatingRef.current) return;
+    podCreatingRef.current = true;
+    setPodCreating(true);
+    try {
+      if (!selectedPod || !sessionTitle.trim()) return;
+      await sessionAction('create', {
+        podId: selectedPod.id,
+        title: sessionTitle.trim(),
+        focusDuration: sessionFocus,
+        breakDuration: sessionBreak,
+        rounds: sessionRounds,
+        goal: sessionGoal.trim(),
+      });
+      setShowCreateSession(false);
+      setSessionGoal('');
+    } finally {
+      podCreatingRef.current = false;
+      setPodCreating(false);
+    }
   }, [selectedPod, sessionTitle, sessionFocus, sessionBreak, sessionRounds, sessionGoal, sessionAction]);
 
   const fetchBoard = useCallback(async () => {
@@ -1382,15 +1421,21 @@ export default function StudyPods() {
                           </svg>
                         </button>
                       )}
+                      {/* Community channels are open to everyone: there's no
+                          code to share and nothing to leave. They used to show
+                          a blank code that "Copied!" an empty string. */}
+                      {!activeChannel && (
                       <button
                         onClick={() => setShowInvite((v) => !v)}
-                        className="p-2 rounded-lg text-slate-400 hover:text-primary hover:bg-slate-50"
+                        className="p-2 rounded-lg text-slate-600 hover:text-primary hover:bg-slate-50"
                         title="Invite code"
+                        aria-label="Invite code"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                         </svg>
                       </button>
+                      )}
                       <button
                         onClick={() => setShowMembers((v) => !v)}
                         className="p-2 rounded-lg text-slate-400 hover:text-primary hover:bg-slate-50"
@@ -1403,7 +1448,7 @@ export default function StudyPods() {
                     </div>
                   </div>
 
-                  {showInvite && (
+                  {showInvite && !activeChannel && (
                     <div className="px-4 pb-3 flex items-center gap-2">
                       <div className="flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-2 flex-1">
                         <span className="text-xs text-slate-400">Invite code:</span>
@@ -1430,6 +1475,7 @@ export default function StudyPods() {
                             )}
                           </div>
                         ))}
+                        {!activeChannel && (
                         <div className="pt-1 mt-1 border-t border-slate-200">
                           {confirmLeave ? (
                             <div className="flex items-center gap-2 px-2 py-1">
@@ -1443,6 +1489,7 @@ export default function StudyPods() {
                             </button>
                           )}
                         </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -1643,7 +1690,7 @@ export default function StudyPods() {
                           className="flex-1 px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-accent focus:ring-1 focus:ring-accent outline-none resize-none"
                           style={{ minHeight: '40px', maxHeight: '120px', height: '40px' }}
                         />
-                        <button
+                        <button aria-label="Send message"
                           onClick={handleSend}
                           disabled={!messageText.trim()}
                           className={`p-2 rounded-lg flex-shrink-0 transition-colors ${
@@ -1695,7 +1742,7 @@ export default function StudyPods() {
                             )}
                             <button
                               onClick={handleCreatePoll}
-                              disabled={!pollQuestion.trim() || pollOptions.filter((o) => o.trim()).length < 2}
+                              disabled={podCreating || !pollQuestion.trim() || pollOptions.filter((o) => o.trim()).length < 2}
                               className="ml-auto px-3 py-1.5 text-sm font-medium rounded-lg bg-accent text-white disabled:opacity-50"
                             >
                               Create Poll
@@ -1842,7 +1889,7 @@ export default function StudyPods() {
                             />
                             <button
                               onClick={handleCreateSession}
-                              disabled={!sessionTitle.trim()}
+                              disabled={podCreating || !sessionTitle.trim()}
                               className="w-full py-2 text-sm font-medium rounded-lg bg-accent text-white disabled:opacity-50"
                             >
                               Create Session
@@ -2052,7 +2099,7 @@ export default function StudyPods() {
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     </button>
                   )}
-                  <button onClick={closeDocModal} className="p-2 rounded-lg text-slate-400 hover:bg-slate-50">
+                  <button aria-label="Close document" onClick={closeDocModal} className="p-2 rounded-lg text-slate-400 hover:bg-slate-50">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                   </button>
                 </div>
