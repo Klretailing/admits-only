@@ -25,6 +25,9 @@ export default function Document() {
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         {/* Fonts are self-hosted via @fontsource (imported in _app.tsx). */}
         <meta name="theme-color" content="#f7f3ea" />
+        {/* Here, not in Layout: the sign-in pages render without Layout, and
+            with no icon tag the browser asks for /favicon.ico, which 404s. */}
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
       </Head>
       <body>
         <Main />
