@@ -93,7 +93,11 @@ function ensurePaypalSdk(clientId: string): Promise<any> {
 }
 
 export default function EssaySamples() {
-  const { status } = useSession();
+  const { data: session, status } = useSession();
+  // PayPal account holders must be 18+. Students under 18 confirm a parent or
+  // guardian is completing (or allowing) the purchase before buttons appear.
+  const buyerIsMinor = !!(session?.user as any)?.minor;
+  const [guardianOk, setGuardianOk] = useState(false);
   const router = useRouter();
   const [buckets, setBuckets] = useState<SchoolBucket[]>([]);
   const [total, setTotal] = useState(0);
@@ -210,6 +214,7 @@ export default function EssaySamples() {
   useEffect(() => {
     if (!reader?.locked) return;
     if (!config?.configured || !config.clientId) return;
+    if (buyerIsMinor && !guardianOk) return;
 
     let cancelled = false;
     setPaypalLoadError(false);
@@ -256,7 +261,7 @@ export default function EssaySamples() {
       instances.forEach((b) => { try { b.close(); } catch { /* ignore */ } });
     };
     // Re-mount when the essay, config, or the user's access changes.
-  }, [reader?.locked, reader?.essay?.id, reader?.essay?.schoolSlug, config, (access.schools || []).join(',')]);
+  }, [reader?.locked, reader?.essay?.id, reader?.essay?.schoolSlug, config, (access.schools || []).join(','), buyerIsMinor, guardianOk]);
 
   // Filter buckets/essays by the search query
   const filtered = useMemo(() => {
@@ -493,7 +498,21 @@ export default function EssaySamples() {
                       ) : paypalLoadError ? (
                         <p className="text-xs text-rose-500 text-center">Checkout couldn&rsquo;t load. Please refresh and try again.</p>
                       ) : (
-                        <div className="grid gap-4 sm:grid-cols-2 max-w-2xl mx-auto items-start">
+                        <>
+                        {buyerIsMinor && (
+                          <div className="max-w-2xl mx-auto mb-4 rounded-xl border-[1.5px] border-ink bg-white p-4 text-left">
+                            <p className="text-sm font-semibold text-primary">Ask a parent or guardian to check out</p>
+                            <p className="mt-1 text-sm text-slate-700 leading-snug">
+                              Payments go through PayPal, which is for adults 18 and older. Please have a parent or guardian
+                              complete this purchase with you.
+                            </p>
+                            <label className="mt-3 flex items-start gap-2 text-sm text-primary">
+                              <input type="checkbox" checked={guardianOk} onChange={(e) => setGuardianOk(e.target.checked)} className="mt-0.5 h-4 w-4" />
+                              <span>I&apos;m a parent or guardian, or one is buying this with me.</span>
+                            </label>
+                          </div>
+                        )}
+                        <div className={`grid gap-4 sm:grid-cols-2 max-w-2xl mx-auto items-start ${buyerIsMinor && !guardianOk ? 'opacity-50' : ''}`}>
                           {/* ── UC Essay Vault ── */}
                           {ucTier && !ownsUc && (
                             <div className="relative rounded-2xl border border-slate-200 bg-white p-5 flex flex-col">
@@ -544,6 +563,7 @@ export default function EssaySamples() {
                             </div>
                           )}
                         </div>
+                        </>
                       )}
 
                       {captureError && <p className="mt-3 text-xs text-rose-500 text-center">{captureError}</p>}

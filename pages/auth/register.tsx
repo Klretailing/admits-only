@@ -8,7 +8,18 @@ import LogoMark from '../../components/LogoMark';
 
 export default function Register() {
   const router = useRouter();
-  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'student' as 'student' | 'parent' | 'educator' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', dateOfBirth: '', role: 'student' as 'student' | 'parent' | 'educator' });
+  // Neutral age screen: an under-13 attempt shows a kind message (nothing is
+  // stored on our side), and this browser keeps showing it for a day so the
+  // form can't simply be retried with a different birthday.
+  const [ageBlocked, setAgeBlocked] = useState(false);
+  useEffect(() => {
+    try {
+      const t = Number(localStorage.getItem('ao_age_gate') || 0);
+      if (t && Date.now() - t < 24 * 60 * 60 * 1000) setAgeBlocked(true);
+    } catch { /* storage unavailable */ }
+  }, []);
+  const todayIso = new Date().toISOString().slice(0, 10);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [inviteToken, setInviteToken] = useState('');
@@ -51,6 +62,12 @@ export default function Register() {
       const data = await res.json();
 
       if (!res.ok) {
+        if (data.code === 'under_13') {
+          try { localStorage.setItem('ao_age_gate', String(Date.now())); } catch { /* ignore */ }
+          setAgeBlocked(true);
+          setLoading(false);
+          return;
+        }
         setError(data.error || 'Registration failed');
         setLoading(false);
         return;
@@ -92,8 +109,12 @@ export default function Register() {
                 Admits<span className="gradient-text">Only</span>
               </span>
             </Link>
-            <h1 className="text-2xl font-bold font-display text-primary">Create your account</h1>
-            <p className="mt-2 text-slate-500">Start your notebook. Free, in any grade.</p>
+            {!ageBlocked && (
+              <>
+                <h1 className="text-2xl font-bold font-display text-primary">Create your account</h1>
+                <p className="mt-2 text-slate-500">Start your notebook. Free, in any grade.</p>
+              </>
+            )}
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-100 shadow-xl shadow-slate-200/50 p-8">
@@ -105,11 +126,24 @@ export default function Register() {
               </div>
             )}
             {error && (
-              <div className="mb-5 p-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600">
+              <div role="alert" className="mb-5 p-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600">
                 {error}
               </div>
             )}
 
+            {ageBlocked ? (
+              <div role="status" className="py-4 text-center">
+                <h2 className="text-lg font-bold text-primary">Thanks for your interest in AdmitsOnly</h2>
+                <p className="mt-2 text-sm text-slate-700 leading-relaxed">
+                  AdmitsOnly is for students 13 and older, so we can&apos;t create an account right now. We didn&apos;t save
+                  anything you entered. When you&apos;re older, we&apos;d love to have you.
+                </p>
+                <p className="mt-3 text-sm text-slate-700 leading-relaxed">
+                  A parent or guardian can learn more on our <Link href="/privacy" className="font-semibold underline underline-offset-2">Privacy</Link> page.
+                </p>
+                <Link href="/" className="mt-5 inline-block btn-secondary text-sm">Back to the homepage</Link>
+              </div>
+            ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* Role selector */}
               <div>
@@ -155,8 +189,10 @@ export default function Register() {
               </div>
 
               <div>
-                <label className="block mb-2 text-sm font-semibold text-primary">Full Name</label>
+                <label htmlFor="reg-name" className="block mb-2 text-sm font-semibold text-primary">Full Name</label>
                 <input
+                  id="reg-name"
+                  autoComplete="name"
                   type="text"
                   value={form.name}
                   onChange={(e) => update('name', e.target.value)}
@@ -167,8 +203,10 @@ export default function Register() {
               </div>
 
               <div>
-                <label className="block mb-2 text-sm font-semibold text-primary">Email</label>
+                <label htmlFor="reg-email" className="block mb-2 text-sm font-semibold text-primary">Email</label>
                 <input
+                  id="reg-email"
+                  autoComplete="email"
                   type="email"
                   value={form.email}
                   onChange={(e) => update('email', e.target.value)}
@@ -179,16 +217,39 @@ export default function Register() {
               </div>
 
               <div>
-                <label className="block mb-2 text-sm font-semibold text-primary">Password</label>
+                <label htmlFor="reg-dob" className="block mb-2 text-sm font-semibold text-primary">Date of birth</label>
                 <input
+                  id="reg-dob"
+                  type="date"
+                  value={form.dateOfBirth}
+                  onChange={(e) => update('dateOfBirth', e.target.value)}
+                  max={todayIso}
+                  min="1900-01-01"
+                  autoComplete="bday"
+                  aria-describedby="reg-dob-hint"
+                  className="w-full border border-slate-200 bg-surface p-3.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-colors"
+                  required
+                />
+                <p id="reg-dob-hint" className="mt-1.5 text-xs text-slate-600">
+                  We use this to set the right privacy protections for your account. We keep only the month and year.
+                </p>
+              </div>
+
+              <div>
+                <label htmlFor="reg-password" className="block mb-2 text-sm font-semibold text-primary">Password</label>
+                <input
+                  id="reg-password"
                   type="password"
                   value={form.password}
                   onChange={(e) => update('password', e.target.value)}
                   className="w-full border border-slate-200 bg-surface p-3.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-colors"
-                  placeholder="Minimum 8 characters"
+                  placeholder="At least 8 characters"
                   minLength={8}
+                  maxLength={72}
+                  autoComplete="new-password"
                   required
                 />
+                <p className="mt-1.5 text-xs text-slate-600">A short phrase is easier to remember and harder to guess than a common word with numbers.</p>
               </div>
 
               <button
@@ -199,15 +260,21 @@ export default function Register() {
                 {loading ? 'Creating account...' : 'Create Account'}
               </button>
             </form>
+            )}
           </div>
 
+          {!ageBlocked && (
+          <>
           <p className="text-center text-xs text-slate-600 mt-4">By creating an account you agree to our <Link href="/terms" className="underline underline-offset-2">Terms</Link> and <Link href="/privacy" className="underline underline-offset-2">Privacy</Link> notice.</p>
+          <p className="text-center text-xs text-slate-600 mt-2">Under 18? Please read them with a parent or guardian before you sign up.</p>
           <p className="mt-6 text-center text-sm text-slate-500">
             Already have an account?{' '}
             <Link href={safeNext(router.query.next) ? `/auth/login?next=${encodeURIComponent(safeNext(router.query.next)!)}` : '/auth/login'} className="text-accent font-semibold hover:underline">
               Sign in
             </Link>
           </p>
+          </>
+          )}
         </div>
       </div>
     </>

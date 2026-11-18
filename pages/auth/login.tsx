@@ -38,7 +38,9 @@ export default function Login() {
 
     setLoading(false);
 
-    if (result?.error) {
+    if (result?.error === 'TooManyAttempts') {
+      setError('Too many sign-in attempts. For your security, sign-in is paused for 15 minutes. You can reset your password instead.');
+    } else if (result?.error) {
       setError('Invalid email or password. Please try again.');
     } else {
       // Fetch session to check role and redirect accordingly

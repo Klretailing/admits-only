@@ -90,10 +90,12 @@ export async function checkResetToken(token: string): Promise<boolean> {
   return rows.length > 0;
 }
 
+import { passwordProblem } from './passwordPolicy';
+
 export type ConsumeResult = 'ok' | 'invalid' | 'weak_password';
 
 export async function consumeResetToken(token: string, newPassword: string): Promise<ConsumeResult> {
-  if (typeof newPassword !== 'string' || newPassword.length < 8) return 'weak_password';
+  if (passwordProblem(newPassword)) return 'weak_password';
   if (!token || token.length < 20) return 'invalid';
   await ensureResetSchema();
 

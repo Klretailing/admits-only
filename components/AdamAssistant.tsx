@@ -20,7 +20,7 @@ interface Message {
 }
 
 const GREETING =
-  "Hey, I'm Adam — your admissions guide. I've got your profile in front of me. What's on your mind?";
+  "Hey, I'm Adam, an AI admissions guide. I've got your profile in front of me. What's on your mind?";
 
 const SUGGESTED_PROMPTS = [
   'Help me brainstorm my personal statement',
@@ -277,7 +277,7 @@ export function AdamPanel({
           ${open ? 'translate-x-0 visible' : 'translate-x-full invisible'}`}
         style={{ height: '100dvh' }}
         role="dialog"
-        aria-label="Adam, your admissions guide"
+        aria-label="Adam, an AI admissions guide"
       >
         {/* Header — deep orange gradient: keeps Adam's identity while giving
             white text a 5.2:1+ contrast ratio (orange-500 was only 2.8:1). */}
@@ -291,7 +291,7 @@ export function AdamPanel({
             </span>
             <div>
               <h3 className="text-base font-bold leading-tight">Adam</h3>
-              <p className="text-[11px] text-white/90 leading-tight">Your admissions guide</p>
+              <p className="text-xs text-white/90 leading-tight">AI admissions guide</p>
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -454,6 +454,10 @@ export function AdamPanel({
                 </svg>
               </button>
             </div>
+            <p className="mt-2 text-xs text-slate-600 leading-snug">
+              Adam is an AI and can make mistakes. Check important details with a counselor or parent.
+              If you&apos;re in crisis, call or text <a href="tel:988" className="font-semibold underline">988</a>.
+            </p>
           </div>
         )}
       </aside>

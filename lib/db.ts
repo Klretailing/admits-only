@@ -45,6 +45,8 @@ export async function ensureSchema() {
     await prisma.$executeRawUnsafe(`DO $$ BEGIN ALTER TABLE "users" ADD COLUMN "plan" TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END $$;`);
     await prisma.$executeRawUnsafe(`DO $$ BEGIN ALTER TABLE "users" ADD COLUMN "planStartedAt" TIMESTAMP(3); EXCEPTION WHEN duplicate_column THEN NULL; END $$;`);
     await prisma.$executeRawUnsafe(`DO $$ BEGIN ALTER TABLE "users" ADD COLUMN "lastLoginAt" TIMESTAMP(3); EXCEPTION WHEN duplicate_column THEN NULL; END $$;`);
+    // Birth month and year ("YYYY-MM") for age-based protections; see lib/age.ts.
+    await prisma.$executeRawUnsafe(`DO $$ BEGIN ALTER TABLE "users" ADD COLUMN "birthMonth" TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END $$;`);
 
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "student_profiles" (

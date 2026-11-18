@@ -33,6 +33,20 @@ function groupReactions(rows: { messageId: string; emoji: string; userId: string
 
 /** Private pods need membership; community channels are readable by any
     signed-in student. One definition, used by every read path. */
+/* Community channels are open to every student, so most readers are
+   strangers. There, everyone appears as first name + last initial
+   ("Priya S."); you still see your own name in full. Private pods are
+   groups students chose to join and keep full names. Emails are never sent
+   to other students. */
+function shortName(name: string | null | undefined): string {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return 'Student';
+  return parts.length === 1 ? parts[0] : `${parts[0]} ${parts[parts.length - 1][0].toUpperCase()}.`;
+}
+function shieldNames<T extends { user?: { id: string; name: string } | null }>(rows: T[], viewerId: string): T[] {
+  return rows.map((r) => (r.user && r.user.id !== viewerId ? { ...r, user: { ...r.user, name: shortName(r.user.name) } } : r));
+}
+
 async function canRead(podId: string, userId: string): Promise<boolean> {
   if (await isCommunityChannel(podId)) return true;
   const membership = await (prisma as any).podMember.findUnique({
@@ -77,7 +91,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         orderBy: { createdAt: 'desc' },
         take: 100,
       })).reverse();
-      return res.json({ messages });
+      return res.json({ messages: isCommunity ? shieldNames(messages, user.id) : messages });
     }
 
     // Unread totals for the nav badge: cheap, no message bodies.
@@ -99,7 +113,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const members = await (prisma as any).podMember.findMany({
         where: { podId: podId as string },
-        include: { user: { select: { id: true, name: true, email: true } } },
+        include: { user: { select: { id: true, name: true } } },
         orderBy: { joinedAt: 'asc' },
       });
       return res.json({ members });
@@ -126,7 +140,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }).then((rows: any[]) => rows.reverse()),
         (prisma as any).podMember.findMany({
           where: { podId: pid },
-          include: { user: { select: { id: true, name: true, email: true } } },
+          include: { user: { select: { id: true, name: true } } },
           orderBy: { joinedAt: 'asc' },
         }),
         (prisma as any).podMessageReaction.findMany({
@@ -158,8 +172,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }),
       ]);
 
+      const community = await isCommunityChannel(pid);
       return res.json({
-        messages,
+        messages: community ? shieldNames(messages, user.id) : messages,
         members,
         reactions: groupReactions(reactionRows),
         polls,
@@ -197,7 +212,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }),
       ]);
 
-      return res.json({ messages: newMessages, reactions: groupReactions(reactionRows) });
+      const community = await isCommunityChannel(pid);
+      return res.json({ messages: community ? shieldNames(newMessages, user.id) : newMessages, reactions: groupReactions(reactionRows) });
     }
 
     // List all pods the user is a member of

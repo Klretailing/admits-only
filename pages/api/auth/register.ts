@@ -1,24 +1,34 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createUser } from '../../../lib/auth';
 import { linkInvite } from '../../../lib/invites';
+import { checkSignupAge } from '../../../lib/age';
+import { passwordProblem } from '../../../lib/passwordPolicy';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { name, email, password, role, inviteToken } = req.body;
+  const { name, email, password, role, inviteToken, dateOfBirth } = req.body || {};
 
-  if (!name || !email || !password || !role) {
+  if (!name || !email || !password || !role || typeof name !== 'string' || typeof email !== 'string') {
     return res.status(400).json({ error: 'All fields are required' });
-  }
-
-  if (password.length < 8) {
-    return res.status(400).json({ error: 'Password must be at least 8 characters' });
   }
 
   if (!['student', 'parent', 'educator', 'admin'].includes(role)) {
     return res.status(400).json({ error: 'Invalid role' });
+  }
+
+  // Age gate (lib/age.ts). Checked on the server, so it can't be skipped from
+  // the browser. An under-13 attempt is refused before anything is stored.
+  const age = checkSignupAge(role, dateOfBirth);
+  if (!age.ok) {
+    return res.status(age.status).json({ error: age.error, code: age.code });
+  }
+
+  const pwIssue = passwordProblem(password, email, name);
+  if (pwIssue) {
+    return res.status(400).json({ error: pwIssue });
   }
 
   // Admin registration requires a secret key to prevent unauthorized admin accounts
@@ -33,7 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   let user;
   try {
-    user = await createUser(name, email, password, role);
+    user = await createUser(name, email, password, role, age.birthMonth);
   } catch (err: any) {
     return res.status(409).json({ error: err.message || 'Registration failed' });
   }
