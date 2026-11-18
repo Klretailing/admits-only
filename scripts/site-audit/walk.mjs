@@ -265,6 +265,9 @@ async function signIn(ctx, roleName, role) {
     await page.fill('input[type="text"], input[name="name"]', 'Audit Student');
     await page.fill('input[type="email"]', email);
     await page.fill('input[type="password"]', 'AuditPass#2026');
+    // A 16-year-old: walks the site with the under-18 protections on.
+    const dob = new Date(); dob.setFullYear(dob.getFullYear() - 16);
+    await page.fill('input[type="date"]', dob.toISOString().slice(0, 10));
     await page.click('button[type="submit"]');
   } else {
     await page.goto(`${BASE}/auth/login`, { waitUntil: 'networkidle' });
@@ -285,11 +288,14 @@ async function visit(ctx, url, variant, roleName) {
     if (m.type() !== 'error') return;
     const t = m.text();
     if (/favicon|Download the React DevTools|net::ERR_ABORTED/.test(t)) return;
-    push('high', 'error:console', t);
+    // "Failed to load resource" says nothing about which one; name it.
+    const src = m.location()?.url;
+    if (src && src.endsWith('/no-such-page')) return; // the 404 we asked for
+    push('high', 'error:console', src && /Failed to load resource/.test(t) ? `${t} (${src})` : t);
   });
   page.on('response', (r) => {
     const u = new URL(r.url());
-    if (u.origin === new URL(BASE).origin && r.status() >= 400 && !u.pathname.startsWith('/_next/webpack-hmr')) {
+    if (u.origin === new URL(BASE).origin && r.status() >= 400 && !u.pathname.startsWith('/_next/webpack-hmr') && u.pathname !== '/no-such-page') {
       push(r.status() >= 500 ? 'critical' : 'high', 'error:request-failed', `${r.status()} ${r.request().method()} ${u.pathname}`);
     }
   });
