@@ -18,7 +18,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const { token, password } = req.body || {};
       const result = await consumeResetToken(String(token || ''), password);
       if (result === 'weak_password') {
-        return res.status(400).json({ error: 'Please use at least 8 characters.' });
+        return res.status(400).json({ error: 'Choose a stronger password: at least 8 characters, and not a common one like "password123".' });
       }
       if (result === 'invalid') {
         return res.status(400).json({ error: 'This reset link has expired or was already used. Request a new one below.', expired: true });

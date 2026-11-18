@@ -1,7 +1,7 @@
 import Head from 'next/head';
 import Link from 'next/link';
 
-const UPDATED = 'November 15, 2026';
+const UPDATED = 'November 18, 2026';
 
 export default function Terms() {
   return (
@@ -21,6 +21,15 @@ export default function Terms() {
 
         <div className="mt-10 space-y-8 text-slate-700 leading-relaxed">
           <section>
+            <h2 className="text-2xl font-bold text-primary">Who can use AdmitsOnly</h2>
+            <ul className="mt-3 list-disc pl-5 space-y-2">
+              <li>Students must be <strong>13 or older</strong>. If you are under 18, you need a parent or guardian&apos;s permission to use AdmitsOnly, and they should read these terms and our <Link href="/privacy" className="font-semibold underline underline-offset-4">Privacy</Link> notice with you.</li>
+              <li>Parent and tutor accounts are for adults <strong>18 or older</strong>.</li>
+              <li>Enter your real date of birth. We use it to set protections for younger students, and we may close an account that doesn&apos;t meet these age requirements.</li>
+            </ul>
+          </section>
+
+          <section>
             <h2 className="text-2xl font-bold text-primary">Your account</h2>
             <p className="mt-3">
               Give accurate information, keep your password to yourself, and tell us if you think someone else has used
@@ -37,11 +46,12 @@ export default function Terms() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-primary">Feedback is guidance</h2>
+            <h2 className="text-2xl font-bold text-primary">Feedback is guidance, and Adam is an AI</h2>
             <p className="mt-3">
               Scores, suggestions, college fits and deadlines in AdmitsOnly are guidance, not guarantees. Deadlines are the
               dates schools have typically used; always confirm on each school&apos;s own website. No tool, tutor or
-              consultant can promise an admission.
+              consultant can promise an admission. Adam is an AI: it can be wrong, so check important details with a
+              counselor, teacher or parent.
             </p>
           </section>
 
@@ -58,7 +68,8 @@ export default function Terms() {
             <h2 className="text-2xl font-bold text-primary">Paid features</h2>
             <p className="mt-3">
               Some features, such as the full sample essay library and consulting services, are paid. Prices are shown
-              before you pay, and payments are processed by PayPal. If something you paid for doesn&apos;t work, email us
+              before you pay, and payments are processed by PayPal. If you are under 18, a parent or guardian must make
+              or approve the purchase. If something you paid for doesn&apos;t work, email us
               and we will make it right.
             </p>
           </section>

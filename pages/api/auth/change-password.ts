@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { compare, hash } from 'bcryptjs';
 import { authOptions } from '../../../lib/auth';
 import { prisma } from '../../../lib/db';
+import { passwordProblem } from '../../../lib/passwordPolicy';
 
 /* Change the signed-in user's password. Requires the current password, so a
    session left open on a shared computer cannot be used to take the account. */
@@ -27,6 +28,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (newPassword.length < minLength) {
     return res.status(400).json({ error: `Use at least ${minLength} characters.` });
   }
+  const issue = passwordProblem(newPassword, user.email, user.name);
+  if (issue) return res.status(400).json({ error: issue });
   if (newPassword === currentPassword) {
     return res.status(400).json({ error: 'Choose a password different from your current one.' });
   }

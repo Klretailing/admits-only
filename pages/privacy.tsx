@@ -5,7 +5,7 @@ import Link from 'next/link';
    (see lib/email.ts, lib/ai.ts, lib/paypal.ts, app/api/subscribe, lib/analytics.ts).
    If a feature changes what is collected or who receives it, update this page. */
 
-const UPDATED = 'November 15, 2026';
+const UPDATED = 'November 18, 2026';
 
 export default function Privacy() {
   return (
@@ -27,7 +27,7 @@ export default function Privacy() {
           <section>
             <h2 className="text-2xl font-bold text-primary">What we collect</h2>
             <ul className="mt-3 list-disc pl-5 space-y-2">
-              <li><strong>Your account:</strong> name, email address, a scrambled (hashed) copy of your password, and whether you are a student, parent or tutor.</li>
+              <li><strong>Your account:</strong> name, email address, the month and year you were born, a scrambled (hashed) copy of your password, and whether you are a student, parent or tutor. We ask for your full date of birth to check your age when you sign up, but keep only the month and year.</li>
               <li><strong>What you put in your notebook:</strong> grades and test scores, activities, essays and drafts, college lists, deadlines and notes, Study Pod messages and files.</li>
               <li><strong>For tutors:</strong> students on your roster, sessions, lesson notes, reviews and earnings you record.</li>
               <li><strong>How the site is used:</strong> pages visited, buttons used and time spent, so we can tell what works. When you are signed in, this is linked to your account.</li>
@@ -48,7 +48,7 @@ export default function Privacy() {
             <h2 className="text-2xl font-bold text-primary">Services that help us run AdmitsOnly</h2>
             <ul className="mt-3 list-disc pl-5 space-y-2">
               <li><strong>Vercel</strong> hosts the website and its database.</li>
-              <li><strong>Anthropic</strong> powers the AI features, such as Adam and AI essay feedback. When you use one, the text you send it (and the parts of your notebook it needs to answer) goes to Anthropic to produce a reply.</li>
+              <li><strong>Anthropic</strong> powers the AI features, such as Adam and AI essay feedback. When you use one, the text you send it (and the parts of your notebook it needs to answer) goes to Anthropic to produce a reply. Under its commercial terms, Anthropic does not use this data to train its models.</li>
               <li><strong>Resend</strong> sends our emails, such as deadline reminders and password resets.</li>
               <li><strong>Beehiiv</strong> runs the newsletter.</li>
               <li><strong>PayPal</strong> handles payments. We never see or store your card details.</li>
@@ -67,9 +67,36 @@ export default function Privacy() {
           <section>
             <h2 className="text-2xl font-bold text-primary">Students under 18</h2>
             <p className="mt-3">
-              AdmitsOnly is made for students in grades 9 to 12. It is not intended for children under 13, and we do not
-              knowingly collect information from them. If you believe a child under 13 has signed up, tell us and we will
-              delete the account.
+              AdmitsOnly is made for high school students, so most of our students are teenagers. We take that seriously.
+            </p>
+            <ul className="mt-3 list-disc pl-5 space-y-2">
+              <li><strong>13 and older only.</strong> Students must be at least 13. We ask for a date of birth at sign-up and don&apos;t create accounts for anyone younger, and we don&apos;t keep what they entered. If you believe a child under 13 has an account, email us and we will delete it.</li>
+              <li><strong>Parents and tutors are adults.</strong> Parent and tutor accounts are for people 18 and older.</li>
+              <li><strong>Extra protections for under-18s.</strong> In community channels that any student can read, students appear as first name and last initial only. Email addresses are never shown to other students. Purchases ask for a parent or guardian, since our payment provider is for adults.</li>
+              <li><strong>An AI that knows its audience.</strong> Adam, our AI guide, tells you it is an AI, keeps conversations age-appropriate, won&apos;t write essays for you to submit as your own, and points you to a trusted adult and the 988 Suicide &amp; Crisis Lifeline if you mention you&apos;re struggling.</li>
+              <li><strong>No ads, no selling data.</strong> We don&apos;t sell personal information or use it for advertising.</li>
+            </ul>
+            <p className="mt-3">
+              <strong>Parents and guardians</strong> of a student under 18 can ask us to show them what we hold about their
+              child, correct it, or delete the account. Email{' '}
+              <a href="mailto:info@admitsonly.com" className="font-semibold underline underline-offset-4">info@admitsonly.com</a>{' '}
+              and we will confirm the request with the account&apos;s email address first.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-bold text-primary">How we protect your information</h2>
+            <ul className="mt-3 list-disc pl-5 space-y-2">
+              <li><strong>Encrypted in transit.</strong> Every connection to AdmitsOnly uses HTTPS (TLS), and browsers are told to never connect without it.</li>
+              <li><strong>Encrypted at rest.</strong> Your data is stored in a managed database whose provider encrypts stored data, and our connection to it is encrypted too.</li>
+              <li><strong>Passwords are never stored.</strong> We keep only a one-way bcrypt hash, so not even we can read your password. Very common passwords are refused, and repeated failed sign-ins pause sign-in for that account.</li>
+              <li><strong>Only the right people see your work.</strong> Every request checks that you are allowed to see or change what you asked for, and our tests check those rules before each release.</li>
+              <li><strong>Payments stay with PayPal.</strong> Card and bank details are entered with PayPal and never reach our servers.</li>
+              <li><strong>Less data, less risk.</strong> We collect only what the notebook needs, such as birth month and year rather than your full birthday.</li>
+            </ul>
+            <p className="mt-3">
+              No system can promise perfect security. If we learn of a breach that affects your information, we will tell
+              you promptly, as the law requires.
             </p>
           </section>
 

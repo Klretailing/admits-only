@@ -15,6 +15,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   checks.CRON_SECRET = process.env.CRON_SECRET ? 'set' : 'not set';
   checks.RESEND_API_KEY = process.env.RESEND_API_KEY ? 'set' : 'not set';
   checks.NODE_ENV = process.env.NODE_ENV || 'undefined';
+  // Is the database connection encrypted? (Reports the setting, never the URL.)
+  const dbUrl = process.env.POSTGRES_PRISMA_URL || process.env.DATABASE_URL || '';
+  const sslmode = /[?&]sslmode=([a-z-]+)/i.exec(dbUrl)?.[1]?.toLowerCase();
+  checks.db_tls = sslmode && ['require', 'verify-ca', 'verify-full'].includes(sslmode)
+    ? `required (sslmode=${sslmode})`
+    : /localhost|127\.0\.0\.1/.test(dbUrl) ? 'local database (no TLS needed)' : 'NOT REQUIRED: add sslmode=require to the database URL';
 
   let dbOk = false;
   try {

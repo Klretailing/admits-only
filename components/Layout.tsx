@@ -133,7 +133,6 @@ export default function Layout({ children }: LayoutProps) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="description" content="AdmitsOnly is the all-in-one notebook for high school, grades 9 to 12: activities and GPA, essay feedback, study groups, career exploration and college planning, in one place. Free to start." />
         <meta name="keywords" content="high school planner, student planner app, GPA tracker, extracurricular tracker, essay feedback, college essay checker, study group app, career exploration for teens, college list builder" />
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <title>AdmitsOnly | The All-in-One Notebook for High School</title>
         {/* One canonical address. The same site is also served on two
             *.vercel.app domains, which otherwise compete with
@@ -357,7 +356,7 @@ export default function Layout({ children }: LayoutProps) {
 
             <div className="mt-12 pt-8 border-t border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4 text-center sm:text-left">
               <p className="text-sm text-slate-500">&copy; {new Date().getFullYear()} AdmitsOnly Learning Collective. All rights reserved.</p>
-              <p className="text-sm text-slate-500">Made for grades 9 through 12.</p>
+              <p className="text-sm text-slate-500">Made for grades 9 through 12 · Students 13 and older.</p>
             </div>
           </div>
         </footer>

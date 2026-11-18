@@ -206,5 +206,9 @@ export async function captureOrder(orderId: string): Promise<any> {
   return paypalFetch(`/v2/checkout/orders/${encodeURIComponent(orderId)}/capture`, {
     method: 'POST',
     body: JSON.stringify({}),
+    // Idempotency: PayPal treats repeat captures with the same request id as
+    // one operation and returns the original result, so a retry after a
+    // timeout can never charge the customer twice.
+    headers: { 'PayPal-Request-Id': `capture-${orderId}` },
   });
 }

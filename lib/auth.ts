@@ -4,6 +4,16 @@ import { compare, hash } from 'bcryptjs';
 import { createHash } from 'crypto';
 import { prisma, ensureSchema } from './db';
 import { seedDemoStudent } from './seedDemoStudent';
+import { isMinor } from './age';
+import { isLocked, recordFailure, clearFailures, clientIp, LIMITS } from './rateLimit';
+
+// Compared against when an email has no account, so a wrong email takes as
+// long as a wrong password and response timing can't reveal who has an account.
+let dummyHash: string | null = null;
+async function burnCompare(password: string) {
+  dummyHash = dummyHash || (await hash('not-a-real-password-' + Math.random(), 12));
+  await compare(password, dummyHash);
+}
 
 export type UserRole = 'student' | 'parent' | 'educator' | 'admin';
 
@@ -163,7 +173,7 @@ export async function getUsers() {
   return users;
 }
 
-export async function createUser(name: string, email: string, password: string, role: UserRole) {
+export async function createUser(name: string, email: string, password: string, role: UserRole, birthMonth: string | null = null) {
   await seedAccounts();
 
   // Emails are compared without regard to case: "Jane@x.com" and
@@ -182,6 +192,9 @@ export async function createUser(name: string, email: string, password: string, 
     },
     select: { id: true, name: true, email: true, role: true },
   });
+  if (birthMonth) {
+    await prisma.$executeRaw`UPDATE "users" SET "birthMonth" = ${birthMonth} WHERE "id" = ${user.id}`;
+  }
 
   return user;
 }
@@ -199,27 +212,55 @@ export const authOptions: NextAuthOptions = {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) return null;
+
+        const typed = credentials.email.trim();
+        const accountKey = `login:${typed.toLowerCase()}`;
+        const ipKey = `ip:${clientIp((req as any)?.headers)}`;
+
+        // Brute-force protection (lib/rateLimit.ts). Thrown, not returned, so
+        // the sign-in page can say why instead of "wrong password".
+        let locked = false;
+        try {
+          locked = (await isLocked(accountKey)) || (await isLocked(ipKey));
+        } catch (e) {
+          console.error('Rate limit check failed:', (e as Error).message);
+        }
+        if (locked) throw new Error('TooManyAttempts');
 
         try {
           await seedAccounts();
 
-          const typed = credentials.email.trim();
           const user = (await prisma.user.findUnique({ where: { email: typed } }))
             || (await prisma.user.findFirst({ where: { email: { equals: typed, mode: 'insensitive' } } }));
-          if (!user) return null;
-          // The admin password that was published in this repository never
-          // works again, whatever the database still holds.
-          if (user.role === 'admin' && LEAKED_ADMIN_PASSWORDS.includes(credentials.password)) return null;
 
-          const valid = await compare(credentials.password, user.password);
-          if (!valid) return null;
+          let valid = false;
+          if (!user) {
+            await burnCompare(credentials.password);
+          } else if (user.role === 'admin' && LEAKED_ADMIN_PASSWORDS.includes(credentials.password)) {
+            // The admin password that was published in this repository never
+            // works again, whatever the database still holds.
+            valid = false;
+          } else {
+            valid = await compare(credentials.password, user.password);
+          }
 
+          if (!user || !valid) {
+            await recordFailure(accountKey, LIMITS.account).catch(() => {});
+            await recordFailure(ipKey, LIMITS.ip).catch(() => {});
+            return null;
+          }
+
+          await clearFailures(accountKey).catch(() => {});
           // Track last login time
           await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } }).catch(() => {});
 
-          return { id: user.id, name: user.name, email: user.email, role: user.role } as any;
+          const bm = (await prisma.$queryRaw`SELECT "birthMonth" FROM "users" WHERE "id" = ${user.id}`.catch(() => [])) as any[];
+          return {
+            id: user.id, name: user.name, email: user.email, role: user.role,
+            minor: isMinor(user.role, bm[0]?.birthMonth ?? null),
+          } as any;
         } catch (e) {
           console.error('Auth error:', (e as Error).message);
           return null;
@@ -232,6 +273,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.role = (user as any).role;
         token.id = user.id;
+        token.minor = !!(user as any).minor;
       }
       return token;
     },
@@ -239,6 +281,8 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         (session.user as any).role = token.role;
         (session.user as any).id = token.id;
+        // Students under 18 (or of unknown age) get the protected defaults.
+        (session.user as any).minor = token.minor ?? token.role === 'student';
       }
       return session;
     },
