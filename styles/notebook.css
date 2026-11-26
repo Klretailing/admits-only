@@ -254,6 +254,11 @@ input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-
 .tint-amber { background-color: rgb(var(--amber-pencil) / 0.12); color: rgb(var(--amber-pencil)); border-color: rgb(var(--amber-pencil) / 0.35); }
 .tint-blue { background-color: rgb(var(--blue-pencil) / 0.12); color: rgb(var(--blue-pencil)); border-color: rgb(var(--blue-pencil) / 0.35); }
 .tint-red { background-color: rgb(var(--red-pencil) / 0.12); color: rgb(var(--red-pencil)); border-color: rgb(var(--red-pencil) / 0.35); }
+.border-blue-pencil { border-color: rgb(var(--blue-pencil)); }
+/* Highlighter: tints the background behind the student's own words, which
+   stay in ink so they read as easily as unhighlighted text. */
+.hl-blue { background-color: rgb(var(--blue-pencil) / 0.16); }
+.hl-amber { background-color: rgb(var(--amber-pencil) / 0.18); }
 
 @media (prefers-reduced-motion: reduce) {
   .surface-interactive, .card, .dash-card-hover, .dash-stat-card, .btn-primary, .btn-secondary { transition: none !important; }
