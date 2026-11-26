@@ -12,7 +12,8 @@
     "db:seed": "npx tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "audit:site": "node scripts/site-audit/walk.mjs",
-    "test:security": "node scripts/security-check/run.mjs"
+    "test:security": "node scripts/security-check/run.mjs",
+    "test:essays": "tsx scripts/essay-calibration/run.ts --strict"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

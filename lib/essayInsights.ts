@@ -1,3 +1,4 @@
+import { resolveContext, checkPrompt, wordsOf } from './essayPrompt';
 /* ══════════════════════════════════════════════════════════════════════
    ESSAY INSIGHTS ENGINE
    Provides multi-dimensional analysis of college application essays:
@@ -387,35 +388,15 @@ function analyzePromptAlignment(
 ): EssayInsights['promptAlignment'] {
   // Return null if no prompt or prompt is too short.
   if (!prompt || prompt.trim().length < 10) return null;
-
-  // Extract meaningful keywords from the prompt.
-  const promptWords = prompt
-    .toLowerCase()
-    .split(/\s+/)
-    .map((w) => stripPunctuation(w))
-    .filter((w) => w.length >= 4 && !STOP_WORDS.has(w));
-
-  // Deduplicate prompt keywords.
-  const uniqueKeywords = [...new Set(promptWords)];
-  if (uniqueKeywords.length === 0) return null;
-
-  const lowerText = text.toLowerCase();
-  const found: string[] = [];
-  const missing: string[] = [];
-
-  for (const keyword of uniqueKeywords) {
-    if (lowerText.includes(keyword)) {
-      found.push(keyword);
-    } else {
-      missing.push(keyword);
-    }
-  }
-
-  // Score: percentage of prompt keywords found in the essay, 0–100.
-  const rawScore = Math.round((found.length / uniqueKeywords.length) * 100);
-  const score = Math.max(0, Math.min(100, rawScore));
-
-  return { score, found, missing };
+  // The same evaluator as the score card (lib/essayPrompt.ts), so the two
+  // never disagree: "found" and "missing" are the prompt's asks, by name.
+  const ctx = resolveContext(prompt, wordsOf(text).length);
+  const check = checkPrompt(text, prompt, ctx);
+  return {
+    score: check.score,
+    found: check.asks.filter((a) => a.met).map((a) => a.label),
+    missing: check.asks.filter((a) => !a.met).map((a) => a.label),
+  };
 }
 
 /* ══════════════════════════════════════════════════════════════════════

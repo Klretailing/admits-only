@@ -11,6 +11,7 @@ import { analyzeEssayInsights, type EssayInsights } from '../../lib/essayInsight
 import { analyzeCraft, type LearnedRule } from '../../lib/essayCraft';
 import CraftStudio from '../../components/CraftStudio';
 import EssayScoreCard from '../../components/EssayScoreCard';
+import type { ScoreDetail } from '../../lib/essayScore';
 import { tracker } from '../../lib/analytics';
 import { analyzeActivities } from '../../lib/motifEngine';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
@@ -30,6 +31,10 @@ interface Essay {
   grammarScore: number | null;
   originalityScore: number | null;
   overallScore: number | null;
+  // Returned by /api/essays on every read and save (not stored).
+  promptScore?: number | null;
+  insightScore?: number | null;
+  scoreDetail?: ScoreDetail | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -3742,9 +3747,12 @@ export default function Essays() {
                     {activeEssay.prompt && <p className="text-xs text-slate-600 italic mt-0.5 line-clamp-2 break-words">&ldquo;{activeEssay.prompt}&rdquo;</p>}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-baseline gap-1 rounded-lg bg-slate-100 px-2.5 py-1 text-xs text-slate-700" title="Common App personal statements allow up to 650 words">
-                      <span className="font-bold text-primary tabular-nums">{wordCount}</span> words
-                      {wordCount > 650 && <span className="font-semibold text-red-pencil">· over 650</span>}
+                    {/* The limit for THIS essay (a UC answer is 350, a Stanford
+                        short answer 50), as detected from its prompt. */}
+                    <span className="inline-flex items-baseline gap-1 rounded-lg bg-slate-100 px-2.5 py-1 text-xs text-slate-700" title={activeEssay.scoreDetail?.limit ? `${activeEssay.scoreDetail.kindLabel}: ${activeEssay.scoreDetail.limit}-word limit` : 'Add the full prompt, with its word limit, for a length check'}>
+                      <span className="font-bold text-primary tabular-nums">{wordCount}</span>
+                      {activeEssay.scoreDetail?.limit ? <> / {activeEssay.scoreDetail.limit} words</> : ' words'}
+                      {activeEssay.scoreDetail?.limit && wordCount > activeEssay.scoreDetail.limit && <span className="font-semibold text-red-pencil">· {wordCount - activeEssay.scoreDetail.limit} over</span>}
                     </span>
                     <span className="text-xs text-slate-600 min-w-[4.5rem]" aria-live="polite">
                       {saveFailed ? (
