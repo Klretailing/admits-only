@@ -11,6 +11,7 @@ import { analyzeEssayInsights, type EssayInsights } from '../../lib/essayInsight
 import { analyzeCraft, type LearnedRule } from '../../lib/essayCraft';
 import CraftStudio from '../../components/CraftStudio';
 import EssayScoreCard from '../../components/EssayScoreCard';
+import InfoTip from '../../components/InfoTip';
 import type { ScoreDetail } from '../../lib/essayScore';
 import { tracker } from '../../lib/analytics';
 import { analyzeActivities } from '../../lib/motifEngine';
@@ -50,9 +51,9 @@ interface Extracurricular {
 }
 
 const statusColors: Record<string, string> = {
-  'Complete': 'bg-green-100 text-green-700',
-  'In Review': 'bg-accent/10 text-accent',
-  'Draft': 'bg-amber-100 text-amber-700',
+  'Complete': 'tint-green',
+  'In Review': 'tint-blue',
+  'Draft': 'tint-amber',
   'Not Started': 'bg-slate-100 text-slate-500',
 };
 
@@ -2295,14 +2296,20 @@ function GrammarEditor({
       <aside className="lg:w-80 xl:w-96 flex-shrink-0 border-t lg:border-t-0 lg:border-l border-slate-200 bg-slate-50/70 flex flex-col">
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-white">
           <div>
-            <h4 className="text-[11px] font-bold text-primary uppercase tracking-wider">Grammar Suggestions</h4>
+            <div className="flex items-center gap-1">
+              <h4 className="text-[11px] font-bold text-primary uppercase tracking-wider">Grammar Suggestions</h4>
+              <InfoTip label="Grammar suggestions">
+                <p><span className="font-semibold text-red-pencil">Errors</span> are likely mistakes, such as spelling, agreement or punctuation, and are worth fixing.</p>
+                <p><span className="font-semibold text-amber-pencil">Optimizations</span> are optional polish: wordiness, weak verbs, passive voice. Apply one with a click, or leave it if your version sounds more like you.</p>
+              </InfoTip>
+            </div>
             <div className="flex items-center gap-2 mt-1">
-              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-rose-600">
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-pencil">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-pencil" />
                 {errorCount} {errorCount === 1 ? 'error' : 'errors'}
               </span>
-              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-pencil">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-pencil" />
                 {optCount} optimization{optCount === 1 ? '' : 's'}
               </span>
             </div>
@@ -2320,9 +2327,9 @@ function GrammarEditor({
           {numbered.length === 0 && (
             <div className="text-center py-10">
               <div className="w-12 h-12 mx-auto rounded-full bg-emerald-100 flex items-center justify-center mb-3">
-                <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                <svg className="w-6 h-6 text-green-pencil" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
               </div>
-              <p className="text-xs font-semibold text-emerald-700">No issues found</p>
+              <p className="text-xs font-semibold text-green-pencil">No issues found</p>
               <p className="text-[10px] text-slate-400 mt-1">Your writing reads cleanly.</p>
             </div>
           )}
@@ -2349,7 +2356,7 @@ function GrammarEditor({
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 mb-0.5">
-                      <span className={`text-[9px] font-bold uppercase tracking-wider ${isError ? 'text-rose-600' : 'text-amber-600'}`}>
+                      <span className={`text-[9px] font-bold uppercase tracking-wider ${isError ? 'text-red-pencil' : 'text-amber-pencil'}`}>
                         {isError ? 'Error' : 'Optimization'}
                       </span>
                       <span className="text-[9px] text-slate-400">• {iss.title}</span>
@@ -2359,11 +2366,11 @@ function GrammarEditor({
                     {canApply && (
                       <div className="text-[11px] font-mono bg-slate-50 rounded-md border border-slate-100 p-2 mb-2">
                         <div className="flex items-start gap-1.5">
-                          <span className="text-rose-500 line-through break-all">{iss.original}</span>
+                          <span className="text-red-pencil line-through break-all">{iss.original}</span>
                         </div>
                         {iss.replacement && (
                           <div className="flex items-start gap-1.5 mt-1">
-                            <span className="text-emerald-600 break-all">{iss.replacement}</span>
+                            <span className="text-green-pencil font-semibold break-all">{iss.replacement}</span>
                           </div>
                         )}
                       </div>
@@ -2402,9 +2409,9 @@ function GrammarEditor({
 
 /* Text colours for score numbers in the Logic & flow panel. */
 const SCORE_INK: Record<string, string> = {
-  '#a7a29b': 'text-emerald-700 dark:text-emerald-400',
-  '#b6b0a9': 'text-amber-700 dark:text-amber-400',
-  '#de574e': 'text-red-700 dark:text-red-400',
+  '#a7a29b': 'text-green-pencil',
+  '#b6b0a9': 'text-amber-pencil',
+  '#de574e': 'text-red-pencil',
 };
 
 
@@ -3114,14 +3121,14 @@ export default function Essays() {
                             {motif.weakConnections && motif.weakConnections.length > 0 && (
                               <div className="p-5 rounded-xl bg-amber-50 border border-amber-200">
                                 <div className="flex items-center gap-2 mb-3">
-                                  <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                                  <p className="text-xs font-bold text-amber-700">Cliché & Weakness Alerts</p>
+                                  <svg className="w-4 h-4 text-amber-pencil" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                  <p className="text-xs font-bold text-amber-pencil">Cliché & Weakness Alerts</p>
                                 </div>
                                 <div className="space-y-2.5">
                                   {motif.weakConnections.map((w, i) => (
                                     <div key={i} className="flex items-start gap-2">
-                                      <div className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 flex-shrink-0" />
-                                      <p className="text-xs text-amber-800 leading-relaxed">{w}</p>
+                                      <div className="w-1.5 h-1.5 rounded-full bg-amber-pencil mt-1.5 flex-shrink-0" />
+                                      <p className="text-xs text-slate-700 leading-relaxed">{w}</p>
                                     </div>
                                   ))}
                                 </div>
@@ -3136,8 +3143,12 @@ export default function Essays() {
                     {motifAnalysis.orphanIds.length > 0 && (
                       <div className="bg-white rounded-2xl border-2 border-slate-200 overflow-hidden">
                         <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
-                          <h3 className="text-sm font-bold text-slate-500">Standalone Ideas</h3>
-                          <p className="text-xs text-slate-400 mt-0.5">These didn&apos;t connect strongly to the selected motifs. Try adding more specific detail — physical descriptions, dialogue, or sensory information — to strengthen connections.</p>
+                          <div className="flex items-center gap-1">
+                            <h3 className="text-sm font-bold text-primary">Standalone Ideas</h3>
+                            <InfoTip label="Standalone ideas">
+                              <p>Ideas that didn&apos;t connect strongly to the motifs you selected. Adding specific detail (what something looked like, what someone said, what you heard or smelled) gives them more to connect with.</p>
+                            </InfoTip>
+                          </div>
                         </div>
                         <div className="p-5 space-y-2">
                           {motifAnalysis.orphanIds.map(id => {
@@ -3259,8 +3270,8 @@ export default function Essays() {
                                 <div className="flex items-center justify-between gap-2 mb-2">
                                   <p className="text-sm font-bold text-primary">&ldquo;{match.sourceEssayTitle}&rdquo;</p>
                                   <div className={`px-3 py-1 rounded-lg text-xs font-bold ${
-                                    match.matchScore >= 70 ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' :
-                                    match.matchScore >= 50 ? 'bg-amber-50 text-amber-600 border border-amber-200' :
+                                    match.matchScore >= 70 ? 'tint-green border' :
+                                    match.matchScore >= 50 ? 'tint-amber border' :
                                     'bg-slate-50 text-slate-500 border border-slate-200'
                                   }`}>{match.matchScore}% match</div>
                                 </div>
@@ -3271,9 +3282,9 @@ export default function Essays() {
                                 </div>
                                 {match.adaptationNotes.length > 0 && (
                                   <div className="bg-amber-50/50 rounded-lg p-3 border border-amber-100">
-                                    <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">What To Change</p>
+                                    <p className="text-[10px] font-bold text-amber-pencil uppercase tracking-wider mb-1">What To Change</p>
                                     {match.adaptationNotes.map((n, ni) => (
-                                      <p key={ni} className="text-[11px] text-amber-700 flex items-start gap-1.5"><span>→</span> {n}</p>
+                                      <p key={ni} className="text-[11px] text-slate-700 flex items-start gap-1.5"><span className="text-amber-pencil">→</span> {n}</p>
                                     ))}
                                   </div>
                                 )}
@@ -3448,8 +3459,13 @@ export default function Essays() {
                     <svg className="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-primary">Essay Reuse Opportunities</h3>
-                    <p className="text-xs text-slate-400">
+                    <div className="flex items-center gap-1">
+                      <h3 className="text-sm font-bold text-primary">Essay Reuse Opportunities</h3>
+                      <InfoTip label="Essay reuse">
+                        <p>Supplement prompts at different schools often ask the same thing. These are essays you&apos;ve already written that could be adapted for this prompt, each with a match score and notes on what to change.</p>
+                      </InfoTip>
+                    </div>
+                    <p className="text-xs text-slate-600">
                       {reuseMatches.length} match{reuseMatches.length !== 1 ? 'es' : ''} found
                       <span className="hidden sm:inline"> — click any card for details</span>
                     </p>
@@ -3468,7 +3484,7 @@ export default function Essays() {
                           {getPromptTypeInfo(match.targetPrompt.type).icon} {getPromptTypeInfo(match.targetPrompt.type).label}
                         </span>
                         <span className={`text-[10px] font-bold ${
-                          match.matchScore >= 70 ? 'text-emerald-600' : match.matchScore >= 50 ? 'text-amber-600' : 'text-slate-400'
+                          match.matchScore >= 70 ? 'text-green-pencil' : match.matchScore >= 50 ? 'text-amber-pencil' : 'text-slate-600'
                         }`}>{match.matchScore}%</span>
                       </div>
                       <p className="text-xs font-semibold text-primary truncate group-hover:text-accent transition-colors">&ldquo;{match.sourceEssayTitle}&rdquo;</p>
@@ -3711,15 +3727,15 @@ export default function Essays() {
                     <div className="flex items-center gap-2 mt-2.5">
                       <span className={`px-2 py-0.5 rounded-md text-xs font-semibold ${statusColors[essay.status] || statusColors['Draft']}`}>{essay.status}</span>
                       {essay.overallScore != null && (
-                        <span className="text-xs font-bold text-primary tabular-nums" title="Overall score">{essay.overallScore}</span>
+                        <span className={`text-xs font-bold tabular-nums ${essay.overallScore >= 70 ? 'text-green-pencil' : 'text-amber-pencil'}`} title="Overall score">{essay.overallScore}</span>
                       )}
                       <span className="text-xs text-slate-600">{essayWords} words</span>
                       {essayReviews[essay.id] && (
                         <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
-                          essayReviews[essay.id].status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
-                          essayReviews[essay.id].status === 'in_review' ? 'bg-blue-100 text-blue-700' :
-                          essayReviews[essay.id].status === 'returned' ? 'bg-purple-100 text-purple-700' :
-                          'bg-amber-100 text-amber-700'
+                          essayReviews[essay.id].status === 'completed' ? 'tint-green' :
+                          essayReviews[essay.id].status === 'in_review' ? 'tint-blue' :
+                          essayReviews[essay.id].status === 'returned' ? 'tint-amber' :
+                          'bg-slate-100 text-slate-600'
                         }`}>
                           {essayReviews[essay.id].status === 'completed' ? 'Reviewed' :
                            essayReviews[essay.id].status === 'in_review' ? 'In Review' :
@@ -3750,7 +3766,7 @@ export default function Essays() {
                     {/* The limit for THIS essay (a UC answer is 350, a Stanford
                         short answer 50), as detected from its prompt. */}
                     <span className="inline-flex items-baseline gap-1 rounded-lg bg-slate-100 px-2.5 py-1 text-xs text-slate-700" title={activeEssay.scoreDetail?.limit ? `${activeEssay.scoreDetail.kindLabel}: ${activeEssay.scoreDetail.limit}-word limit` : 'Add the full prompt, with its word limit, for a length check'}>
-                      <span className="font-bold text-primary tabular-nums">{wordCount}</span>
+                      <span className={`font-bold tabular-nums ${activeEssay.scoreDetail?.limit && wordCount <= activeEssay.scoreDetail.limit && wordCount >= activeEssay.scoreDetail.limit * (activeEssay.scoreDetail.limit <= 120 ? 0.6 : 0.85) ? 'text-green-pencil' : 'text-primary'}`}>{wordCount}</span>
                       {activeEssay.scoreDetail?.limit ? <> / {activeEssay.scoreDetail.limit} words</> : ' words'}
                       {activeEssay.scoreDetail?.limit && wordCount > activeEssay.scoreDetail.limit && <span className="font-semibold text-red-pencil">· {wordCount - activeEssay.scoreDetail.limit} over</span>}
                     </span>
@@ -3827,7 +3843,7 @@ export default function Essays() {
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                       Feedback
                       {activeEssay.overallScore != null && (
-                        <span className={`ml-1 text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeEssay.overallScore >= 70 ? 'bg-emerald-100 text-emerald-700' : activeEssay.overallScore >= 45 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
+                        <span className={`ml-1 text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeEssay.overallScore >= 70 ? 'tint-green' : 'tint-amber'}`}>
                           {activeEssay.overallScore}
                         </span>
                       )}
@@ -3879,8 +3895,12 @@ export default function Essays() {
                       <aside className="lg:w-80 xl:w-96 flex-shrink-0 border-t lg:border-t-0 lg:border-l border-slate-200 bg-slate-50/70 flex flex-col">
                         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-white">
                           <div>
-                            <h4 className="text-[11px] font-bold text-indigo-600 uppercase tracking-wider">Logic & Flow</h4>
-                            <p className="text-[9px] text-slate-400 mt-0.5">Essay structure insights</p>
+                            <div className="flex items-center gap-1">
+                              <h4 className="text-[11px] font-bold text-primary uppercase tracking-wider">Logic & Flow</h4>
+                              <InfoTip label="Logic and flow">
+                                <p>A closer read of how the essay holds together. Each section appears only when it finds something in this draft, so a short list is good news.</p>
+                              </InfoTip>
+                            </div>
                           </div>
                           <button
                             onClick={() => setShowInsights(false)}
@@ -3897,7 +3917,7 @@ export default function Essays() {
                             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-3">
                               <div className="flex items-center gap-1.5 mb-2">
                                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                                <h5 className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">Tense Shifts</h5>
+                                <h5 className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">Tense Shifts</h5><InfoTip label="Tense shifts"><p>Paragraphs that switch between past and present tense. Telling a story in one tense keeps the reader oriented; switch only on purpose, such as moving from the story to what you think now.</p></InfoTip>
                                 <span className="text-[9px] text-slate-400 ml-auto">{essayInsights.tenseShifts.length}</span>
                               </div>
                               <div className="space-y-2">
@@ -3918,7 +3938,7 @@ export default function Essays() {
                             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-3">
                               <div className="flex items-center gap-1.5 mb-2">
                                 <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                                <h5 className="text-[10px] font-bold text-blue-700 uppercase tracking-wider">Show, Don&apos;t Tell</h5>
+                                <h5 className="text-[10px] font-bold text-blue-700 uppercase tracking-wider">Show, Don&apos;t Tell</h5><InfoTip label="Show, don’t tell"><p>Sentences that name a feeling (“I was nervous”) instead of showing it. Show it through what you did, saw or said: “My hands shook as I read the email twice.”</p></InfoTip>
                                 <span className="text-[9px] text-slate-400 ml-auto">{essayInsights.showDontTell.length}</span>
                               </div>
                               <div className="space-y-2">
@@ -3939,7 +3959,7 @@ export default function Essays() {
                             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-3">
                               <div className="flex items-center gap-1.5 mb-2">
                                 <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-                                <h5 className="text-[10px] font-bold text-orange-700 uppercase tracking-wider">Unsupported Claims</h5>
+                                <h5 className="text-[10px] font-bold text-orange-700 uppercase tracking-wider">Unsupported Claims</h5><InfoTip label="Unsupported claims"><p>Big claims about yourself (“I am a natural leader”) with no example nearby. Readers believe what you show, so back each claim with a specific moment, or cut it.</p></InfoTip>
                                 <span className="text-[9px] text-slate-400 ml-auto">{essayInsights.unsupportedClaims.length}</span>
                               </div>
                               <div className="space-y-2">
@@ -3960,7 +3980,7 @@ export default function Essays() {
                             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-3">
                               <div className="flex items-center gap-1.5 mb-2">
                                 <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
-                                <h5 className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Overused Words</h5>
+                                <h5 className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Overused Words</h5><InfoTip label="Overused words"><p>Words used often enough that a reader will notice. Swap in a different word or cut the extras.</p></InfoTip>
                               </div>
                               <div className="flex flex-wrap gap-1.5">
                                 {essayInsights.overusedWords.map((ow, i) => (
@@ -3977,7 +3997,7 @@ export default function Essays() {
                             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-3">
                               <div className="flex items-center gap-1.5 mb-2">
                                 <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                                <h5 className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider">Prompt Alignment</h5>
+                                <h5 className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider">Prompt Alignment</h5><InfoTip label="Prompt alignment"><p>How fully the draft answers its prompt, using the same checklist as the score card. Found items are covered; missing ones still need adding.</p></InfoTip>
                                 <span className={`text-[10px] font-bold ml-auto ${SCORE_INK[essayInsights.promptAlignment.score >= 70 ? '#a7a29b' : essayInsights.promptAlignment.score >= 40 ? '#b6b0a9' : '#de574e']}`}>
                                   {essayInsights.promptAlignment.score}%
                                 </span>
@@ -3987,7 +4007,7 @@ export default function Essays() {
                                   className="h-full rounded-full transition-all duration-700 ease-out"
                                   style={{
                                     width: `${essayInsights.promptAlignment.score}%`,
-                                    backgroundColor: essayInsights.promptAlignment.score >= 70 ? '#a7a29b' : essayInsights.promptAlignment.score >= 40 ? '#b6b0a9' : '#de574e',
+                                    backgroundColor: essayInsights.promptAlignment.score >= 70 ? 'rgb(var(--green-pencil))' : essayInsights.promptAlignment.score >= 40 ? 'rgb(var(--amber-pencil))' : 'rgb(var(--red-pencil))',
                                   }}
                                 />
                               </div>
@@ -4019,7 +4039,7 @@ export default function Essays() {
                             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-3">
                               <div className="flex items-center gap-1.5 mb-2">
                                 <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                                <h5 className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Repetitive Openings</h5>
+                                <h5 className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Repetitive Openings</h5><InfoTip label="Repetitive openings"><p>Sentences that start the same way, often with “I”. Varying how sentences begin keeps the rhythm alive.</p></InfoTip>
                               </div>
                               <div className="space-y-1.5">
                                 {essayInsights.repetitiveOpenings.map((ro, i) => (
@@ -4040,7 +4060,7 @@ export default function Essays() {
                            essayInsights.repetitiveOpenings.length === 0 && (
                             <div className="text-center py-10">
                               <div className="w-12 h-12 mx-auto rounded-full bg-emerald-100 flex items-center justify-center mb-3">
-                                <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                <svg className="w-6 h-6 text-green-pencil" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                               </div>
                               <p className="text-xs font-semibold text-emerald-700">Looking good!</p>
                               <p className="text-[10px] text-slate-400 mt-1">No logic or flow issues detected.</p>
@@ -4065,9 +4085,9 @@ export default function Essays() {
                               key={i}
                               className={`${
                                 s.type === 'internalized'
-                                  ? 'bg-blue-100/70 text-blue-900 rounded-sm'
+                                  ? 'hl-blue rounded-sm'
                                   : s.type === 'externalized'
-                                  ? 'bg-amber-100/70 text-amber-900 rounded-sm'
+                                  ? 'hl-amber rounded-sm'
                                   : 'text-slate-700'
                               } ${s.isPassive ? 'underline decoration-red-400 decoration-wavy decoration-2 underline-offset-4' : ''}`}
                               title={
@@ -4091,46 +4111,48 @@ export default function Essays() {
                           {/* Legend */}
                           <div className="flex items-center gap-3 flex-wrap">
                             <div className="flex items-center gap-1.5">
-                              <span className="inline-block w-3 h-3 rounded-sm bg-blue-100 border border-blue-200" />
-                              <span className="text-[10px] font-semibold text-blue-800">Internalized</span>
-                              <span className="text-[9px] text-slate-400">(thoughts, feelings, reflection)</span>
+                              <span className="inline-block w-3 h-3 rounded-sm hl-blue border border-blue-pencil" />
+                              <span className="text-[10px] font-semibold text-blue-pencil">Internalized</span>
                             </div>
                             <div className="flex items-center gap-1.5">
-                              <span className="inline-block w-3 h-3 rounded-sm bg-amber-100 border border-amber-200" />
-                              <span className="text-[10px] font-semibold text-amber-800">Externalized</span>
-                              <span className="text-[9px] text-slate-400">(actions, events, experiences)</span>
+                              <span className="inline-block w-3 h-3 rounded-sm hl-amber border border-amber-pencil" />
+                              <span className="text-[10px] font-semibold text-amber-pencil">Externalized</span>
                             </div>
                             <div className="flex items-center gap-1.5">
                               <span className="inline-block w-8 border-b-2 border-wavy border-red-400" style={{ textDecorationStyle: 'wavy' }} />
-                              <span className="text-[10px] font-semibold text-red-600">Passive Voice</span>
-                              <span className="text-[9px] text-slate-400">(wavy underline)</span>
+                              <span className="text-[10px] font-semibold text-red-pencil">Passive Voice</span>
                             </div>
+                            <InfoTip label="What the highlights mean">
+                              <p><span className="font-semibold text-blue-pencil">Blue</span> sentences are internalized: your thoughts, feelings and reflection.</p>
+                              <p><span className="font-semibold text-amber-pencil">Amber</span> sentences are externalized: actions, events, what happened.</p>
+                              <p>Strong essays mix both, moments a reader can see and what they meant to you. A <span className="font-semibold text-red-pencil">wavy red underline</span> marks passive voice (&ldquo;the drive was organized by me&rdquo;), which usually reads stronger made active.</p>
+                            </InfoTip>
                           </div>
 
                           {/* Stats counters */}
                           <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-1 px-2 py-1 bg-blue-50 rounded-md border border-blue-100">
-                              <span className="text-[10px] font-bold text-blue-700">{sentenceAnalysis.stats.internalized}</span>
-                              <span className="text-[9px] text-blue-500">int</span>
+                            <div className="flex items-center gap-1 px-2 py-1 tint-blue rounded-md border">
+                              <span className="text-[10px] font-bold">{sentenceAnalysis.stats.internalized}</span>
+                              <span className="text-[9px]">int</span>
                             </div>
-                            <div className="flex items-center gap-1 px-2 py-1 bg-amber-50 rounded-md border border-amber-100">
-                              <span className="text-[10px] font-bold text-amber-700">{sentenceAnalysis.stats.externalized}</span>
-                              <span className="text-[9px] text-amber-500">ext</span>
+                            <div className="flex items-center gap-1 px-2 py-1 tint-amber rounded-md border">
+                              <span className="text-[10px] font-bold">{sentenceAnalysis.stats.externalized}</span>
+                              <span className="text-[9px]">ext</span>
                             </div>
                             <div className="flex items-center gap-1 px-2 py-1 bg-slate-50 rounded-md border border-slate-200">
                               <span className="text-[10px] font-bold text-slate-600">{sentenceAnalysis.stats.neutral}</span>
-                              <span className="text-[9px] text-slate-400">neutral</span>
+                              <span className="text-[9px] text-slate-600">neutral</span>
                             </div>
                             {sentenceAnalysis.stats.passive > 0 && (
-                              <div className="flex items-center gap-1 px-2 py-1 bg-red-50 rounded-md border border-red-100">
-                                <span className="text-[10px] font-bold text-red-600">{sentenceAnalysis.stats.passive}</span>
-                                <span className="text-[9px] text-red-400">passive</span>
+                              <div className="flex items-center gap-1 px-2 py-1 tint-red rounded-md border">
+                                <span className="text-[10px] font-bold">{sentenceAnalysis.stats.passive}</span>
+                                <span className="text-[9px]">passive</span>
                               </div>
                             )}
                             {/* Balance indicator */}
                             <div className="flex items-center gap-1.5 px-2 py-1 bg-white rounded-md border border-slate-200" title={`Balance: ${Math.round(sentenceAnalysis.stats.balanceRatio * 100)}% internalized vs ${Math.round((1 - sentenceAnalysis.stats.balanceRatio) * 100)}% externalized`}>
-                              <div className="w-16 h-1.5 rounded-full overflow-hidden bg-amber-100 flex">
-                                <div className="h-full bg-blue-400 rounded-full transition-all duration-500" style={{ width: `${sentenceAnalysis.stats.balanceRatio * 100}%` }} />
+                              <div className="w-16 h-1.5 rounded-full overflow-hidden bg-amber-pencil flex">
+                                <div className="h-full bg-blue-pencil rounded-full transition-all duration-500" style={{ width: `${sentenceAnalysis.stats.balanceRatio * 100}%` }} />
                               </div>
                               <span className="text-[9px] font-semibold text-slate-500">
                                 {sentenceAnalysis.stats.balanceRatio >= 0.4 && sentenceAnalysis.stats.balanceRatio <= 0.6
@@ -4294,7 +4316,7 @@ export default function Essays() {
                             <div key={dim.key} className="flex items-center gap-2">
                               <span className="text-xs text-slate-500 w-16">{dim.label}</span>
                               <div className="flex-1 h-1.5 rounded-full bg-slate-100">
-                                <div className="h-full rounded-full transition-all" style={{ width: (val * 10) + '%', backgroundColor: val >= 8 ? '#a7a29b' : val >= 5 ? '#b6b0a9' : '#de574e' }} />
+                                <div className="h-full rounded-full transition-all" style={{ width: (val * 10) + '%', backgroundColor: val >= 8 ? 'rgb(var(--green-pencil))' : val >= 5 ? 'rgb(var(--amber-pencil))' : 'rgb(var(--red-pencil))' }} />
                               </div>
                               <span className="text-xs font-bold text-primary w-4 text-right">{val}</span>
                             </div>
@@ -4307,7 +4329,7 @@ export default function Essays() {
                         <p className="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-2">{essayReviews[activeEssay.id].annotations.length} Annotation{essayReviews[activeEssay.id].annotations.length !== 1 ? 's' : ''}</p>
                         <div className="space-y-2 max-h-40 overflow-y-auto">
                           {essayReviews[activeEssay.id].annotations.map(function(ann: any) {
-                            var colors: Record<string, string> = { strength: 'bg-emerald-100 text-emerald-700', suggestion: 'bg-blue-100 text-blue-700', issue: 'bg-rose-100 text-rose-700', question: 'bg-amber-100 text-amber-700' };
+                            var colors: Record<string, string> = { strength: 'tint-green', suggestion: 'tint-blue', issue: 'tint-red', question: 'tint-amber' };
                             return (
                               <div key={ann.id} className="p-2 rounded-lg bg-slate-50">
                                 <div className="flex items-center gap-1.5 mb-1">

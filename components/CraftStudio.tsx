@@ -1,3 +1,4 @@
+import InfoTip from './InfoTip';
 import { useState } from 'react';
 import type { CraftReport, CraftSuggestion } from '../lib/essayCraft';
 import { craftCategoryLabel } from '../lib/essayCraft';
@@ -22,6 +23,21 @@ import { craftCategoryLabel } from '../lib/essayCraft';
 const TOP_N = 3;
 
 const STATUS_WORD: Record<string, string> = { good: 'Strong', warn: 'Could be stronger', bad: 'Needs work' };
+/* What each craft score measures, behind its "i" button. The live advice
+   for this draft (m.hint) is shown inside it too, as "Right now". */
+const CRAFT_INFO: Record<string, string> = {
+  rhythm: 'How much your sentence lengths vary. A mix of short and long sentences reads with energy; a run of same-length sentences reads flat.',
+  readability: 'Whether a reader moving fast understands every word the first time. Plain, exact words score higher than thesaurus words.',
+  tone: 'Whether the voice sounds measured and credible: few exaggerations ("incredibly", "life-changing") and, when the subject is hard, a turn toward what you did about it.',
+  narrative: 'Whether the essay works as a story rather than a list of events: a scene, the cause and effect between moments, and reflection on what they meant.',
+};
+
+// Same pencils as the score card: green when it's working, amber when it isn't yet.
+const STATUS_TONE: Record<string, { text: string; bar: string }> = {
+  good: { text: 'text-green-pencil', bar: 'bg-green-pencil' },
+  warn: { text: 'text-amber-pencil', bar: 'bg-amber-pencil' },
+  bad: { text: 'text-amber-pencil', bar: 'bg-amber-pencil' },
+};
 
 function Suggestion({ s, defaultOpen }: { s: CraftSuggestion; defaultOpen: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -34,7 +50,8 @@ function Suggestion({ s, defaultOpen }: { s: CraftSuggestion; defaultOpen: boole
         className="w-full flex items-start gap-3 px-3.5 py-3 text-left"
       >
         <span className="flex-1 min-w-0">
-          <span className="block text-xs font-semibold text-slate-500">
+          {/* A caution is amber, a tip is blue: the colour says how much it matters. */}
+          <span className={`block text-xs font-semibold ${s.severity === 'caution' ? 'text-amber-pencil' : s.severity === 'tip' ? 'text-blue-pencil' : 'text-slate-600'}`}>
             {craftCategoryLabel(s.category)}
             {s.learned && <span title="Learned from essays our tutors reviewed"> · from tutor-reviewed essays</span>}
           </span>
@@ -52,8 +69,8 @@ function Suggestion({ s, defaultOpen }: { s: CraftSuggestion; defaultOpen: boole
           )}
           {s.example && (
             <div className="rounded-lg bg-paper border border-slate-200 p-3 space-y-2 text-sm leading-relaxed">
-              <p><span className="block text-xs font-semibold text-slate-500">Instead of</span><span className="text-slate-600">{s.example.before}</span></p>
-              <p><span className="block text-xs font-semibold text-slate-500">Try</span><span className="text-primary font-medium">{s.example.after}</span></p>
+              <p><span className="block text-xs font-semibold text-amber-pencil">Instead of</span><span className="text-slate-600">{s.example.before}</span></p>
+              <p><span className="block text-xs font-semibold text-green-pencil">Try</span><span className="text-primary font-medium">{s.example.after}</span></p>
             </div>
           )}
         </div>
@@ -94,7 +111,13 @@ export default function CraftStudio({ report }: { report: CraftReport }) {
     <section className="bg-white rounded-2xl border p-4 space-y-5" aria-label="Writing feedback">
       {/* 1. Start here */}
       <div>
-        <h3 className="text-base font-bold text-primary">{top.length ? 'Start here' : 'Writing feedback'}</h3>
+        <div className="flex items-center gap-1">
+          <h3 className="text-base font-bold text-primary">{top.length ? 'Start here' : 'Writing feedback'}</h3>
+          <InfoTip label="About this feedback">
+            <p>These are the changes most likely to make the draft read better, most important first. Each one names the sentences it means and shows a fix in your own words where it can.</p>
+            <p>It&apos;s guidance, not a grade. A tutor&apos;s read is the best second opinion.</p>
+          </InfoTip>
+        </div>
         {top.length ? (
           <>
             <p className="mt-0.5 text-sm text-slate-600">The {top.length === 1 ? 'change' : `${top.length} changes`} most worth making in this draft.</p>
@@ -128,7 +151,7 @@ export default function CraftStudio({ report }: { report: CraftReport }) {
           <ul className="mt-1.5 space-y-1.5">
             {praise.map((s) => (
               <li key={s.id} className="flex gap-2 text-sm text-slate-700 leading-snug">
-                <svg className="w-4 h-4 mt-0.5 flex-shrink-0 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                <svg className="w-4 h-4 mt-0.5 flex-shrink-0 text-green-pencil" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
                 <span><span className="font-semibold text-primary">{s.title}.</span> {s.detail}</span>
               </li>
             ))}
@@ -141,8 +164,12 @@ export default function CraftStudio({ report }: { report: CraftReport }) {
             a word somebody meant to flag. */}
       {flags.length > 0 && (
         <div>
-          <h4 className="text-sm font-bold text-primary">Words to look at <span className="font-normal text-slate-600">({flags.length})</span></h4>
-          <p className="mt-0.5 text-sm text-slate-600 leading-snug">A busy reader may slow down on these. Keep one only if it&apos;s the most exact word you have.</p>
+          <div className="flex items-center gap-1">
+            <h4 className="text-sm font-bold text-primary">Words to look at <span className="font-normal text-slate-600">({flags.length})</span></h4>
+            <InfoTip label="Words to look at">
+              <p>Words a busy reader may slow down on, with a plainer option where there is one. Keep a word only if it&apos;s the most exact one you have.</p>
+            </InfoTip>
+          </div>
           <ul className="mt-2 flex flex-wrap gap-1.5">
             {flags.map((f) => (
               <li key={f.word} className="inline-flex items-baseline whitespace-nowrap rounded-lg border-[1.5px] border-slate-200 bg-white px-2 py-1 text-sm">
@@ -169,14 +196,13 @@ export default function CraftStudio({ report }: { report: CraftReport }) {
           <dl className="mt-3 space-y-3">
             {report.metrics.map((m) => (
               <div key={m.key}>
-                <div className="flex items-baseline justify-between gap-2">
-                  <dt className="text-sm font-semibold text-primary">{m.label}</dt>
-                  <dd className="text-sm text-slate-700"><span className="font-bold text-primary tabular-nums">{m.value}</span> · {STATUS_WORD[m.status]}</dd>
+                <div className="flex items-center justify-between gap-2">
+                  <dt className="min-w-0 text-sm font-semibold text-primary">{m.label.split(' ').slice(0, -1).join(' ')} {/* the last word and the "i" wrap together */}<span className="whitespace-nowrap">{m.label.split(' ').slice(-1)[0]}<InfoTip className="ml-0.5 -my-1" label={m.label}>{CRAFT_INFO[m.key] && <p>{CRAFT_INFO[m.key]}</p>}<p><span className="font-semibold text-primary">Right now:</span> {m.hint}</p></InfoTip></span></dt>
+                  <dd className="shrink-0 whitespace-nowrap text-sm text-slate-700"><span className="font-bold text-primary tabular-nums">{m.value}</span> · <span className={STATUS_TONE[m.status]?.text}>{STATUS_WORD[m.status]}</span></dd>
                 </div>
                 <div className="mt-1 h-1.5 rounded-full bg-slate-100 overflow-hidden" aria-hidden>
-                  <div className="h-full rounded-full bg-ink" style={{ width: `${m.value}%` }} />
+                  <div className={`h-full rounded-full ${STATUS_TONE[m.status]?.bar || 'bg-ink'}`} style={{ width: `${m.value}%` }} />
                 </div>
-                <p className="mt-1 text-xs text-slate-600 leading-snug">{m.hint}</p>
               </div>
             ))}
             {report.readingGrade > 0 && (
@@ -186,7 +212,6 @@ export default function CraftStudio({ report }: { report: CraftReport }) {
         )}
       </div>
 
-      <p className="text-xs text-slate-600">This is guidance, not a grade. A tutor&apos;s read is the best second opinion.</p>
     </section>
   );
 }
