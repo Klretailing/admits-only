@@ -22,6 +22,12 @@ import { craftCategoryLabel } from '../lib/essayCraft';
 const TOP_N = 3;
 
 const STATUS_WORD: Record<string, string> = { good: 'Strong', warn: 'Could be stronger', bad: 'Needs work' };
+// Same pencils as the score card: green when it's working, amber when it isn't yet.
+const STATUS_TONE: Record<string, { text: string; bar: string }> = {
+  good: { text: 'text-green-pencil', bar: 'bg-green-pencil' },
+  warn: { text: 'text-amber-pencil', bar: 'bg-amber-pencil' },
+  bad: { text: 'text-amber-pencil', bar: 'bg-amber-pencil' },
+};
 
 function Suggestion({ s, defaultOpen }: { s: CraftSuggestion; defaultOpen: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -34,7 +40,8 @@ function Suggestion({ s, defaultOpen }: { s: CraftSuggestion; defaultOpen: boole
         className="w-full flex items-start gap-3 px-3.5 py-3 text-left"
       >
         <span className="flex-1 min-w-0">
-          <span className="block text-xs font-semibold text-slate-500">
+          {/* A caution is amber, a tip is blue: the colour says how much it matters. */}
+          <span className={`block text-xs font-semibold ${s.severity === 'caution' ? 'text-amber-pencil' : s.severity === 'tip' ? 'text-blue-pencil' : 'text-slate-600'}`}>
             {craftCategoryLabel(s.category)}
             {s.learned && <span title="Learned from essays our tutors reviewed"> · from tutor-reviewed essays</span>}
           </span>
@@ -52,8 +59,8 @@ function Suggestion({ s, defaultOpen }: { s: CraftSuggestion; defaultOpen: boole
           )}
           {s.example && (
             <div className="rounded-lg bg-paper border border-slate-200 p-3 space-y-2 text-sm leading-relaxed">
-              <p><span className="block text-xs font-semibold text-slate-500">Instead of</span><span className="text-slate-600">{s.example.before}</span></p>
-              <p><span className="block text-xs font-semibold text-slate-500">Try</span><span className="text-primary font-medium">{s.example.after}</span></p>
+              <p><span className="block text-xs font-semibold text-amber-pencil">Instead of</span><span className="text-slate-600">{s.example.before}</span></p>
+              <p><span className="block text-xs font-semibold text-green-pencil">Try</span><span className="text-primary font-medium">{s.example.after}</span></p>
             </div>
           )}
         </div>
@@ -128,7 +135,7 @@ export default function CraftStudio({ report }: { report: CraftReport }) {
           <ul className="mt-1.5 space-y-1.5">
             {praise.map((s) => (
               <li key={s.id} className="flex gap-2 text-sm text-slate-700 leading-snug">
-                <svg className="w-4 h-4 mt-0.5 flex-shrink-0 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                <svg className="w-4 h-4 mt-0.5 flex-shrink-0 text-green-pencil" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
                 <span><span className="font-semibold text-primary">{s.title}.</span> {s.detail}</span>
               </li>
             ))}
@@ -171,10 +178,10 @@ export default function CraftStudio({ report }: { report: CraftReport }) {
               <div key={m.key}>
                 <div className="flex items-baseline justify-between gap-2">
                   <dt className="text-sm font-semibold text-primary">{m.label}</dt>
-                  <dd className="text-sm text-slate-700"><span className="font-bold text-primary tabular-nums">{m.value}</span> · {STATUS_WORD[m.status]}</dd>
+                  <dd className="text-sm text-slate-700"><span className="font-bold text-primary tabular-nums">{m.value}</span> · <span className={STATUS_TONE[m.status]?.text}>{STATUS_WORD[m.status]}</span></dd>
                 </div>
                 <div className="mt-1 h-1.5 rounded-full bg-slate-100 overflow-hidden" aria-hidden>
-                  <div className="h-full rounded-full bg-ink" style={{ width: `${m.value}%` }} />
+                  <div className={`h-full rounded-full ${STATUS_TONE[m.status]?.bar || 'bg-ink'}`} style={{ width: `${m.value}%` }} />
                 </div>
                 <p className="mt-1 text-xs text-slate-600 leading-snug">{m.hint}</p>
               </div>

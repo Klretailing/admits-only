@@ -29,6 +29,9 @@
   --rule: 214 207 194;      /* hairlines, dividers — a light pencil line */
   --shadow-ink: 28 27 25;
   --red-pencil: 180 35 24;  /* #af2b27: 6.4:1 on paper */
+  --green-pencil: 45 106 62;  /* #2d6a3e: 5.8:1 on paper, 6.4:1 on card */
+  --amber-pencil: 138 80 0;   /* #8a5000: 5.9:1 on paper, 6.4:1 on card */
+  --blue-pencil: 31 90 150;   /* #1f5a96: 6.4:1 on paper, 7.0:1 on card */
   --dot: 28 27 25;
 }
 html.dark {
@@ -39,6 +42,9 @@ html.dark {
   --rule: 64 61 56;
   --shadow-ink: 0 0 0;
   --red-pencil: 248 113 102;
+  --green-pencil: 143 203 156;  /* 8.7:1 on the chalkboard card */
+  --amber-pencil: 233 183 100;  /* 8.9:1 */
+  --blue-pencil: 148 185 232;   /* 8.0:1 */
   --dot: 240 236 227;
 }
 
@@ -228,6 +234,26 @@ input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-
 
 /* Errors and destructive actions: the red pencil. */
 .text-red-pencil { color: rgb(var(--red-pencil)); }
+
+/* ─── coloured pencils: meaning, never decoration ───────────────────
+   Like a teacher's pens in the margin: green for what's working, amber
+   for what to work on next, blue for neutral facts worth spotting (an
+   essay's type, a date that's coming up), red only for real problems.
+   Everything else stays graphite. Every pencil reads at 4.5:1 or more on
+   paper, card, and its own 12% tint, in both themes. */
+.text-green-pencil { color: rgb(var(--green-pencil)); }
+.text-amber-pencil { color: rgb(var(--amber-pencil)); }
+.text-blue-pencil { color: rgb(var(--blue-pencil)); }
+.bg-green-pencil { background-color: rgb(var(--green-pencil)); }
+.bg-amber-pencil { background-color: rgb(var(--amber-pencil)); }
+.bg-blue-pencil { background-color: rgb(var(--blue-pencil)); }
+.bg-red-pencil { background-color: rgb(var(--red-pencil)); }
+.border-green-pencil { border-color: rgb(var(--green-pencil)); }
+.border-amber-pencil { border-color: rgb(var(--amber-pencil)); }
+.tint-green { background-color: rgb(var(--green-pencil) / 0.12); color: rgb(var(--green-pencil)); border-color: rgb(var(--green-pencil) / 0.35); }
+.tint-amber { background-color: rgb(var(--amber-pencil) / 0.12); color: rgb(var(--amber-pencil)); border-color: rgb(var(--amber-pencil) / 0.35); }
+.tint-blue { background-color: rgb(var(--blue-pencil) / 0.12); color: rgb(var(--blue-pencil)); border-color: rgb(var(--blue-pencil) / 0.35); }
+.tint-red { background-color: rgb(var(--red-pencil) / 0.12); color: rgb(var(--red-pencil)); border-color: rgb(var(--red-pencil) / 0.35); }
 
 @media (prefers-reduced-motion: reduce) {
   .surface-interactive, .card, .dash-card-hover, .dash-stat-card, .btn-primary, .btn-secondary { transition: none !important; }

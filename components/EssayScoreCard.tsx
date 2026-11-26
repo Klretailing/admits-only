@@ -31,6 +31,12 @@ function overallBand(v: number): string {
 }
 const partBand = (v: number) => (v >= 75 ? 'Strong' : v >= 55 ? 'Getting there' : 'Needs work');
 
+/* Colour carries the band, like a teacher's pens (styles/notebook.css):
+   green for what's working, amber for what to work on. Red is kept for real
+   problems, such as going over the word limit. */
+const overallInk = (v: number) => (v >= 70 ? 'text-green-pencil' : 'text-amber-pencil');
+const partTone = (v: number) => (v >= 75 ? { text: 'text-green-pencil', bar: 'bg-green-pencil' } : { text: 'text-amber-pencil', bar: 'bg-amber-pencil' });
+
 function verdict(overall: number): string {
   if (overall >= 80) return 'This reads like the essays admitted students submit.';
   if (overall >= 70) return 'A solid draft. The open items below will lift it.';
@@ -39,10 +45,10 @@ function verdict(overall: number): string {
 }
 
 const LENGTH_INK: Record<string, string> = {
-  over: 'text-red-700',
-  very_short: 'text-amber-800',
-  short: 'text-slate-700',
-  good: 'text-slate-600',
+  over: 'text-red-pencil font-semibold',
+  very_short: 'text-amber-pencil',
+  short: 'text-amber-pencil',
+  good: 'text-green-pencil',
   unknown: 'text-slate-600',
 };
 
@@ -64,7 +70,7 @@ export default function EssayScoreCard({ scores, wordCount }: { scores: Scores; 
       <h3 className="text-base font-bold text-primary">How this draft reads</h3>
       {d && (
         <p className="mt-1 text-xs text-slate-600">
-          <span className="font-semibold text-slate-700">{d.kindLabel}</span>
+          <span className="font-semibold text-blue-pencil">{d.kindLabel}</span>
           {' · '}
           {d.limit ? `${d.wordCount} of ${d.limit} words` : `${d.wordCount} words`}
         </p>
@@ -79,7 +85,7 @@ export default function EssayScoreCard({ scores, wordCount }: { scores: Scores; 
         <>
           <div className="mt-2 flex items-end gap-3">
             <p className="text-4xl font-bold font-display text-primary tabular-nums leading-none">{overall}</p>
-            <p className="pb-0.5 text-sm text-slate-600">out of 100 · {overallBand(overall)}</p>
+            <p className="pb-0.5 text-sm text-slate-600">out of 100 · <span className={`font-semibold ${overallInk(overall)}`}>{overallBand(overall)}</span></p>
           </div>
           <p className="mt-2 text-sm text-slate-700 leading-snug">{verdict(overall)}</p>
           {d?.length && <p className={`mt-1.5 text-xs leading-snug ${LENGTH_INK[d.length.status] || 'text-slate-600'}`}>{d.length.note}</p>}
@@ -90,16 +96,16 @@ export default function EssayScoreCard({ scores, wordCount }: { scores: Scores; 
               <ul className="mt-1.5 space-y-1.5">
                 {d.asks.map((a) => (
                   <li key={a.id} className="flex gap-2 text-sm leading-snug">
-                    <span aria-hidden className={`mt-0.5 inline-flex h-4 w-4 flex-none items-center justify-center rounded-full border text-[10px] font-bold ${a.met ? 'bg-ink text-white border-ink' : 'border-slate-400 text-transparent'}`}>✓</span>
+                    <span aria-hidden className={`mt-0.5 inline-flex h-4 w-4 flex-none items-center justify-center rounded-full border-[1.5px] text-[10px] font-bold ${a.met ? 'bg-green-pencil border-green-pencil text-paper' : 'border-amber-pencil text-transparent'}`}>✓</span>
                     <span>
-                      <span className={a.met ? 'text-slate-700' : 'font-semibold text-primary'}>{a.label}</span>
+                      <span className={a.met ? 'text-slate-700' : 'font-semibold text-amber-pencil'}>{a.label}</span>
                       <span className="sr-only">{a.met ? ': covered' : ': not yet'}</span>
                       {!a.met && <span className="block text-xs text-slate-600">{a.hint}</span>}
                     </span>
                   </li>
                 ))}
               </ul>
-              {open.length === 0 && <p className="mt-1.5 text-xs text-slate-600">Every part of the question is covered.</p>}
+              {open.length === 0 && <p className="mt-1.5 text-xs font-semibold text-green-pencil">Every part of the question is covered.</p>}
             </div>
           )}
 
@@ -109,11 +115,11 @@ export default function EssayScoreCard({ scores, wordCount }: { scores: Scores; 
                 <div className="flex items-baseline justify-between gap-2">
                   <dt className="text-sm font-semibold text-primary">{p.label}</dt>
                   <dd className="text-sm text-slate-700">
-                    {p.value == null ? '—' : <><span className="font-bold text-primary tabular-nums">{p.value}</span> · {partBand(p.value)}</>}
+                    {p.value == null ? '—' : <><span className="font-bold text-primary tabular-nums">{p.value}</span> · <span className={partTone(p.value).text}>{partBand(p.value)}</span></>}
                   </dd>
                 </div>
                 <div className="mt-1 h-1.5 rounded-full bg-slate-100 overflow-hidden" aria-hidden>
-                  <div className="h-full rounded-full bg-ink transition-[width] duration-700" style={{ width: `${p.value ?? 0}%` }} />
+                  <div className={`h-full rounded-full transition-[width] duration-700 ${p.value == null ? 'bg-ink' : partTone(p.value).bar}`} style={{ width: `${p.value ?? 0}%` }} />
                 </div>
                 <p className="mt-1 text-xs text-slate-600 leading-snug">{p.hint}</p>
               </div>

@@ -50,9 +50,9 @@ interface Extracurricular {
 }
 
 const statusColors: Record<string, string> = {
-  'Complete': 'bg-green-100 text-green-700',
-  'In Review': 'bg-accent/10 text-accent',
-  'Draft': 'bg-amber-100 text-amber-700',
+  'Complete': 'tint-green',
+  'In Review': 'tint-blue',
+  'Draft': 'tint-amber',
   'Not Started': 'bg-slate-100 text-slate-500',
 };
 
@@ -2297,12 +2297,12 @@ function GrammarEditor({
           <div>
             <h4 className="text-[11px] font-bold text-primary uppercase tracking-wider">Grammar Suggestions</h4>
             <div className="flex items-center gap-2 mt-1">
-              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-rose-600">
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-pencil">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-pencil" />
                 {errorCount} {errorCount === 1 ? 'error' : 'errors'}
               </span>
-              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-pencil">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-pencil" />
                 {optCount} optimization{optCount === 1 ? '' : 's'}
               </span>
             </div>
@@ -2320,9 +2320,9 @@ function GrammarEditor({
           {numbered.length === 0 && (
             <div className="text-center py-10">
               <div className="w-12 h-12 mx-auto rounded-full bg-emerald-100 flex items-center justify-center mb-3">
-                <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                <svg className="w-6 h-6 text-green-pencil" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
               </div>
-              <p className="text-xs font-semibold text-emerald-700">No issues found</p>
+              <p className="text-xs font-semibold text-green-pencil">No issues found</p>
               <p className="text-[10px] text-slate-400 mt-1">Your writing reads cleanly.</p>
             </div>
           )}
@@ -2349,7 +2349,7 @@ function GrammarEditor({
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 mb-0.5">
-                      <span className={`text-[9px] font-bold uppercase tracking-wider ${isError ? 'text-rose-600' : 'text-amber-600'}`}>
+                      <span className={`text-[9px] font-bold uppercase tracking-wider ${isError ? 'text-red-pencil' : 'text-amber-pencil'}`}>
                         {isError ? 'Error' : 'Optimization'}
                       </span>
                       <span className="text-[9px] text-slate-400">• {iss.title}</span>
@@ -2359,11 +2359,11 @@ function GrammarEditor({
                     {canApply && (
                       <div className="text-[11px] font-mono bg-slate-50 rounded-md border border-slate-100 p-2 mb-2">
                         <div className="flex items-start gap-1.5">
-                          <span className="text-rose-500 line-through break-all">{iss.original}</span>
+                          <span className="text-red-pencil line-through break-all">{iss.original}</span>
                         </div>
                         {iss.replacement && (
                           <div className="flex items-start gap-1.5 mt-1">
-                            <span className="text-emerald-600 break-all">{iss.replacement}</span>
+                            <span className="text-green-pencil font-semibold break-all">{iss.replacement}</span>
                           </div>
                         )}
                       </div>
@@ -2402,9 +2402,9 @@ function GrammarEditor({
 
 /* Text colours for score numbers in the Logic & flow panel. */
 const SCORE_INK: Record<string, string> = {
-  '#a7a29b': 'text-emerald-700 dark:text-emerald-400',
-  '#b6b0a9': 'text-amber-700 dark:text-amber-400',
-  '#de574e': 'text-red-700 dark:text-red-400',
+  '#a7a29b': 'text-green-pencil',
+  '#b6b0a9': 'text-amber-pencil',
+  '#de574e': 'text-red-pencil',
 };
 
 
@@ -3114,14 +3114,14 @@ export default function Essays() {
                             {motif.weakConnections && motif.weakConnections.length > 0 && (
                               <div className="p-5 rounded-xl bg-amber-50 border border-amber-200">
                                 <div className="flex items-center gap-2 mb-3">
-                                  <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                                  <p className="text-xs font-bold text-amber-700">Cliché & Weakness Alerts</p>
+                                  <svg className="w-4 h-4 text-amber-pencil" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                  <p className="text-xs font-bold text-amber-pencil">Cliché & Weakness Alerts</p>
                                 </div>
                                 <div className="space-y-2.5">
                                   {motif.weakConnections.map((w, i) => (
                                     <div key={i} className="flex items-start gap-2">
-                                      <div className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 flex-shrink-0" />
-                                      <p className="text-xs text-amber-800 leading-relaxed">{w}</p>
+                                      <div className="w-1.5 h-1.5 rounded-full bg-amber-pencil mt-1.5 flex-shrink-0" />
+                                      <p className="text-xs text-slate-700 leading-relaxed">{w}</p>
                                     </div>
                                   ))}
                                 </div>
@@ -3259,8 +3259,8 @@ export default function Essays() {
                                 <div className="flex items-center justify-between gap-2 mb-2">
                                   <p className="text-sm font-bold text-primary">&ldquo;{match.sourceEssayTitle}&rdquo;</p>
                                   <div className={`px-3 py-1 rounded-lg text-xs font-bold ${
-                                    match.matchScore >= 70 ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' :
-                                    match.matchScore >= 50 ? 'bg-amber-50 text-amber-600 border border-amber-200' :
+                                    match.matchScore >= 70 ? 'tint-green border' :
+                                    match.matchScore >= 50 ? 'tint-amber border' :
                                     'bg-slate-50 text-slate-500 border border-slate-200'
                                   }`}>{match.matchScore}% match</div>
                                 </div>
@@ -3271,9 +3271,9 @@ export default function Essays() {
                                 </div>
                                 {match.adaptationNotes.length > 0 && (
                                   <div className="bg-amber-50/50 rounded-lg p-3 border border-amber-100">
-                                    <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">What To Change</p>
+                                    <p className="text-[10px] font-bold text-amber-pencil uppercase tracking-wider mb-1">What To Change</p>
                                     {match.adaptationNotes.map((n, ni) => (
-                                      <p key={ni} className="text-[11px] text-amber-700 flex items-start gap-1.5"><span>→</span> {n}</p>
+                                      <p key={ni} className="text-[11px] text-slate-700 flex items-start gap-1.5"><span className="text-amber-pencil">→</span> {n}</p>
                                     ))}
                                   </div>
                                 )}
@@ -3468,7 +3468,7 @@ export default function Essays() {
                           {getPromptTypeInfo(match.targetPrompt.type).icon} {getPromptTypeInfo(match.targetPrompt.type).label}
                         </span>
                         <span className={`text-[10px] font-bold ${
-                          match.matchScore >= 70 ? 'text-emerald-600' : match.matchScore >= 50 ? 'text-amber-600' : 'text-slate-400'
+                          match.matchScore >= 70 ? 'text-green-pencil' : match.matchScore >= 50 ? 'text-amber-pencil' : 'text-slate-600'
                         }`}>{match.matchScore}%</span>
                       </div>
                       <p className="text-xs font-semibold text-primary truncate group-hover:text-accent transition-colors">&ldquo;{match.sourceEssayTitle}&rdquo;</p>
@@ -3711,15 +3711,15 @@ export default function Essays() {
                     <div className="flex items-center gap-2 mt-2.5">
                       <span className={`px-2 py-0.5 rounded-md text-xs font-semibold ${statusColors[essay.status] || statusColors['Draft']}`}>{essay.status}</span>
                       {essay.overallScore != null && (
-                        <span className="text-xs font-bold text-primary tabular-nums" title="Overall score">{essay.overallScore}</span>
+                        <span className={`text-xs font-bold tabular-nums ${essay.overallScore >= 70 ? 'text-green-pencil' : 'text-amber-pencil'}`} title="Overall score">{essay.overallScore}</span>
                       )}
                       <span className="text-xs text-slate-600">{essayWords} words</span>
                       {essayReviews[essay.id] && (
                         <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
-                          essayReviews[essay.id].status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
-                          essayReviews[essay.id].status === 'in_review' ? 'bg-blue-100 text-blue-700' :
-                          essayReviews[essay.id].status === 'returned' ? 'bg-purple-100 text-purple-700' :
-                          'bg-amber-100 text-amber-700'
+                          essayReviews[essay.id].status === 'completed' ? 'tint-green' :
+                          essayReviews[essay.id].status === 'in_review' ? 'tint-blue' :
+                          essayReviews[essay.id].status === 'returned' ? 'tint-amber' :
+                          'bg-slate-100 text-slate-600'
                         }`}>
                           {essayReviews[essay.id].status === 'completed' ? 'Reviewed' :
                            essayReviews[essay.id].status === 'in_review' ? 'In Review' :
@@ -3750,7 +3750,7 @@ export default function Essays() {
                     {/* The limit for THIS essay (a UC answer is 350, a Stanford
                         short answer 50), as detected from its prompt. */}
                     <span className="inline-flex items-baseline gap-1 rounded-lg bg-slate-100 px-2.5 py-1 text-xs text-slate-700" title={activeEssay.scoreDetail?.limit ? `${activeEssay.scoreDetail.kindLabel}: ${activeEssay.scoreDetail.limit}-word limit` : 'Add the full prompt, with its word limit, for a length check'}>
-                      <span className="font-bold text-primary tabular-nums">{wordCount}</span>
+                      <span className={`font-bold tabular-nums ${activeEssay.scoreDetail?.limit && wordCount <= activeEssay.scoreDetail.limit && wordCount >= activeEssay.scoreDetail.limit * (activeEssay.scoreDetail.limit <= 120 ? 0.6 : 0.85) ? 'text-green-pencil' : 'text-primary'}`}>{wordCount}</span>
                       {activeEssay.scoreDetail?.limit ? <> / {activeEssay.scoreDetail.limit} words</> : ' words'}
                       {activeEssay.scoreDetail?.limit && wordCount > activeEssay.scoreDetail.limit && <span className="font-semibold text-red-pencil">· {wordCount - activeEssay.scoreDetail.limit} over</span>}
                     </span>
@@ -3827,7 +3827,7 @@ export default function Essays() {
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                       Feedback
                       {activeEssay.overallScore != null && (
-                        <span className={`ml-1 text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeEssay.overallScore >= 70 ? 'bg-emerald-100 text-emerald-700' : activeEssay.overallScore >= 45 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
+                        <span className={`ml-1 text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeEssay.overallScore >= 70 ? 'tint-green' : 'tint-amber'}`}>
                           {activeEssay.overallScore}
                         </span>
                       )}
@@ -3987,7 +3987,7 @@ export default function Essays() {
                                   className="h-full rounded-full transition-all duration-700 ease-out"
                                   style={{
                                     width: `${essayInsights.promptAlignment.score}%`,
-                                    backgroundColor: essayInsights.promptAlignment.score >= 70 ? '#a7a29b' : essayInsights.promptAlignment.score >= 40 ? '#b6b0a9' : '#de574e',
+                                    backgroundColor: essayInsights.promptAlignment.score >= 70 ? 'rgb(var(--green-pencil))' : essayInsights.promptAlignment.score >= 40 ? 'rgb(var(--amber-pencil))' : 'rgb(var(--red-pencil))',
                                   }}
                                 />
                               </div>
@@ -4040,7 +4040,7 @@ export default function Essays() {
                            essayInsights.repetitiveOpenings.length === 0 && (
                             <div className="text-center py-10">
                               <div className="w-12 h-12 mx-auto rounded-full bg-emerald-100 flex items-center justify-center mb-3">
-                                <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                <svg className="w-6 h-6 text-green-pencil" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                               </div>
                               <p className="text-xs font-semibold text-emerald-700">Looking good!</p>
                               <p className="text-[10px] text-slate-400 mt-1">No logic or flow issues detected.</p>
@@ -4294,7 +4294,7 @@ export default function Essays() {
                             <div key={dim.key} className="flex items-center gap-2">
                               <span className="text-xs text-slate-500 w-16">{dim.label}</span>
                               <div className="flex-1 h-1.5 rounded-full bg-slate-100">
-                                <div className="h-full rounded-full transition-all" style={{ width: (val * 10) + '%', backgroundColor: val >= 8 ? '#a7a29b' : val >= 5 ? '#b6b0a9' : '#de574e' }} />
+                                <div className="h-full rounded-full transition-all" style={{ width: (val * 10) + '%', backgroundColor: val >= 8 ? 'rgb(var(--green-pencil))' : val >= 5 ? 'rgb(var(--amber-pencil))' : 'rgb(var(--red-pencil))' }} />
                               </div>
                               <span className="text-xs font-bold text-primary w-4 text-right">{val}</span>
                             </div>
@@ -4307,7 +4307,7 @@ export default function Essays() {
                         <p className="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-2">{essayReviews[activeEssay.id].annotations.length} Annotation{essayReviews[activeEssay.id].annotations.length !== 1 ? 's' : ''}</p>
                         <div className="space-y-2 max-h-40 overflow-y-auto">
                           {essayReviews[activeEssay.id].annotations.map(function(ann: any) {
-                            var colors: Record<string, string> = { strength: 'bg-emerald-100 text-emerald-700', suggestion: 'bg-blue-100 text-blue-700', issue: 'bg-rose-100 text-rose-700', question: 'bg-amber-100 text-amber-700' };
+                            var colors: Record<string, string> = { strength: 'tint-green', suggestion: 'tint-blue', issue: 'tint-red', question: 'tint-amber' };
                             return (
                               <div key={ann.id} className="p-2 rounded-lg bg-slate-50">
                                 <div className="flex items-center gap-1.5 mb-1">

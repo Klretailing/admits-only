@@ -27,11 +27,13 @@ function daysUntil(dateStr: string): number | null {
 }
 
 function deadlineBadge(days: number): { label: string; className: string } {
-  if (days < 0) return { label: `${Math.abs(days)}d overdue`, className: 'bg-red-100 text-red-700 border-red-200' };
-  if (days === 0) return { label: 'Due today', className: 'bg-red-100 text-red-700 border-red-200 animate-pulse' };
-  if (days <= 7) return { label: `${days}d left`, className: 'bg-amber-100 text-amber-700 border-amber-200' };
-  if (days <= 30) return { label: `${days}d left`, className: 'bg-blue-100 text-blue-600 border-blue-200' };
-  return { label: `${days}d left`, className: 'bg-slate-100 text-slate-500 border-slate-200' };
+  // Pencil colours (styles/notebook.css): red only once it's due, amber this
+  // week, blue this month, graphite after that.
+  if (days < 0) return { label: `${Math.abs(days)}d overdue`, className: 'tint-red' };
+  if (days === 0) return { label: 'Due today', className: 'tint-red' };
+  if (days <= 7) return { label: `${days}d left`, className: 'tint-amber' };
+  if (days <= 30) return { label: `${days}d left`, className: 'tint-blue' };
+  return { label: `${days}d left`, className: 'bg-slate-100 text-slate-600 border-slate-200' };
 }
 
 function UpcomingDeadlines() {
